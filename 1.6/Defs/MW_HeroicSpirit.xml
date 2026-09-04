@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <ThingDef ParentName="Human">
+    <defName>MW_TestHeroicSpirit</defName>
+    <label>测试英灵</label>
+    <description>MoonWorld 圣杯战争机制测试用英灵。</description>
+    <comps>
+      <li Class="MoonWorld.CompProperties_ServantState" />
+    </comps>
+  </ThingDef>
+  <PawnKindDef ParentName="BasePlayerPawnKind">
+    <defName>MW_TestServant</defName>
+    <label>测试英灵</label>
+    <race>MW_TestHeroicSpirit</race>
+    <combatPower>180</combatPower>
+    <isFighter>true</isFighter>
+    <initialResistanceRange>0~0</initialResistanceRange>
+  </PawnKindDef>
+</Defs>

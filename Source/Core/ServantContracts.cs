@@ -1,0 +1,51 @@
+using System.Collections.Generic;
+using Verse;
+
+namespace MoonWorld
+{
+    public enum ServantPresenceState
+    {
+        Materialized,
+        VoluntarySpirit,
+        DefeatedSpirit,
+        Annihilated
+    }
+
+    public enum ServantEndReason
+    {
+        MasterDeath,
+        SpiritDamageLimit,
+        ExplicitKill
+    }
+
+    public struct ServantSnapshot
+    {
+        public Pawn servant;
+        public Pawn master;
+        public ServantPresenceState presenceState;
+        public int rematerializationReadyTick;
+        public ServantIdentityDef identity;
+    }
+
+    public interface IServantQuery
+    {
+        bool IsServant(Pawn pawn);
+        bool TryGetSnapshot(Pawn pawn, out ServantSnapshot snapshot);
+        bool IsMaterialized(Pawn pawn);
+    }
+
+    public interface IContractLookup
+    {
+        Pawn GetMaster(Pawn servant);
+        void GetBoundServants(Pawn master, List<Pawn> buffer);
+    }
+
+    public interface IServantLifecycle
+    {
+        bool TryBind(Pawn master, Pawn servant, out string rejection);
+        bool TryEnterVoluntarySpirit(Pawn master, Pawn servant);
+        bool TryRematerialize(Pawn master, Pawn servant);
+        void ResolveDefeat(Pawn servant);
+        void Annihilate(Pawn servant, ServantEndReason reason);
+    }
+}

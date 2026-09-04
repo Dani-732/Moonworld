@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <Def Class="MoonWorld.MoonWorldSettingsDef">
+    <defName>MW_HolyGrailWarSettings</defName>
+    <pranaUpdateIntervalTicks>250</pranaUpdateIntervalTicks>
+  </Def>
+  <Def Class="MoonWorld.ServantResourceProfileDef">
+    <defName>MW_TestServantResources</defName>
+    <maxPrana>100</maxPrana>
+    <materializedUpkeepPerDay>6</materializedUpkeepPerDay>
+    <spiritUpkeepMultiplier>0.25</spiritUpkeepMultiplier>
+    <materializedSustainThreshold>30</materializedSustainThreshold>
+    <spiritSustainThreshold>10</spiritSustainThreshold>
+    <shortageDurationTicks>60000</shortageDurationTicks>
+    <foodToPranaPerDay>2</foodToPranaPerDay>
+    <foodToPranaEfficiency>0.1</foodToPranaEfficiency>
+    <foodConversionThreshold>0.2</foodConversionThreshold>
+    <healingMaxPerInterval>1</healingMaxPerInterval>
+    <pranaPerHealingPoint>4</pranaPerHealingPoint>
+    <rematerializationCooldownTicks>10000</rematerializationCooldownTicks>
+    <maxSpiritDamageStages>4</maxSpiritDamageStages>
+  </Def>
+  <Def Class="MoonWorld.ServantAutonomyProfileDef">
+    <defName>MW_QuestLodgerAutonomy</defName>
+    <lordJobKey>QuestLodger</lordJobKey>
+    <targetPriorityKey>ServantMasterNormal</targetPriorityKey>
+  </Def>
+  <Def Class="MoonWorld.ServantIdentityDef">
+    <defName>MW_TestServantIdentity</defName>
+    <servantKind>MW_TestServant</servantKind>
+    <resourceProfile>MW_TestServantResources</resourceProfile>
+    <autonomyProfile>MW_QuestLodgerAutonomy</autonomyProfile>
+  </Def>
+</Defs>

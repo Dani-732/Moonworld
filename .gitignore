@@ -1,0 +1,16 @@
+# Editor and IDE state
+.vs/
+.idea/
+*.suo
+*.user
+
+# Intermediate build output
+**/bin/
+**/obj/
+*.pdb
+
+# Runtime and operating-system noise
+*.log
+*.tmp
+Thumbs.db
+.DS_Store

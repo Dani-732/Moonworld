@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <NeedDef>
+    <defName>MW_Prana</defName>
+    <label>从者魔力</label>
+    <needClass>MoonWorld.Need_Prana</needClass>
+    <showOnNeedList>true</showOnNeedList>
+  </NeedDef>
+  <NeedDef>
+    <defName>MW_MasterPrana</defName>
+    <label>御主魔力</label>
+    <needClass>MoonWorld.Need_MasterPrana</needClass>
+    <showOnNeedList>true</showOnNeedList>
+  </NeedDef>
+  <HediffDef>
+    <defName>MW_PranaShortage</defName>
+    <label>魔力不足</label>
+    <hediffClass>Verse.HediffWithComps</hediffClass>
+    <isBad>true</isBad>
+  </HediffDef>
+  <HediffDef>
+    <defName>MW_SpiritDamage</defName>
+    <label>灵基受损</label>
+    <hediffClass>Verse.HediffWithComps</hediffClass>
+    <isBad>true</isBad>
+  </HediffDef>
+</Defs>

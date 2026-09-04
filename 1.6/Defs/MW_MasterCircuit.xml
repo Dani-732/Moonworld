@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <Def Class="MoonWorld.MasterCircuitDef">
+    <defName>MW_StandardCircuit</defName>
+    <label>标准魔术回路</label>
+    <maxPrana>100</maxPrana>
+    <naturalRegenPerDay>240</naturalRegenPerDay>
+    <supplyThresholdFraction>0.8</supplyThresholdFraction>
+  </Def>
+  <TraitDef>
+    <defName>MW_MagusCircuit_Basic</defName>
+    <label>基础魔力回路</label>
+    <description>拥有可供给从者的基础魔术回路。</description>
+    <degreeDatas>
+      <li><label>基础魔力回路</label><description>拥有可供给从者的基础魔术回路。</description></li>
+    </degreeDatas>
+    <modExtensions>
+      <li Class="MoonWorld.MasterCircuitExtension">
+        <circuitDef>MW_StandardCircuit</circuitDef>
+      </li>
+    </modExtensions>
+  </TraitDef>
+  <TraitDef>
+    <defName>MW_MageRank_Apprentice</defName>
+    <label>魔术师位阶：学徒</label>
+    <description>这是一项身份标签，不参与魔力数值计算。</description>
+    <degreeDatas>
+      <li><label>学徒</label><description>魔术师身份标签。</description></li>
+    </degreeDatas>
+  </TraitDef>
+</Defs>
