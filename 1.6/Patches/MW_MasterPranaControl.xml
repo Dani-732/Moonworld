@@ -4,6 +4,7 @@
     <xpath>/Defs/ThingDef[defName = "Human"]/comps</xpath>
     <value>
       <li Class="MoonWorld.CompProperties_MasterPranaControl" />
+      <li Class="MoonWorld.CompProperties_MasterServantCommands" />
     </value>
   </Operation>
 </Patch>

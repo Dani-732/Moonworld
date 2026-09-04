@@ -46,41 +46,83 @@ namespace MoonWorld
             state.SetPresence(ServantPresenceState.Materialized);
             state.SetRematerializationReadyTick(-1);
             QuestLodgerAutonomyService.Initialize(servant);
+            ServantPresenceEffects.Reconcile(servant);
             return true;
         }
 
         public bool TryEnterVoluntarySpirit(Pawn master, Pawn servant)
         {
+            string rejection;
+            return TryEnterVoluntarySpirit(master, servant, out rejection);
+        }
+
+        public bool TryEnterVoluntarySpirit(Pawn master, Pawn servant, out string rejection)
+        {
+            rejection = null;
             CompServantState state = GetBoundState(master, servant);
-            if (state == null || state.PresenceState != ServantPresenceState.Materialized)
+            if (state == null)
             {
+                rejection = "该从者未与当前御主订立契约。";
+                return false;
+            }
+            if (!AreAliveAndOnSameMap(master, servant))
+            {
+                rejection = "御主与从者必须存活并处于同一张地图。";
+                return false;
+            }
+            if (servant.Downed)
+            {
+                rejection = "倒地从者不能主动灵体化。";
+                return false;
+            }
+            if (state.PresenceState != ServantPresenceState.Materialized)
+            {
+                rejection = "从者当前不是实体化状态。";
                 return false;
             }
 
             state.SetPresence(ServantPresenceState.VoluntarySpirit);
+            ServantPresenceEffects.Reconcile(servant);
             return true;
         }
 
         public bool TryRematerialize(Pawn master, Pawn servant)
         {
+            string rejection;
+            return TryRematerialize(master, servant, out rejection);
+        }
+
+        public bool TryRematerialize(Pawn master, Pawn servant, out string rejection)
+        {
+            rejection = null;
             CompServantState state = GetBoundState(master, servant);
             if (state == null)
             {
+                rejection = "该从者未与当前御主订立契约。";
+                return false;
+            }
+            if (!AreAliveAndOnSameMap(master, servant))
+            {
+                rejection = "御主与从者必须存活并处于同一张地图。";
                 return false;
             }
             if (state.PresenceState == ServantPresenceState.DefeatedSpirit
                 && Find.TickManager.TicksGame < state.RematerializationReadyTick)
             {
+                int remaining = state.RematerializationReadyTick - Find.TickManager.TicksGame;
+                rejection = "战败后的灵基仍在凝聚，还需 " + remaining.ToStringTicksToPeriod() + "。";
                 return false;
             }
             if (state.PresenceState != ServantPresenceState.VoluntarySpirit
                 && state.PresenceState != ServantPresenceState.DefeatedSpirit)
             {
+                rejection = "从者当前不是可解除的灵体状态。";
                 return false;
             }
 
             state.SetPresence(ServantPresenceState.Materialized);
             state.SetRematerializationReadyTick(-1);
+            ServantPresenceEffects.Reconcile(servant);
             return true;
         }
 
@@ -118,6 +160,7 @@ namespace MoonWorld
 
                 state.SetPresence(ServantPresenceState.DefeatedSpirit);
                 state.SetRematerializationReadyTick(Find.TickManager.TicksGame + profile.rematerializationCooldownTicks);
+                ServantPresenceEffects.Reconcile(servant);
             }
             finally
             {
@@ -137,7 +180,19 @@ namespace MoonWorld
             }
 
             state.SetPresence(ServantPresenceState.Annihilated);
+            ServantPresenceEffects.Reconcile(servant);
             servant.Kill(null);
+        }
+
+        private static bool AreAliveAndOnSameMap(Pawn master, Pawn servant)
+        {
+            return master != null
+                && servant != null
+                && !master.Dead
+                && !servant.Dead
+                && master.Spawned
+                && servant.Spawned
+                && master.Map == servant.Map;
         }
 
         private static CompServantState GetBoundState(Pawn master, Pawn servant)

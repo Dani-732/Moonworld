@@ -1,25 +1,32 @@
 # MoonWorld
 
-`MoonWorld` is a new RimWorld 1.6 Mod root. It does not replace or load code from `HolyGrailWarTest`.
+`MoonWorld` 是一个全新的 RimWorld 1.6 Mod 根目录，不会覆盖或加载 `HolyGrailWarTest` 的代码。
 
-The first included module is the Holy Grail War MVP foundation:
+目前已实现的圣杯战争 MVP 基础包括：
 
-* servant identity, contract and lifecycle state;
-* master and servant prana needs with one low-frequency pipeline;
-* servant-only damage permission with environmental damage retained;
-* temporary guest initialization for autonomous servants;
-* developer actions to grant a master circuit and summon a neutral test servant.
+* 从者身份、契约关系与生命周期状态；
+* 御主和从者各自独立的魔力 Need，以及统一的低频结算管线；
+* 仅允许英灵攻击伤害从者的白名单门控，并保留实体化时的环境伤害；
+* 复用原版任务贵客逻辑的自主从者；
+* 由御主控制的灵体化，复用 Core 隐形机制，并冻结 Job、攻击和能力施放；
+* 将殖民者设为测试御主、召唤测试从者和调整魔力的开发者按钮。
 
-Build with:
+编译：
 
 ```powershell
 ./Source/build.ps1
 ```
 
-The implementation boundary is documented in `docs/HolyGrailWar_Module_Boundaries.md`.
+模块实现边界见 `docs/HolyGrailWar_Module_Boundaries.md`。
 
-The reviewed gameplay design and MVP data contract are versioned under `docs/design/`.
+审定后的玩法设计和 MVP 数据契约存放在 `docs/design/`，并纳入 Git 版本管理。
 
-Use `docs/MVP_Smoke_Test.md` for the first in-game verification pass. The current output remains in this workspace and has not changed the game's enabled-mod configuration.
+首轮游戏内验证见 `docs/MVP_Smoke_Test.md`。构建脚本不会修改游戏当前启用的 Mod 列表。
 
-Run `./Source/build.ps1 -Deploy` to compile and synchronize this Mod to `G:\steam\steamapps\common\RimWorld\Mods\MoonWorld`. This copies only the MoonWorld folder and does not alter the enabled-mod configuration.
+编译并同步到 `G:\steam\steamapps\common\RimWorld\Mods\MoonWorld`：
+
+```powershell
+./Source/build.ps1 -Deploy
+```
+
+该命令只复制 `MoonWorld` 目录，不会改动游戏的启用 Mod 配置。

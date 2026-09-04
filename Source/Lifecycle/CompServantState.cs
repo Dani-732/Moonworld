@@ -1,4 +1,5 @@
 using RimWorld;
+using UnityEngine;
 using Verse;
 
 namespace MoonWorld
@@ -36,6 +37,17 @@ namespace MoonWorld
                 {
                     QuestLodgerAutonomyService.Initialize(pawn);
                 }
+                ServantPresenceEffects.Reconcile(pawn);
+            }
+        }
+
+        public override void CompTick()
+        {
+            base.CompTick();
+            Pawn pawn = parent as Pawn;
+            if (pawn != null && pawn.Spawned && pawn.IsHashIntervalTick(250))
+            {
+                ServantPresenceEffects.Reconcile(pawn);
             }
         }
 
@@ -57,6 +69,40 @@ namespace MoonWorld
         public void SetDefeatResolutionInProgress(bool value)
         {
             defeatResolutionInProgress = value;
+        }
+
+        public override string CompInspectStringExtra()
+        {
+            string stateLabel;
+            switch (presenceState)
+            {
+                case ServantPresenceState.VoluntarySpirit:
+                    stateLabel = "主动灵体化";
+                    break;
+                case ServantPresenceState.DefeatedSpirit:
+                    stateLabel = "战败灵体化";
+                    break;
+                case ServantPresenceState.Annihilated:
+                    stateLabel = "已湮灭";
+                    break;
+                default:
+                    stateLabel = "实体化";
+                    break;
+            }
+
+            string result = "存在状态：" + stateLabel;
+            if (master != null)
+            {
+                result += "\n契约御主：" + master.LabelShort;
+            }
+            if (presenceState == ServantPresenceState.DefeatedSpirit && rematerializationReadyTick >= 0)
+            {
+                int remaining = Find.TickManager == null
+                    ? 0
+                    : Mathf.Max(0, rematerializationReadyTick - Find.TickManager.TicksGame);
+                result += "\n实体化冷却：" + remaining.ToStringTicksToPeriod();
+            }
+            return result;
         }
 
         public override void PostExposeData()

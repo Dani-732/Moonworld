@@ -24,4 +24,24 @@
     <hediffClass>Verse.HediffWithComps</hediffClass>
     <isBad>true</isBad>
   </HediffDef>
+  <HediffDef>
+    <defName>MW_SpiritForm</defName>
+    <label>灵体化</label>
+    <description>从者以不可感知的灵体形态存在。</description>
+    <hediffClass>Verse.HediffWithComps</hediffClass>
+    <isBad>false</isBad>
+    <duplicationAllowed>false</duplicationAllowed>
+    <stages>
+      <li>
+        <totalBleedFactor>0</totalBleedFactor>
+      </li>
+    </stages>
+    <comps>
+      <li Class="HediffCompProperties_Invisibility">
+        <visibleToPlayer>false</visibleToPlayer>
+        <affectedByDisruptor>false</affectedByDisruptor>
+        <fadeDurationTicks>60</fadeDurationTicks>
+      </li>
+    </comps>
+  </HediffDef>
 </Defs>

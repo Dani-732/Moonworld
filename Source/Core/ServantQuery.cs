@@ -45,6 +45,18 @@ namespace MoonWorld
                 && snapshot.presenceState == ServantPresenceState.Materialized;
         }
 
+        public bool IsSpirit(Pawn pawn)
+        {
+            ServantSnapshot snapshot;
+            if (!TryGetSnapshot(pawn, out snapshot))
+            {
+                return false;
+            }
+
+            return snapshot.presenceState == ServantPresenceState.VoluntarySpirit
+                || snapshot.presenceState == ServantPresenceState.DefeatedSpirit;
+        }
+
         public Pawn GetMaster(Pawn servant)
         {
             ServantSnapshot snapshot;

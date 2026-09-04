@@ -238,17 +238,21 @@ namespace MoonWorld
         {
             foreach (Pawn servant in servants)
             {
-                if (!ServantQuery.Instance.IsMaterialized(servant))
-                {
-                    continue;
-                }
                 ServantResourceProfileDef profile = ServantIdentityUtility.GetProfile(servant);
                 Need_Prana prana = servant.needs.TryGetNeed<Need_Prana>();
-                if (profile == null || prana == null || ledger.LevelAfterPending(prana) <= profile.materializedSustainThreshold)
+                CompServantState state = servant.TryGetComp<CompServantState>();
+                if (profile == null || prana == null || state == null || state.PresenceState == ServantPresenceState.Annihilated)
                 {
                     continue;
                 }
-                float healingPrana = Mathf.Max(0f, ledger.LevelAfterPending(prana) - profile.materializedSustainThreshold);
+                float sustainThreshold = state.PresenceState == ServantPresenceState.Materialized
+                    ? profile.materializedSustainThreshold
+                    : profile.spiritSustainThreshold;
+                if (ledger.LevelAfterPending(prana) <= sustainThreshold)
+                {
+                    continue;
+                }
+                float healingPrana = Mathf.Max(0f, ledger.LevelAfterPending(prana) - sustainThreshold);
                 float budget = Mathf.Min(profile.healingMaxPerInterval, healingPrana / profile.pranaPerHealingPoint);
                 foreach (Hediff hediff in new List<Hediff>(servant.health.hediffSet.hediffs))
                 {

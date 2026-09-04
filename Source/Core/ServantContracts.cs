@@ -32,6 +32,7 @@ namespace MoonWorld
         bool IsServant(Pawn pawn);
         bool TryGetSnapshot(Pawn pawn, out ServantSnapshot snapshot);
         bool IsMaterialized(Pawn pawn);
+        bool IsSpirit(Pawn pawn);
     }
 
     public interface IContractLookup
