@@ -22,7 +22,7 @@ Defs -> Core 查询/契约 -> Lifecycle 生命周期
 | `Core` | 身份查询、契约查询、不可变快照 | `IServantQuery`、`IContractLookup` | 保存可变状态或执行游戏 Tick 逻辑 |
 | `Lifecycle` | 契约绑定、实体/灵体/湮灭状态转换及其派生效果 | `IServantLifecycle` | 魔力运算、索敌、VFX |
 | `Core` 生理策略 | 从者无寿命与疾病分类 | `ServantPhysiologyPolicy` | 添加或移除 Hediff |
-| `Prana` | Need 变化、来源管线、维持、断供、自愈 | `IPranaSource` | 除请求生命周期服务外直接改变存在状态 |
+| `Prana` | Need 变化、来源管线、维持、断供、自愈及可治疗状态策略 | `IPranaSource`、`ServantHealingPolicy` | 除请求生命周期服务外直接改变存在状态 |
 | `Combat` | 伤害许可与战败请求 | `IServantDamagePolicy` | 创建特效或直接修改 Need/Hediff |
 | `Autonomy` | Guest 关系初始化、原版驻点 Lord/Duty、灵体跟随移动与索敌策略 | `IServantAutonomyPolicy` | 改变契约或伤害规则 |
 | `Abilities` | 能力消耗、有效性与结算结果 | `INoblePhantasmResolver` | 渲染或直接写入生命周期字段 |
@@ -93,6 +93,6 @@ Pawn_HealthTracker.CheckForStateChange（普通伤害及其延迟健康后果）
 
 战败切片已经实现：原版 `CheckForStateChange` 前置适配、普通伤害及失血等延迟后果的倒地/死亡判定、本次致命伤的最低限度修复、战败资源与状态结算，以及灵体状态下的原版倒地/死亡状态检查抑制。若同一次伤害先满足倒地、随后才升级为致死，生命周期服务会继续稳定后续致命变化。致命部位缺失仅移除造成死亡的缺失状态；未缺失的致命伤或失血只降低到刚好不再致死，其他伤口与非致命缺失部位保留。重新实体化同时要求原版 `ShouldBeDead` 和 `ShouldBeDowned` 均为否。直接 `Pawn.Kill` 不经过战败转换，但会先清除灵体派生效果，避免原版尸体持有隐形组件。
 
-战败灵体化不设置独立实体化冷却。御主供魔不受从者实体或灵体形态限制；战败灵体可持续获得供魔并执行自愈，伤势恢复到不会被原版立即判定为倒地或死亡、且当前格可站立后即可实体化。
+战败灵体化不设置独立实体化冷却。御主供魔不受从者实体或灵体形态限制；战败灵体可持续获得供魔并执行自愈，伤势恢复到不会被原版立即判定为倒地或死亡、且当前格可站立后即可实体化。肉体自愈的目标筛选由 `ServantHealingPolicy` 独立负责：普通伤口逐点治疗，背痛等非伤口有害状态按固定魔力消耗调用原版治愈机制，缺失部位及 MoonWorld 系统状态不进入候选。
 
 仍未实现：顶部小人栏灵体灰显、LordJob 三阶索敌、令咒、宝具迁移。当前从者使用不含离图转换的原版驻点 Lord；御主与从者的显式地图离开生命周期仍未接入。这些功能保持独立，不会以占位代码塞进无关模块。

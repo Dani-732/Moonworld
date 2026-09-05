@@ -263,7 +263,10 @@ namespace MoonWorld
                     continue;
                 }
                 float healingPrana = Mathf.Max(0f, ledger.LevelAfterPending(prana) - sustainThreshold);
-                float budget = Mathf.Min(profile.healingMaxPerInterval, healingPrana / profile.pranaPerHealingPoint);
+                float healingCost = Mathf.Max(0f, profile.pranaPerHealingPoint);
+                float budget = healingCost > 0f
+                    ? Mathf.Min(profile.healingMaxPerInterval, healingPrana / healingCost)
+                    : 0f;
                 foreach (Hediff hediff in new List<Hediff>(servant.health.hediffSet.hediffs))
                 {
                     Hediff_Injury injury = hediff as Hediff_Injury;
@@ -272,9 +275,23 @@ namespace MoonWorld
                         continue;
                     }
                     float healed = Mathf.Min(budget, injury.Severity);
-                    injury.Severity -= healed;
-                    ledger.Add(prana, -healed * profile.pranaPerHealingPoint);
+                    injury.Heal(healed);
+                    ledger.Add(prana, -healed * healingCost);
                     budget -= healed;
+                }
+
+                float conditionCost = Mathf.Max(0f, profile.conditionCurePranaCost);
+                if (conditionCost <= 0f
+                    || ledger.LevelAfterPending(prana) - sustainThreshold < conditionCost)
+                {
+                    continue;
+                }
+
+                Hediff condition = ServantHealingPolicy.FindWorstCurableCondition(servant);
+                if (condition != null)
+                {
+                    HealthUtility.Cure(condition);
+                    ledger.Add(prana, -conditionCost);
                 }
             }
         }

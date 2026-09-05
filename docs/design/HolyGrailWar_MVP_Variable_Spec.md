@@ -152,7 +152,7 @@ int defeatCount;
 2. 实体化、未满魔且食物储备高于阈值的从者执行进食转魔。
 3. 若 CurrentMasterPrana > SupplyThreshold，取得所有未湮灭、未满魔且 master 指向该御主的从者，不受实体或灵体形态限制；将全部溢出魔力在它们之间均分，满魔者立即移出均分池。
 4. 处理从者形态维持消耗与断供 Hediff。
-5. 仅用高于当前形态维持线的魔力执行自愈。
+5. 仅用高于当前形态维持线的魔力执行自愈；先按严重度逐点治疗伤口，再以固定消耗治愈一个非缺失型有害状态。
 ```
 
 不保存御主侧 `boundServants` 列表；由从者的 `master` 引用建立运行时索引。御主与从者共用一次统一低频魔力结算服务，不设置 `nextMasterPranaUpdateTick` 或独立供魔通道速率字段。
@@ -308,6 +308,7 @@ MVP 不创建 `hasMystery`、神秘度等级或攻击源注册表。判定只依
 | `foodConversionThreshold` | `float` | 转魔停止点；必须与原版进食 Job 的可用边界同源或严格对齐。 |
 | `healingMaxPerInterval` | `float` | 单次自愈最大恢复量。 |
 | `pranaPerHealingPoint` | `float` | 每单位自愈消耗魔力。 |
+| `conditionCurePranaCost` | `float` | 每次完整治愈一个非伤口有害状态的固定魔力消耗，默认 `40`；只使用维持线以上的魔力。 |
 | `spiritFollowDistance` | `float` | 灵体使用原版寻路跟随时的停留距离，默认 `4` 格。 |
 | `spiritTeleportDistance` | `float` | 灵体与御主距离超过该值时闪现，默认 `10` 格。 |
 | `spiritTeleportRadius` | `int` | 闪现落点在御主周围的搜索半径，默认 `2` 格。 |
@@ -358,6 +359,7 @@ bool malnutritionImmune;
 | 是否可工作、攻击、施放宝具 | 仅实体化从者，且由自主 AI / 当前 Job 决定。 |
 | 灵体状态执行何种 Job | 有效御主同图时只执行专用跟随 Job；默认 4 格内停留，4 至 10 格调用原版 Pawn 寻路，超过 10 格时闪现到御主周围 2 格内的原版可站立格；御主暂时无有效地图目标时原地等待。 |
 | 灵体状态如何显示 | 全部 PawnRenderTree 渲染层使用统一 `30%` 不透明度；该值不保存为运行时状态。 |
+| 哪些健康状态可由魔力治愈 | 伤口与疤痕按严重度治疗；其他 `isBad` 且非 `Hediff_MissingPart`、非植入物、非 MoonWorld 系统状态的 Hediff 可按固定消耗整项治愈。 |
 
 ## 12. 明确不进入 MVP 的字段
 
