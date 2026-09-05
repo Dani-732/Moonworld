@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Patch>
+  <Operation Class="PatchOperationAdd">
+    <xpath>/Defs/Def[@Class="MoonWorld.ServantIdentityDef"]</xpath>
+    <value><noblePhantasms><li>MW_TestPranaBurst</li></noblePhantasms></value>
+  </Operation>
+</Patch>

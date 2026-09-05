@@ -55,6 +55,8 @@ namespace MoonWorld
                 Command_Action miracle = CompMasterCommandSpells.CreateMiracleCommand(master, servant);
                 if (miracle != null)
                     yield return miracle;
+                foreach (Gizmo gizmo in NoblePhantasmCommands.ForServant(master, servant))
+                    yield return gizmo;
             }
         }
 

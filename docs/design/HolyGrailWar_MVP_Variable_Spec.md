@@ -280,7 +280,7 @@ MVP 不创建 `hasMystery`、神秘度等级或攻击源注册表。判定只依
 | 字段 | 类型 | 存档 | 默认值 | 说明 |
 |---|---|---:|---:|---|
 | `commandSpellCharges` | `int` | 是 | `3` | 御主剩余令咒。 |
-| `noblePhantasmOverchargePending` | `bool` | 是 | `false` | “宝具过载”已生效，等待目标从者下一次成功释放宝具；MVP 不设超时。 |
+| `MW_NoblePhantasmOvercharge` | 目标从者 Hediff | 原版保存 | 无 | 等待目标从者下一次成功释放 MoonWorld 宝具，无超时、不可叠加；不在御主组件保存 pending 布尔值。 |
 
 令咒 Trait 只表示资格。不要把计数存入 Trait，也不要在御主侧再保存 `boundServant` 引用；从者的 `master` 字段是唯一契约关系来源。
 
@@ -312,7 +312,7 @@ MVP 不创建 `hasMystery`、神秘度等级或攻击源注册表。判定只依
 | `spiritFollowDistance` | `float` | 灵体使用原版寻路跟随时的停留距离，默认 `4` 格。 |
 | `spiritTeleportDistance` | `float` | 灵体与御主距离超过该值时闪现，默认 `10` 格。 |
 | `spiritTeleportRadius` | `int` | 闪现落点在御主周围的搜索半径，默认 `2` 格。 |
-| `noblePhantasmDefs` | `List<AbilityDef>` | 从者可用宝具定义。 |
+| `noblePhantasms` | `List<AbilityDef>` | 从者可用宝具定义；原版范围、吟唱和冷却，`NoblePhantasmExtension` 保存费用、伤害、护甲穿透和过载倍率。 |
 | `targetPriorityPolicy` | 枚举/Def | 英灵 > 御主 > 普通敌人/建筑的索敌策略。 |
 
 ### 10.2 共享系统配置
@@ -388,8 +388,8 @@ bool hasMystery;
 2. 从者在 caravan、运输舱、传送、地图撤离时的灵体状态如何表现？
 3. 六维参数、额外具备神秘度的攻击来源及其他魔力来源如何扩展，而不改变当前 MVP 的存档模型？
 4. 敌对御主被击杀后，其从者的具体退场状态和装备处理规则是什么。
-5. 宝具最终统一使用原版 `AbilityDef`，还是保留当前代码中的 `NoblePhantasmDef` 作为配置包装？实现宝具迁移前必须只保留一个权威契约。
-6. “宝具过载”作用于指定从者，但当前草案把单个布尔值保存在御主组件；多从者下无法表达目标。实现前应评估改用目标从者 Hediff 或专属宝具状态，而不是直接落地该字段。
+5. 宝具契约采用角色原版 `AbilityDef` 加 `NoblePhantasmExtension`，不使用武器组件或第二个 `NoblePhantasmDef`。先验证“测试宝具_魔力爆发”，Excalibur 迁移延后。
+6. 过载目标由从者自身的 `MW_NoblePhantasmOvercharge` Hediff 表达，避免御主侧单个布尔值无法表示多个目标的问题。
 
 ## 14. 审查目标
 

@@ -377,7 +377,7 @@ MVP 神秘度只作为“英灵施放的攻击能否伤及实体化英灵”的�
 
 * `commandSpellCharges`（`int`，御主组件存档）：当前剩余令咒，初始为 3。
 * 令咒特质只承担身份标识；动态计数不放入 Trait 对象。
-* “宝具过载”使用后保存 `noblePhantasmOverchargePending`（`bool`，御主组件存档）；它只作用于目标从者下一次成功释放的宝具，MVP 不设置超时字段。
+* “宝具过载”使用后在指定从者身上添加 `MW_NoblePhantasmOvercharge` Hediff，由原版存档；只作用于该从者下一次成功释放的 MoonWorld 宝具，不叠加、不设置超时字段。御主只保存令咒数量。
 
 ### 8. 身份 Def 中的静态配置
 

@@ -79,14 +79,22 @@ namespace MoonWorld
                 }
             }
             if (!removed) { rejection = "目标没有灵基受损。"; return false; }
-            charges--;
-            if (charges == 0 && master.story?.traits?.HasTrait(MW_DefOf.MW_CommandSpell) == true)
+            TrySpendCharge();
+            ServantPresenceEffects.Reconcile(servant);
+            return true;
+        }
+
+        internal bool TrySpendCharge()
+        {
+            if (charges <= 0) return false;
+            Pawn master = parent as Pawn;
+            if (charges == 1 && master.story?.traits?.HasTrait(MW_DefOf.MW_CommandSpell) == true)
             {
                 Trait commandSpell = master.story.traits.allTraits.Find(t => t.def == MW_DefOf.MW_CommandSpell);
                 if (commandSpell != null)
                     master.story.traits.RemoveTrait(commandSpell);
             }
-            ServantPresenceEffects.Reconcile(servant);
+            charges--;
             return true;
         }
 

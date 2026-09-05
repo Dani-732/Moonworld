@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <AbilityDef>
+    <defName>MW_TestPranaBurst</defName>
+    <label>测试宝具_魔力爆发</label>
+    <description>将魔力在目标地点引爆，造成高爆范围伤害。爆炸会波及范围内的友军和建筑。</description>
+    <abilityClass>MoonWorld.Ability_NoblePhantasm</abilityClass>
+    <iconPath>UI/Commands/Attack</iconPath>
+    <displayGizmoWhileUndrafted>true</displayGizmoWhileUndrafted>
+    <disableGizmoWhileUndrafted>false</disableGizmoWhileUndrafted>
+    <aiCanUse>false</aiCanUse>
+    <cooldownTicksRange>300</cooldownTicksRange>
+    <showCastingProgressBar>true</showCastingProgressBar>
+    <statBases><Ability_EffectRadius>3</Ability_EffectRadius></statBases>
+    <verbProperties>
+      <verbClass>Verb_CastAbility</verbClass>
+      <range>30</range>
+      <warmupTime>1</warmupTime>
+      <requireLineOfSight>true</requireLineOfSight>
+      <targetParams>
+        <canTargetLocations>true</canTargetLocations>
+        <canTargetPawns>false</canTargetPawns>
+        <canTargetBuildings>false</canTargetBuildings>
+      </targetParams>
+    </verbProperties>
+    <modExtensions>
+      <li Class="MoonWorld.NoblePhantasmExtension">
+        <pranaCost>40</pranaCost>
+        <damage>40</damage>
+        <armorPenetration>0.6</armorPenetration>
+        <overchargeDamageMultiplier>2</overchargeDamageMultiplier>
+      </li>
+    </modExtensions>
+  </AbilityDef>
+  <HediffDef>
+    <defName>MW_NoblePhantasmOvercharge</defName>
+    <label>宝具过载</label>
+    <description>下一次成功释放 MoonWorld 宝具时不消耗自身魔力，且伤害增强。</description>
+    <hediffClass>Verse.HediffWithComps</hediffClass>
+    <isBad>false</isBad>
+    <initialSeverity>1</initialSeverity>
+    <duplicationAllowed>false</duplicationAllowed>
+  </HediffDef>
+</Defs>

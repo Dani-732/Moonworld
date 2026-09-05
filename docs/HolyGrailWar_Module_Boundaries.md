@@ -26,7 +26,7 @@ Defs -> Core 查询/契约 -> Lifecycle 生命周期
 | `Prana` | Need 变化、来源管线、维持、断供、自愈及可治疗状态策略 | `PranaCycleService`、`ServantHealingPolicy` | 除请求生命周期服务外直接改变存在状态 |
 | `Combat` | 伤害许可与战败请求 | `IServantDamagePolicy` | 创建特效或直接修改 Need/Hediff |
 | `Autonomy` | Guest 关系初始化、原版驻点 Lord/Duty、灵体跟随移动与索敌策略 | `QuestLodgerAutonomyService`、`SpiritFollowJobPolicy` | 改变契约或伤害规则 |
-| `Abilities` | 能力消耗、有效性与结算结果 | `INoblePhantasmResolver` | 渲染或直接写入生命周期字段 |
+| `Abilities` | 能力消耗、有效性与结算结果 | `Ability_NoblePhantasm`、`NoblePhantasmService` | 自写渲染或直接写入生命周期字段 |
 | `Presentation` | Gizmo、声音、VFX 与渲染 | 只消费结果数据 | 充当玩法权威 |
 | `Integration` | 接入原版方法的窄 Harmony 补丁，包括按身份过滤 Need | 不提供状态 API | 保存状态或实现跨模块业务流程 |
 
@@ -39,10 +39,12 @@ GameComponent_MoonWorld.warStartTick
 CompServantState.master
 CompServantState.presenceState
 CompMasterPranaControl.supplyThresholdOverride
-CompMasterCommandSpells.commandSpellCharges（未来 MVP 切片）
+CompMasterCommandSpells.commandSpellCharges
 ```
 
 魔力数值继续由 `Need_MasterPrana` 和 `Need_Prana` 保存；断供时长使用原版 Hediff 的 `ageTicks`，灵基受损使用 Hediff 的 severity。运行时递归保护不存档。契约反向索引由查询服务即时重建，不存档。
+
+宝具能力与冷却使用原版 `Pawn_AbilityTracker` / `Ability` 存档。过载使用目标从者身上的 `MW_NoblePhantasmOvercharge` Hediff，不另存御主侧 pending 布尔值或目标引用；无超时、不可叠加，只在下一次成功释放 MoonWorld 宝具时消费。
 
 灵体半透明表现、专用跟随 Job、能否工作、能否攻击等效果均由 `presenceState` 派生，不增加持久字段。
 
@@ -54,7 +56,8 @@ CompMasterCommandSpells.commandSpellCharges（未来 MVP 切片）
 ServantIdentityDef
   -> ServantResourceProfileDef
   -> ServantAutonomyProfileDef
-  -> List<NoblePhantasmDef>
+  -> List<AbilityDef> noblePhantasms
+       -> NoblePhantasmExtension（魔力费用、伤害、护甲穿透、过载倍率）
 
 TraitDef + MasterCircuitExtension
   -> MasterCircuitDef
@@ -84,7 +87,9 @@ Pawn_HealthTracker.CheckForStateChange（普通伤害及其延迟健康后果）
   -> IServantLifecycle
 ```
 
-魔力管线是正常玩法中写入魔力 Need 的唯一入口。直接 `Pawn.Kill` 不经过战败处理。战败适配器只在伤害已经通过 `PreApplyDamage` 门控、且原版健康检查将触发倒地或死亡时请求战败转换；生命周期服务负责最低限度修复和状态结算。
+日常魔力变化由魔力管线负责；宝具单次费用由 `NoblePhantasmService` 写入同一 `Need_Prana`。直接 `Pawn.Kill` 不经过战败处理。战败适配器只在伤害已经通过 `PreApplyDamage` 门控、且原版健康检查将触发倒地或死亡时请求战败转换；生命周期服务负责最低限度修复和状态结算。
+
+测试宝具调用路径：御主转呈从者的原版 Ability Gizmo -> 原版选点、施法 Job / Verb -> `Ability_NoblePhantasm.Activate` -> `NoblePhantasmService` 复核、扣费、生成原版 Bomb Explosion、完成原版冷却。成功标志为爆炸初始化与 Ability 记账完成；伤害在后续原版 Tick 中执行，施法者是伤害 instigator。初始化失败销毁本次爆炸并恢复费用、过载和冷却；已播放的瞬时表现不做撤销。过载命令在目标 Hediff 成功添加后，调用御主组件的共同扣令咒方法。测试宝具不桥接 Excalibur。
 
 ## 已实现的开发切片
 
