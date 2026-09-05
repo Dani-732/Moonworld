@@ -48,7 +48,7 @@ internal static class MembershipTests
             Lord lord = new Lord(job);
             lord.AddPawn(pawn);
             ServantColonyMembership.Initialize(pawn);
-            Check(pawn.lord == lord && lord.ownedPawns.Contains(pawn), "legacy departure lord restored: " + job.GetType().Name);
+            Check(!lord.destroyed && pawn.lord == lord && lord.ownedPawns.Contains(pawn), "single-pawn departure lord survives migration: " + job.GetType().Name);
         }
         foreach (Action<Pawn> exclude in new Action<Pawn>[] {
             p => p.master = null, p => p.kind = "Ordinary", p => p.Dead = true,
@@ -153,10 +153,12 @@ namespace Verse.AI.Group
     public sealed class Lord
     {
         public object LordJob;
+        public bool destroyed;
         public List<Pawn> ownedPawns = new List<Pawn>();
         public Lord(object job) { LordJob = job; }
         public void AddPawn(Pawn pawn) { ownedPawns.Add(pawn); pawn.lord = this; }
-        public void Notify_PawnLost(Pawn pawn, PawnLostCondition condition) { ownedPawns.Remove(pawn); pawn.lord = null; }
+        public void RemovePawn(Pawn pawn) { ownedPawns.Remove(pawn); pawn.lord = null; }
+        public void Notify_PawnLost(Pawn pawn, PawnLostCondition condition) { RemovePawn(pawn); if (ownedPawns.Count == 0) destroyed = true; }
     }
 }
 namespace RimWorld

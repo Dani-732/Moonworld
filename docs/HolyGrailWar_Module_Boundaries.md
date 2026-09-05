@@ -2,6 +2,8 @@
 
 ## 范围
 
+本次玩家成员迁移的行为合同见 [Servant_Colony_Migration.md](design/Servant_Colony_Migration.md)。本文旧 Guest/驻点自治描述已被替代：从者使用玩家派系与原版工作/控制流程，`ServantColonyMembership` 只负责绑定与旧档成员转换，周期存在状态校正不再改变派系或旅行 Lord。游戏验收进度仍以 PROJECT_STATUS 为准。
+
 本文档是 `MoonWorld` 内圣杯战争 MVP 的实现契约。它冻结模块依赖方向，但不会提前搭建第二阶段系统。按用户确认的临时接入方案，`HolyGrailWarTest` 作为内容依赖：它拥有种族、身份外观、装备和渲染初始化，MoonWorld 通过桥接 Def 与 XML 组件补丁接入契约、魔力和自治。原型源码与安装文件仍由原型项目维护；待内容开发结束后再评估正式迁移。
 
 ## 依赖规则
@@ -25,7 +27,8 @@ Defs -> Core 查询/契约 -> Lifecycle 生命周期
 | `Core` 生理策略 | 从者无寿命与疾病分类 | `ServantPhysiologyPolicy` | 添加或移除 Hediff |
 | `Prana` | Need 变化、来源管线、维持、断供、自愈及可治疗状态策略 | `PranaCycleService`、`ServantHealingPolicy` | 除请求生命周期服务外直接改变存在状态 |
 | `Combat` | 伤害许可与战败请求 | `IServantDamagePolicy` | 创建特效或直接修改 Need/Hediff |
-| `Autonomy` | Guest 关系初始化、原版驻点 Lord/Duty、灵体跟随移动与索敌策略 | `QuestLodgerAutonomyService`、`SpiritFollowJobPolicy` | 改变契约或伤害规则 |
+| `Lifecycle` 成员身份 | 玩家派系加入、旧 Guest 迁移及角色身份保护 | `ServantColonyMembership` | 保存第二份契约或工作/能力数值 |
+| `Autonomy` | 灵体跟随移动及灵体原版登舱 Job | `SpiritFollowJobPolicy`、`ServantTravelAutonomy` | 改变契约或伤害规则 |
 | `Abilities` | 能力消耗、有效性与结算结果 | `Ability_NoblePhantasm`、`NoblePhantasmService` | 自写渲染或直接写入生命周期字段 |
 | `Presentation` | Gizmo、声音、VFX 与渲染 | 只消费结果数据 | 充当玩法权威 |
 | `Integration` | 接入原版方法的窄 Harmony 补丁，包括按身份过滤 Need | 不提供状态 API | 保存状态或实现跨模块业务流程 |
@@ -89,7 +92,7 @@ Pawn_HealthTracker.CheckForStateChange（普通伤害及其延迟健康后果）
 
 日常魔力变化由魔力管线负责；宝具单次费用由 `NoblePhantasmService` 写入同一 `Need_Prana`。直接 `Pawn.Kill` 不经过战败处理。战败适配器只在伤害已经通过 `PreApplyDamage` 门控、且原版健康检查将触发倒地或死亡时请求战败转换；生命周期服务负责最低限度修复和状态结算。
 
-测试宝具调用路径：御主转呈从者的原版 Ability Gizmo -> 原版选点、施法 Job / Verb -> `Ability_NoblePhantasm.Activate` -> `NoblePhantasmService` 复核、扣费、生成原版 Bomb Explosion、完成原版冷却。成功标志为爆炸初始化与 Ability 记账完成；伤害在后续原版 Tick 中执行，施法者是伤害 instigator。初始化失败销毁本次爆炸并恢复费用、过载和冷却；已播放的瞬时表现不做撤销。过载命令在目标 Hediff 成功添加后，调用御主组件的共同扣令咒方法。测试宝具不桥接 Excalibur。
+测试宝具调用路径：从者自身原版 Ability Gizmo -> 原版选点、施法 Job / Verb -> `Ability_NoblePhantasm.Activate` -> `NoblePhantasmService` 复核、扣费、生成原版 Bomb Explosion、完成原版冷却。成功标志为爆炸初始化与 Ability 记账完成；伤害在后续原版 Tick 中执行，施法者是伤害 instigator。初始化失败销毁本次爆炸并恢复费用、过载和冷却；已播放的瞬时表现不做撤销。御主的过载命令在目标 Hediff 成功添加后，调用御主组件的共同扣令咒方法。测试宝具不桥接 Excalibur。
 
 ## 已实现的开发切片
 

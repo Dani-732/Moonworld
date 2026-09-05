@@ -8,38 +8,6 @@ using Verse.AI.Group;
 
 namespace MoonWorld
 {
-    [HarmonyPatch(typeof(CaravanFormingUtility), nameof(CaravanFormingUtility.AllSendablePawns))]
-    public static class Harmony_ServantDeparture_Selectable
-    {
-        public static void Postfix(Map map, bool allowEvenIfDowned, bool allowEvenIfInMentalState,
-            int allowLoadAndEnterTransportersLordForGroupID, List<Pawn> __result)
-        {
-            foreach (Pawn pawn in map.mapPawns.AllPawnsSpawned)
-            {
-                if (!ServantDepartureService.IsContractGuest(pawn) || __result.Contains(pawn)
-                    || (!allowEvenIfDowned && pawn.Downed)
-                    || (!allowEvenIfInMentalState && pawn.InMentalState)
-                    || !pawn.RaceProps.allowedOnCaravan) continue;
-                Lord lord = pawn.GetLord();
-                if (lord != null && !(lord.LordJob is LordJob_DefendPoint)
-                    && !(lord.LordJob is LordJob_ServantGuest)
-                    && !(lord.LordJob is LordJob_LoadAndEnterTransporters loading
-                        && loading.transportersGroup == allowLoadAndEnterTransportersLordForGroupID)) continue;
-                __result.Add(pawn);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(CaravanUtility), nameof(CaravanUtility.ShouldAutoCapture))]
-    public static class Harmony_ServantDeparture_NoCapture
-    {
-        public static void Postfix(Pawn p, Faction caravanFaction, ref bool __result)
-        {
-            if (__result && caravanFaction == Faction.OfPlayer && ServantDepartureService.IsContractGuest(p))
-                __result = false;
-        }
-    }
-
     [HarmonyPatch(typeof(Dialog_FormCaravan), "CheckForErrors")]
     public static class Harmony_ServantDeparture_FormCheck
     {

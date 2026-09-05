@@ -32,12 +32,17 @@ namespace MoonWorld
             {
                 Lord travelLord = lord?.LordJob is LordJob_FormAndSendCaravan
                     || lord?.LordJob is LordJob_LoadAndEnterTransporters ? lord : null;
+                // SetFaction's PawnLost signal may destroy a one-pawn boarding lord.
+                travelLord?.RemovePawn(servant);
                 Pawn previous = JoiningServant;
                 JoiningServant = servant;
                 try { servant.SetFaction(Faction.OfPlayer); }
-                finally { JoiningServant = previous; }
-                if (travelLord != null && !travelLord.ownedPawns.Contains(servant))
-                    travelLord.AddPawn(servant);
+                finally
+                {
+                    JoiningServant = previous;
+                    if (travelLord != null && !travelLord.ownedPawns.Contains(servant))
+                        travelLord.AddPawn(servant);
+                }
             }
             else if (servant.HostFaction != null)
             {

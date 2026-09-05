@@ -19,12 +19,6 @@ namespace MoonWorld
                 && !pawn.IsPrisoner && !pawn.IsSlave;
         }
 
-        // Compatibility name for existing Harmony call sites; semantics are now faction-based.
-        public static bool IsContractGuest(Pawn pawn)
-        {
-            return IsContractServant(pawn);
-        }
-
         public static bool CanDepartTogether(IEnumerable<Pawn> departing, out string rejection)
         {
             HashSet<Pawn> party = new HashSet<Pawn>(departing);
