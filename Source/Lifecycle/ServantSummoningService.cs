@@ -20,7 +20,7 @@ namespace MoonWorld
             candidates.Clear();
             foreach (ServantIdentityDef identity in DefDatabase<ServantIdentityDef>.AllDefsListForReading)
             {
-                if (identity.servantKind != null && identity.servantKind.race != null && !string.IsNullOrEmpty(identity.fixedName))
+                if (identity.summonable && identity.servantKind != null && identity.servantKind.race != null)
                     candidates.Add(identity);
             }
             if (candidates.Count == 0) { rejection = "当前没有可召唤的从者。"; return false; }
@@ -32,7 +32,7 @@ namespace MoonWorld
                 Faction faction = Find.FactionManager.FirstFactionOfDef(FactionDefOf.OutlanderCivil) ?? Faction.OfAncients;
                 generated = PawnGenerator.GeneratePawn(new PawnGenerationRequest(selected.servantKind, faction, PawnGenerationContext.NonPlayer));
                 GenSpawn.Spawn(generated, cell, map, WipeMode.Vanish);
-                ServantIdentityUtility.Initialize(generated, selected);
+                // The source mod's PostSpawnSetup owns appearance, loadout and body visibility.
                 if (!ServantLifecycleService.Instance.TryBind(master, generated, out rejection))
                     throw new SummoningFailureException(rejection);
                 GameComponent_MoonWorld state = Current.Game.GetComponent<GameComponent_MoonWorld>();

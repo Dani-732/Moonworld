@@ -12,9 +12,15 @@
       <displayName>Harmony</displayName>
       <steamWorkshopUrl>steam://url/CommunityFilePage/2009463077</steamWorkshopUrl>
     </li>
+    <li>
+      <packageId>ly243.holygrailwar.sabertest</packageId>
+      <displayName>Holy Grail War - Servant Test</displayName>
+    </li>
   </modDependencies>
   <loadAfter>
     <li>brrainz.harmony</li>
+    <li>erdelf.HumanoidAlienRaces</li>
+    <li>ly243.holygrailwar.sabertest</li>
   </loadAfter>
   <description>MoonWorld is a modular Type-Moon world framework. Holy Grail War is its first gameplay module and remains isolated from future magecraft, Dead Apostle, and world-system modules.</description>
 </ModMetaData>

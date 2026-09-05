@@ -26,7 +26,7 @@ namespace MoonWorld
         {
             base.PostSpawnSetup(respawningAfterLoad);
             Pawn pawn = parent as Pawn;
-            if (pawn != null)
+            if (ServantQuery.Instance.IsServant(pawn))
             {
                 pawn.needs.AddOrRemoveNeedsAsAppropriate();
                 PawnNeedAccess.EnsureNeed(pawn, MW_DefOf.MW_Prana);
@@ -42,7 +42,8 @@ namespace MoonWorld
         {
             base.CompTick();
             Pawn pawn = parent as Pawn;
-            if (pawn != null && pawn.Spawned && pawn.IsHashIntervalTick(250))
+            if (pawn != null && pawn.Spawned && pawn.IsHashIntervalTick(250)
+                && ServantQuery.Instance.IsServant(pawn))
             {
                 ServantPresenceEffects.Reconcile(pawn);
             }
@@ -65,6 +66,8 @@ namespace MoonWorld
 
         public override string CompInspectStringExtra()
         {
+            // The shared source race also contains characters not yet connected to MoonWorld.
+            if (!ServantQuery.Instance.IsServant(parent as Pawn)) return null;
             string stateLabel;
             switch (presenceState)
             {

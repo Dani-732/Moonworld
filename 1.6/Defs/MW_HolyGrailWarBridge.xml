@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <Def Class="MoonWorld.ServantIdentityDef">
+    <defName>MW_GWW_ArtoriaIdentity</defName>
+    <servantKind>GWW_Artoria</servantKind>
+    <resourceProfile>MW_TestServantResources</resourceProfile>
+    <autonomyProfile>MW_QuestLodgerAutonomy</autonomyProfile>
+    <summonable>true</summonable>
+  </Def>
+  <Def Class="MoonWorld.ServantIdentityDef">
+    <defName>MW_GWW_EmiyaIdentity</defName>
+    <servantKind>GWW_Emiya</servantKind>
+    <resourceProfile>MW_TestServantResources</resourceProfile>
+    <autonomyProfile>MW_QuestLodgerAutonomy</autonomyProfile>
+    <summonable>true</summonable>
+  </Def>
+</Defs>

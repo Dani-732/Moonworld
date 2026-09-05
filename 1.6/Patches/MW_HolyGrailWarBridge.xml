@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Patch>
+  <Operation Class="PatchOperationAdd">
+    <xpath>Defs/AlienRace.ThingDef_AlienRace[defName="GWW_HeroicSpirit"]/comps</xpath>
+    <value>
+      <li Class="MoonWorld.CompProperties_ServantState" />
+    </value>
+  </Operation>
+</Patch>
