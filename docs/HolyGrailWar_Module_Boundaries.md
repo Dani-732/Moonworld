@@ -33,8 +33,8 @@ Defs -> Core 查询/契约 -> Lifecycle 生命周期
 | `Core` 战争事件记录 | 开战 Tick、本届指定御主与一次常规召唤资格的存档 | `GameComponent_MoonWorld`、`HolyGrailWarEntry` | 角色终身召唤次数、阶段二战争状态机 |
 | `Lifecycle` 事件接入与召唤 | 接受者验证、令咒授予、召唤生成与失败清理 | `HolyGrailWarEntryService`、`ServantSummoningService` | 以己方人口数量限制从者、添加额外取得途径 |
 | `Core` 敌方身份 | 七职阶及当前对席选择、敌方契约/供魔资格查询 | `HolyGrailWarClassUtility`、`EnemyContractUtility` | 创建空派系注册表或复制契约状态 |
-| `Lifecycle` 敌方部署 | 专用敌对派系、一次性主从生成、共享绑定、失败清理及离图保留 | `EnemyWarPartyService` | 玩家成员转换、自动突袭、战争胜负 |
-| `Autonomy` 敌方交战 | 原版进攻/撤退 Lord、测试宝具选点及灵体出口 Job | `LordJob_EnemyWarParty`、`EnemyRetreatUtility` | 免费施法、直接修改魔力或存在状态 |
+| `Lifecycle` 敌方部署 | 专用敌对派系、场外御主及单从者落地、共享绑定、失败清理及离图保留 | `EnemyWarPartyService` | 玩家成员转换、自动突袭、战争胜负 |
+| `Autonomy` 敌方交战 | 从者优先目标策略、原版战斗 Job 与 Lord、测试宝具选点及灵体出口 Job | `EnemyTargetingPolicy`、`JobGiver_EnemyServantAssault`、`LordJob_EnemyWarParty`、`EnemyRetreatUtility` | 免费施法、直接修改魔力或存在状态、接管玩家指令 |
 | `Autonomy` | 灵体跟随移动及灵体原版登舱 Job | `SpiritFollowJobPolicy`、`ServantTravelAutonomy` | 改变契约或伤害规则 |
 | `Abilities` | 能力消耗、有效性与结算结果 | `Ability_NoblePhantasm`、`NoblePhantasmService` | 自写渲染或直接写入生命周期字段 |
 | `Presentation` | Gizmo、声音、VFX 与渲染 | 只消费结果数据 | 充当玩法权威 |
@@ -60,6 +60,8 @@ CompMasterCommandSpells.commandSpellCharges
 本届事件资格属于战争接受记录，不附着在 Pawn 生命周期上。原版 Incident / ScenPart 发出同一种 ChoiceLetter；玩家指定回路持有者后调用 `HolyGrailWarEntryService.TryAccept`。原版信件负责拒绝、延后、到期和归档；资格记录独立于信件的删除。正式 `Command_Target` 与调试入口调用同一召唤服务，只有全部成功才消费资格并记录 `warStartTick`。不新增注册表、通用事件框架或多届战争生命周期。参战记录中的 Pawn 引用标明资格接受者及实际敌方参与者，契约仍仅由从者组件保存。
 
 敌方供魔在现有 `PranaCycleService` 内按共享配置执行固定补给；敌方御主不进入玩家魔力库存与分配阶段，敌方从者不转化食物。维持、断供、自愈及宝具费用继续共用既有规则。撤退状态交由原版 Lord 保存，离图原 Pawn 交由 WorldPawns 保留；没有第二套进度、血量或魔力快照。
+
+敌方御主始终以场外 WorldPawn 保留，代表留守工坊，不生成基地地图或加入突袭 Lord。场外敌方契约允许供魔与宝具施法；玩家主从同行和同图施法不因此放宽。敌方从者优先目标通过原版 `LordJob.ValidateAttackTarget` 约束自动开火，自定义 JobGiver 仅选目标和补充接近 Job，射击站位与近战仍调用原版；运行时目标缓存不存档，也不增加 Harmony 补丁。
 
 宝具能力与冷却使用原版 `Pawn_AbilityTracker` / `Ability` 存档。过载使用目标从者身上的 `MW_NoblePhantasmOvercharge` Hediff，不另存御主侧 pending 布尔值或目标引用；无超时、不可叠加，只在下一次成功释放 MoonWorld 宝具时消费。
 

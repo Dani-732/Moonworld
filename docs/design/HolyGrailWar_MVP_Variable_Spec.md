@@ -57,12 +57,14 @@
 | `designatedMaster` | Pawn 引用 | 本届资格接受者 |
 | `regularSummonUsed` | bool，默认 false | 本届唯一常规召唤资格是否已消费 |
 | `playerIdentity` / `enemyIdentity` | Def 引用 | 首次成功召唤确定双方身份；职阶由身份 Def 派生 |
-| `enemyMaster` / `enemyServant` | Pawn 引用 | 本届实际敌方参与者，离图保留原 Pawn；不是契约权威 |
+| `enemyMaster` / `enemyServant` | Pawn 引用 | 御主作为场外 WorldPawn 保存，从者单独落地突袭；撤退保留原 Pawn。不是契约权威 |
 | `enemyDeployed` | bool，默认 false | 成功生成、落地、绑定及建立 Lord 后记为 true，淘汰后也不重置 |
 
 `ServantIdentityDef.warClass` 是静态枚举：None（旧定义兼容）、Saber、Archer、Lancer、Assassin、Caster、Rider、Berserker。当前只有 Saber/Archer 可互选为对席，不保存七个空槽或派系副本。旧档只有明确识别己方身份后才能补全双方 Def，无法确定时拒绝部署。
 
 敌方淘汰由已部署且任一参与者为空、死亡或销毁推导，不另存布尔值。进攻/撤退由原版 Lord 的当前 Toil 保存，不添加重复战斗阶段。敌方固定供魔配置为 `MoonWorldSettingsDef.enemyPranaSupplyPerDay = 240`，负值按零处理；使用统一魔力周期和现有账本，仍扣维持、自愈与宝具费用。敌方御主无魔力 Need，不参与玩家库存分配及食物转魔。世界 Pawn 不执行地图内供魔。
+
+场外御主仍可给地图内敌方从者提供固定补给，并允许其使用测试宝具；从者离图后才停止本轮地图内结算。御主不落地、不加入突袭 Lord，不新增“工坊已建成”存档字段。优先攻击目标与扫描 Tick 是 Lord 内可重建的运行时缓存，不存档；从者身份、有效性、敌对关系和可接战性由现有 Pawn 查询派生，不保存目标名单或三阶索敌状态。
 
 接受事件时创建记录并授予令咒，不开战；唯一召唤服务完成生成、落地和绑定后才消费资格并幂等记录首次开战。两种操作均不可重复领取，取消/失败不消耗资格。Pawn 上不增加终身召唤标记或每人次数表。当前没有事件结束、重开或转让资格 API。
 
