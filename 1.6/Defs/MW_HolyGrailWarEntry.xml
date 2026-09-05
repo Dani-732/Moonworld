@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <ScenPartDef>
+    <defName>MW_HolyGrailWarStart</defName>
+    <label>圣杯的呼唤</label>
+    <description>首位初始殖民者拥有基础魔力回路与学徒位阶。抵达后收到降灵之兆，可指定一名回路持有者接受本届邀请。</description>
+    <scenPartClass>MoonWorld.ScenPart_HolyGrailWar</scenPartClass>
+    <category>StartingImportant</category>
+    <canBeRandomlyAdded>false</canBeRandomlyAdded>
+    <canBePlayerAddedRemoved>false</canBePlayerAddedRemoved>
+  </ScenPartDef>
+  <ScenarioDef ParentName="Crashlanded">
+    <defName>MW_HolyGrailWar</defName>
+    <label>月世界：降灵之兆</label>
+    <description>警报声将三名旅人从冷冻休眠中唤醒。飞船正在解体，你们乘逃生舱坠落在陌生的边缘世界。\n\n其中一人的魔术回路仍在微弱地搏动。穿过星海的呼唤随之而来：圣杯正在寻找愿意回应它的人。\n\n你们可以先建起家园，再决定是否接受这份邀请。指定一名拥有魔力回路的人，他将获得三划令咒与本届圣杯战争的一次常规召唤资格。英灵成功降临的那一刻，战争才正式开幕。</description>
+    <scenario>
+      <summary>三名坠落者，一条觉醒的魔术回路，一份等待回应的圣杯战争邀请。</summary>
+      <parts>
+        <li Class="MoonWorld.ScenPart_HolyGrailWar">
+          <def>MW_HolyGrailWarStart</def>
+        </li>
+      </parts>
+    </scenario>
+  </ScenarioDef>
+  <LetterDef>
+    <defName>MW_HolyGrailWarInvitation</defName>
+    <label>降灵之兆</label>
+    <letterClass>MoonWorld.ChoiceLetter_HolyGrailWar</letterClass>
+    <color>(0.85,0.3,0.3)</color>
+  </LetterDef>
+  <IncidentDef>
+    <defName>MW_HolyGrailWarInvitation</defName>
+    <label>降灵之兆</label>
+    <category>Misc</category>
+    <targetTags><li>Map_PlayerHome</li></targetTags>
+    <workerClass>MoonWorld.IncidentWorker_HolyGrailWarInvitation</workerClass>
+    <baseChance>0.15</baseChance>
+    <earliestDay>3</earliestDay>
+    <minRefireDays>15</minRefireDays>
+  </IncidentDef>
+</Defs>

@@ -22,23 +22,34 @@ namespace MoonWorld
                 yield break;
             }
 
-            Command_Action summon = new Command_Action
+            Map map = master.Map;
+            Command_Target summon = new Command_Target
             {
                 defaultLabel = "召唤从者",
-                defaultDesc = "在鼠标处随机召唤阿尔托莉雅或卫宫。",
+                defaultDesc = "选择落点，随机召唤一名英灵并订立契约。成功后用尽本届圣杯战争授予的常规召唤资格，不消耗令咒划数。",
                 icon = TexButton.Add,
-                action = delegate
+                targetingParams = new TargetingParameters
+                {
+                    canTargetLocations = true,
+                    canTargetPawns = false,
+                    canTargetBuildings = false,
+                    validator = target => target.Map == map && Find.CurrentMap == map
+                        && ServantSummoningService.Instance.Validate(master, map, target.Cell) == null
+                },
+                action = target =>
                 {
                     string rejection;
                     Pawn servant;
-                    if (ServantSummoningService.Instance.TrySummon(master, master.Map, UI.MouseCell(), out servant, out rejection))
+                    if (Find.CurrentMap != map) return;
+                    if (ServantSummoningService.Instance.TrySummon(master, map, target.Cell, out servant, out rejection))
                         Messages.Message(servant.LabelShortCap + " 已完成召唤。", servant, MessageTypeDefOf.PositiveEvent, false);
                     else
                         Messages.Message(rejection, MessageTypeDefOf.RejectInput, false);
                 },
                 Order = -100f
             };
-            if (ServantQueryHasActiveServant(master)) summon.Disable("已有未湮灭的契约从者。");
+            string summonRejection = ServantSummoningService.Instance.CommandRejection(master, map);
+            if (summonRejection != null) summon.Disable(summonRejection);
             yield return summon;
 
             List<Pawn> servants = new List<Pawn>();
@@ -58,16 +69,6 @@ namespace MoonWorld
                 foreach (Gizmo gizmo in NoblePhantasmCommands.ForServant(master, servant))
                     yield return gizmo;
             }
-        }
-
-        private static bool ServantQueryHasActiveServant(Pawn master)
-        {
-            List<Pawn> servants = new List<Pawn>();
-            ServantQuery.Instance.GetBoundServants(master, servants);
-            foreach (Pawn servant in servants)
-                if (servant?.TryGetComp<CompServantState>()?.PresenceState != ServantPresenceState.Annihilated)
-                    return true;
-            return false;
         }
 
         public static Command_Action CreatePresenceCommand(Pawn master, Pawn servant)

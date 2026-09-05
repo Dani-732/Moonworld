@@ -6,12 +6,19 @@ namespace MoonWorld
     public sealed class GameComponent_MoonWorld : GameComponent
     {
         public int warStartTick = -1;
+        private HolyGrailWarEntry currentWarEntry;
+
+        public HolyGrailWarEntry CurrentWarEntry => currentWarEntry;
+        public bool CanAcceptInvitation => currentWarEntry == null && warStartTick < 0;
 
         public GameComponent_MoonWorld(Game game) { }
 
         public override void LoadedGame()
         {
             ServantColonyMembership.ReconcileLoadedGame();
+            // Old saves have no invitation record. A started war must not grant another summon.
+            if (currentWarEntry == null && warStartTick >= 0)
+                currentWarEntry = new HolyGrailWarEntry(null, alreadySummoned: true);
         }
 
         public override void GameComponentTick()
@@ -31,9 +38,25 @@ namespace MoonWorld
             }
         }
 
+        internal void AcceptInvitation(Pawn master)
+        {
+            if (!CanAcceptInvitation)
+                throw new System.InvalidOperationException("本届圣杯战争已经指定御主。");
+            currentWarEntry = new HolyGrailWarEntry(master);
+        }
+
+        internal void CommitRegularSummon()
+        {
+            if (currentWarEntry == null || currentWarEntry.RegularSummonUsed)
+                throw new System.InvalidOperationException("本届常规召唤资格不可用。");
+            RecordWarStartIfNeeded();
+            currentWarEntry.ConsumeRegularSummon();
+        }
+
         public override void ExposeData()
         {
             Scribe_Values.Look(ref warStartTick, "warStartTick", -1);
+            Scribe_Deep.Look(ref currentWarEntry, "currentWarEntry");
         }
     }
 }

@@ -8,6 +8,7 @@ namespace MoonWorld
     {
         public static readonly ServantSummoningService Instance = new ServantSummoningService();
         private readonly List<ServantIdentityDef> candidates = new List<ServantIdentityDef>();
+        private bool summoning;
 
         private ServantSummoningService() { }
 
@@ -17,56 +18,88 @@ namespace MoonWorld
             rejection = Validate(master, map, cell);
             if (rejection != null) return false;
 
-            candidates.Clear();
-            foreach (ServantIdentityDef identity in DefDatabase<ServantIdentityDef>.AllDefsListForReading)
-            {
-                if (identity.summonable && identity.servantKind != null && identity.servantKind.race != null)
-                    candidates.Add(identity);
-            }
-            if (candidates.Count == 0) { rejection = "当前没有可召唤的从者。"; return false; }
-
-            ServantIdentityDef selected = candidates.RandomElement();
+            summoning = true;
             Pawn generated = null;
             try
             {
-                generated = PawnGenerator.GeneratePawn(new PawnGenerationRequest(selected.servantKind, Faction.OfPlayer, PawnGenerationContext.NonPlayer));
+                candidates.Clear();
+                foreach (ServantIdentityDef identity in DefDatabase<ServantIdentityDef>.AllDefsListForReading)
+                {
+                    if (identity.summonable && identity.servantKind != null && identity.servantKind.race != null)
+                        candidates.Add(identity);
+                }
+                if (candidates.Count == 0) { rejection = "当前没有可召唤的从者。"; return false; }
+
+                ServantIdentityDef selected = candidates.RandomElement();
+                generated = PawnGenerator.GeneratePawn(new PawnGenerationRequest(selected.servantKind,
+                    Faction.OfPlayer, PawnGenerationContext.NonPlayer, forceGenerateNewPawn: true,
+                    canGeneratePawnRelations: false, validatorPreGear: pawn => { generated = pawn; return true; }));
+                if (generated == null) throw new SummoningFailureException("从者生成未返回有效角色。");
                 GenSpawn.Spawn(generated, cell, map, WipeMode.Vanish);
                 // The source mod's PostSpawnSetup owns appearance, loadout and body visibility.
                 if (!ServantLifecycleService.Instance.TryBind(master, generated, out rejection))
                     throw new SummoningFailureException(rejection);
+                rejection = HolyGrailWarEntryService.RegularSummonRejection(master);
+                if (rejection != null || !master.Spawned || master.Map != map
+                    || !generated.Spawned || generated.Map != map || generated.Dead || generated.Destroyed
+                    || generated.TryGetComp<CompServantState>()?.Master != master)
+                    throw new SummoningFailureException(rejection ?? "召唤完成前契约或落点状态发生变化。");
                 GameComponent_MoonWorld state = Current.Game.GetComponent<GameComponent_MoonWorld>();
-                state.RecordWarStartIfNeeded();
+                state.CommitRegularSummon();
                 servant = generated;
                 return true;
             }
-            catch (SummoningFailureException)
+            catch (SummoningFailureException ex)
             {
-                if (generated != null && !generated.Destroyed) generated.Destroy(DestroyMode.Vanish);
+                Rollback(generated);
+                rejection = ex.Message;
                 return false;
             }
             catch (System.Exception ex)
             {
                 Log.Error("[MoonWorld] 召唤失败并回滚: " + ex);
-                if (generated != null && !generated.Destroyed) generated.Destroy(DestroyMode.Vanish);
+                Rollback(generated);
                 rejection = "召唤过程发生错误，已回滚。";
                 return false;
             }
+            finally
+            {
+                summoning = false;
+            }
         }
 
-        private static string Validate(Pawn master, Map map, IntVec3 cell)
+        public string CommandRejection(Pawn master, Map map)
         {
-            if (master == null || !MasterCircuitUtility.HasCircuit(master) || master.Faction != Faction.OfPlayer)
-                return "请选中拥有魔力回路的玩家御主。";
+            if (summoning) return "召唤正在进行中。";
+            string rejection = HolyGrailWarEntryService.RegularSummonRejection(master);
+            if (rejection != null) return rejection;
             if (map == null || !master.Spawned || master.Map != map)
                 return "御主必须在当前地图上。";
-            if (!cell.InBounds(map) || !cell.Standable(map)) return "请选择地图上的可站立位置。";
-            List<Pawn> bound = new List<Pawn>();
-            ServantQuery.Instance.GetBoundServants(master, bound);
-            foreach (Pawn servant in bound)
-                if (servant != null && !servant.Destroyed && !servant.Dead
-                    && servant.TryGetComp<CompServantState>()?.PresenceState != ServantPresenceState.Annihilated)
-                    return "该御主已有未湮灭的契约从者。";
             return null;
+        }
+
+        public string Validate(Pawn master, Map map, IntVec3 cell)
+        {
+            string rejection = CommandRejection(master, map);
+            if (rejection != null) return rejection;
+            if (!cell.InBounds(map) || !cell.Standable(map)) return "请选择地图上的可站立位置。";
+            if (cell.Fogged(map)) return "请选择已探索的位置。";
+            return null;
+        }
+
+        private static void Rollback(Pawn pawn)
+        {
+            if (pawn == null) return;
+            pawn.TryGetComp<CompServantState>()?.Bind(null);
+            try
+            {
+                if (!pawn.Destroyed) pawn.Destroy(DestroyMode.Vanish);
+            }
+            finally
+            {
+                // Pawn.Destroy can retain a world pawn; failed summons must leave no such entry.
+                if (Find.WorldPawns.Contains(pawn)) Find.WorldPawns.RemoveAndDiscardPawnViaGC(pawn);
+            }
         }
 
         private sealed class SummoningFailureException : System.Exception

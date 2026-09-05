@@ -19,6 +19,33 @@ namespace MoonWorld
 
         public int Charges => charges;
 
+        internal bool TryGrantForWar(out string rejection)
+        {
+            Pawn master = parent as Pawn;
+            rejection = null;
+            Trait added = null;
+            try
+            {
+                if (!master.story.traits.HasTrait(MW_DefOf.MW_CommandSpell))
+                {
+                    added = new Trait(MW_DefOf.MW_CommandSpell);
+                    master.story.traits.GainTrait(added);
+                }
+                if (!master.story.traits.HasTrait(MW_DefOf.MW_CommandSpell))
+                    throw new System.InvalidOperationException("令咒特质未能授予。");
+                charges = DefaultCharges;
+                return true;
+            }
+            catch (System.Exception ex)
+            {
+                if (added != null && master.story.traits.allTraits.Contains(added))
+                    master.story.traits.RemoveTrait(added);
+                Log.Error("[MoonWorld] 授予令咒失败: " + ex);
+                rejection = "未能授予令咒，本届事件尚未接取。";
+                return false;
+            }
+        }
+
         public override void PostExposeData()
         {
             Scribe_Values.Look(ref charges, "commandSpellCharges", DefaultCharges);
@@ -27,7 +54,8 @@ namespace MoonWorld
         public override string CompInspectStringExtra()
         {
             Pawn master = parent as Pawn;
-            if (!MasterCircuitUtility.HasCircuit(master))
+            if (!MasterCircuitUtility.HasCircuit(master)
+                || (master.story?.traits?.HasTrait(MW_DefOf.MW_CommandSpell) != true && charges > 0))
                 return null;
             return "令咒：" + charges + " / " + DefaultCharges;
         }

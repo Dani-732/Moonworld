@@ -10,11 +10,12 @@
   <TraitDef>
     <defName>MW_CommandSpell</defName>
     <label>令咒</label>
-    <description>拥有三枚可用于奇迹重铸的令咒。</description>
+    <description>圣杯战争授予的令咒，可用于奇迹重铸与宝具过载。常规召唤资格由本届事件单独授予。</description>
+    <commonality>0</commonality>
     <degreeDatas>
       <li>
         <label>令咒</label>
-        <description>拥有三枚可用于奇迹重铸的令咒。</description>
+        <description>圣杯战争授予的令咒，可用于奇迹重铸与宝具过载。剩余划数由御主状态记录。</description>
       </li>
     </degreeDatas>
   </TraitDef>

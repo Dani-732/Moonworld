@@ -16,25 +16,12 @@ namespace MoonWorld
                 Messages.Message("请先选中一名玩家阵营殖民者。", MessageTypeDefOf.RejectInput, false);
                 return;
             }
-            if (!pawn.story.traits.HasTrait(MW_DefOf.MW_MagusCircuit_Basic))
-            {
-                pawn.story.traits.GainTrait(new Trait(MW_DefOf.MW_MagusCircuit_Basic, 0, false));
-            }
-            if (!pawn.story.traits.HasTrait(MW_DefOf.MW_MageRank_Apprentice))
-            {
-                pawn.story.traits.GainTrait(new Trait(MW_DefOf.MW_MageRank_Apprentice, 0, false));
-            }
-            if (!pawn.story.traits.HasTrait(MW_DefOf.MW_CommandSpell))
-            {
-                pawn.story.traits.GainTrait(new Trait(MW_DefOf.MW_CommandSpell, 0, false));
-            }
-            MasterCircuitUtility.EnsureMasterPranaNeed(pawn);
-            Need_MasterPrana prana = pawn.needs.TryGetNeed<Need_MasterPrana>();
-            if (prana != null)
-            {
-                prana.CurLevel = prana.MaxLevel;
-            }
-            Messages.Message(pawn.LabelShortCap + " 已成为测试御主。", pawn, MessageTypeDefOf.PositiveEvent, false);
+            HolyGrailWarEntryService.PrepareStartingCircuit(pawn);
+            string rejection;
+            if (HolyGrailWarEntryService.TryAccept(pawn, out rejection))
+                Messages.Message(pawn.LabelShortCap + " 已接受本届圣杯战争邀请。", pawn, MessageTypeDefOf.PositiveEvent, false);
+            else
+                Messages.Message(rejection, MessageTypeDefOf.RejectInput, false);
         }
 
         [DebugAction("MoonWorld", "在鼠标处召唤测试从者", actionType = DebugActionType.ToolMap, allowedGameStates = AllowedGameStates.PlayingOnMap)]
@@ -54,7 +41,6 @@ namespace MoonWorld
                 return;
             }
 
-            Faction faction = Find.FactionManager.FirstFactionOfDef(FactionDefOf.OutlanderCivil);
             Pawn servant;
             string rejection;
             if (!ServantSummoningService.Instance.TrySummon(master, map, cell, out servant, out rejection))
@@ -62,7 +48,7 @@ namespace MoonWorld
                 Messages.Message(rejection, MessageTypeDefOf.RejectInput, false);
                 return;
             }
-            Messages.Message("正式从者已完成召唤，并作为尊贵访客自主行动。", servant, MessageTypeDefOf.PositiveEvent, false);
+            Messages.Message("从者已完成召唤并加入殖民地，本届常规召唤资格已用尽。", servant, MessageTypeDefOf.PositiveEvent, false);
         }
 
         [DebugAction("MoonWorld/魔力测试", "选中御主：魔力回满", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
