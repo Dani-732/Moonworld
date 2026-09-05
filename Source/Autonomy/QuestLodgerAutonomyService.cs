@@ -9,7 +9,8 @@ namespace MoonWorld
         void Initialize(Pawn servant);
     }
 
-    // The first slice deliberately reuses vanilla visitor duties while keeping the servant on-map.
+    // Guest status keeps servants autonomous; DefendPoint supplies vanilla long-needs behavior
+    // without the timed departure graph used by colony visitors.
     public static class QuestLodgerAutonomyService
     {
         public static void Initialize(Pawn servant)
@@ -24,20 +25,26 @@ namespace MoonWorld
                 servant.guest.SetGuestStatus(Faction.OfPlayer, GuestStatus.Guest);
             }
 
-            if (servant.GetLord() == null)
+            Lord lord = servant.GetLord();
+            if (lord?.LordJob is LordJob_ServantGuest)
+            {
+                lord.RemovePawn(servant);
+                lord = null;
+            }
+
+            if (lord == null)
             {
                 Faction lordFaction = servant.Faction ?? Faction.OfPlayer;
                 LordMaker.MakeNewLord(
                     lordFaction,
-                    new LordJob_ServantGuest(Faction.OfPlayer, servant.Position),
+                    new LordJob_DefendPoint(servant.Position, null, null, false, false),
                     servant.Map,
                     new[] { servant });
             }
         }
     }
 
-    // Vanilla LordJob_VisitColony contains the desired guest duties, but its graph also
-    // contains timed/conditional paths to LordToil_ExitMap. Servants have no visit duration.
+    // Kept for old save deserialization. Initialize migrates servants away from this LordJob.
     public sealed class LordJob_ServantGuest : LordJob_VisitColony
     {
         public LordJob_ServantGuest()

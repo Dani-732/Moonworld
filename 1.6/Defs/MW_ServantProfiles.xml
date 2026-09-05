@@ -21,7 +21,7 @@
   </Def>
   <Def Class="MoonWorld.ServantAutonomyProfileDef">
     <defName>MW_QuestLodgerAutonomy</defName>
-    <lordJobKey>QuestLodger</lordJobKey>
+    <lordJobKey>DefendPointGuest</lordJobKey>
     <targetPriorityKey>ServantMasterNormal</targetPriorityKey>
     <spiritFollowDistance>4</spiritFollowDistance>
     <spiritTeleportDistance>10</spiritTeleportDistance>

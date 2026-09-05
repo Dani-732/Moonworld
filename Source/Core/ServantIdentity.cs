@@ -29,7 +29,7 @@ namespace MoonWorld
 
     public class ServantAutonomyProfileDef : Def
     {
-        public string lordJobKey = "QuestLodger";
+        public string lordJobKey = "DefendPointGuest";
         public string targetPriorityKey = "ServantMasterNormal";
         public float spiritFollowDistance = 4f;
         public float spiritTeleportDistance = 10f;
