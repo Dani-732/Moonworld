@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using RimWorld;
 using Verse;
 
 namespace MoonWorld
@@ -69,15 +70,13 @@ namespace MoonWorld
                 return;
             }
 
-            foreach (Map map in Find.Maps)
+            // Includes map-held containers and world pawns without a second persisted contract index.
+            foreach (Pawn pawn in PawnsFinder.AllMapsAndWorld_Alive)
             {
-                foreach (Pawn pawn in map.mapPawns.AllPawnsSpawned)
+                ServantSnapshot snapshot;
+                if (TryGetSnapshot(pawn, out snapshot) && snapshot.master == master && !buffer.Contains(pawn))
                 {
-                    ServantSnapshot snapshot;
-                    if (TryGetSnapshot(pawn, out snapshot) && snapshot.master == master)
-                    {
-                        buffer.Add(pawn);
-                    }
+                    buffer.Add(pawn);
                 }
             }
         }

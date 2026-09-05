@@ -8,6 +8,8 @@ namespace MoonWorld
     {
         public static Job CreateJob(Pawn servant)
         {
+            Job boarding = ServantTravelAutonomy.GetSpiritBoardingJob(servant);
+            if (boarding != null) return boarding;
             Pawn master = ServantQuery.Instance.GetMaster(servant);
             if (CanFollow(servant, master))
             {
@@ -24,6 +26,11 @@ namespace MoonWorld
             if (servant == null || job == null)
             {
                 return false;
+            }
+            if (job.def == JobDefOf.EnterTransporter)
+            {
+                Job boarding = ServantTravelAutonomy.GetSpiritBoardingJob(servant);
+                return boarding != null && boarding.targetA == job.targetA;
             }
             if (job.def == JobDefOf.Wait)
             {

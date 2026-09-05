@@ -64,7 +64,7 @@ namespace MoonWorld
             List<Pawn> bound = new List<Pawn>();
             ServantQuery.Instance.GetBoundServants(master, bound);
             foreach (Pawn servant in bound)
-                if (servant != null && !servant.Destroyed && servant.Spawned && servant.Map == map
+                if (servant != null && !servant.Destroyed && !servant.Dead
                     && servant.TryGetComp<CompServantState>()?.PresenceState != ServantPresenceState.Annihilated)
                     return "该御主已有未湮灭的契约从者。";
             return null;

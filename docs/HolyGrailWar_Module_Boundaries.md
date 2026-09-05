@@ -21,6 +21,7 @@ Defs -> Core 查询/契约 -> Lifecycle 生命周期
 |---|---|---|---|
 | `Core` | 身份查询、契约查询、不可变快照 | `IServantQuery`、`IContractLookup` | 保存可变状态或执行游戏 Tick 逻辑 |
 | `Lifecycle` | 契约绑定、实体/灵体/湮灭状态转换及其派生效果 | `IServantLifecycle` | 魔力运算、索敌、VFX |
+| `Lifecycle` 离图 | 查询契约并验证实际离图队伍完整性 | `ServantDepartureService` | 保存离图队伍副本、传送或强制移动 Pawn |
 | `Core` 生理策略 | 从者无寿命与疾病分类 | `ServantPhysiologyPolicy` | 添加或移除 Hediff |
 | `Prana` | Need 变化、来源管线、维持、断供、自愈及可治疗状态策略 | `PranaCycleService`、`ServantHealingPolicy` | 除请求生命周期服务外直接改变存在状态 |
 | `Combat` | 伤害许可与战败请求 | `IServantDamagePolicy` | 创建特效或直接修改 Need/Hediff |
@@ -95,6 +96,8 @@ Pawn_HealthTracker.CheckForStateChange（普通伤害及其延迟健康后果）
 
 战败灵体化不设置独立实体化冷却。御主供魔不受从者实体或灵体形态限制；战败灵体可持续获得供魔并执行自愈，伤势恢复到不会被原版立即判定为倒地或死亡、且当前格可站立后即可实体化。肉体自愈的目标筛选由 `ServantHealingPolicy` 独立负责：普通伤口逐点治疗，背痛等非伤口有害状态按固定魔力消耗调用原版治愈机制，缺失部位及 MoonWorld 系统状态不进入候选。
 
-仍未实现：顶部小人栏灵体灰显、LordJob 三阶索敌、令咒、宝具迁移。当前从者使用不含离图转换的原版驻点 Lord；御主与从者的显式地图离开生命周期仍未接入。这些功能保持独立，不会以占位代码塞进无关模块。
+离图调用边界：原版组建/重组商队及运输舱确认、商队准备出发消息和发射许可调用 `ServantDepartureService` 验证队伍。`ServantTravelAutonomy` 只接入原版登舱 Lord 与 Duty，灵体仅在分配到登舱队伍后额外允许原版登舱 Job。契约查询通过原版 `PawnsFinder` 覆盖地图容器和世界 Pawn，不新增存档索引。表现层提供原版选择窗口中的契约从者分组。
+
+顶部小人栏灵体灰显、LordJob 三阶索敌、令咒、宝具迁移及完整跨地图机制继续保持独立边界。实际进度与未验收状态仍以 PROJECT_STATUS 为准。
 
 当前进度、已验收提交、结构债务和下一开发切片统一记录在 [PROJECT_STATUS.md](PROJECT_STATUS.md)。

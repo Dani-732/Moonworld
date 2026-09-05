@@ -169,6 +169,7 @@ namespace MoonWorld
 
         private static bool CanReceiveMasterSupply(Pawn servant, Need_Prana prana)
         {
+            if (servant == null || !servant.Spawned) return false;
             CompServantState state = servant?.TryGetComp<CompServantState>();
             return prana != null
                 && servant != null
