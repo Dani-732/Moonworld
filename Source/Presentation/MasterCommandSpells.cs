@@ -42,7 +42,7 @@ namespace MoonWorld
             Command_Action command = new Command_Action
             {
                 defaultLabel = "奇迹重铸：" + servant.LabelShort,
-                defaultDesc = "清除该契约从者全部灵基受损状态，消耗一枚令咒。",
+                defaultDesc = "清除该契约从者全部伤势与灵基受损状态，消耗一枚令咒。",
                 icon = TexButton.Reveal,
                 action = delegate
                 {
@@ -67,13 +67,14 @@ namespace MoonWorld
             rejection = null;
             if (charges <= 0) { rejection = "令咒已耗尽。"; return false; }
             if (!IsValidTarget(master, servant)) { rejection = "目标不是有效的己方契约从者。"; return false; }
-            List<Hediff> damages = servant.health.hediffSet.hediffs;
+            List<Hediff> hediffs = servant.health.hediffSet.hediffs;
             bool removed = false;
-            for (int i = damages.Count - 1; i >= 0; i--)
+            for (int i = hediffs.Count - 1; i >= 0; i--)
             {
-                if (damages[i].def == MW_DefOf.MW_SpiritDamage)
+                Hediff hediff = hediffs[i];
+                if (hediff.def == MW_DefOf.MW_SpiritDamage || hediff is Hediff_Injury)
                 {
-                    servant.health.RemoveHediff(damages[i]);
+                    servant.health.RemoveHediff(hediff);
                     removed = true;
                 }
             }
