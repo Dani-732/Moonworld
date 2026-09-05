@@ -16,6 +16,9 @@ namespace MoonWorld
             Hediff spiritForm = servant.health.hediffSet.GetFirstHediffOfDef(MW_DefOf.MW_SpiritForm);
             if (shouldBeSpirit)
             {
+                if (servant.Drafted) servant.drafter.Drafted = false;
+                servant.mindState?.priorityWork?.ClearPrioritizedWorkAndJobQueue();
+                servant.jobs?.ClearQueuedJobs();
                 if (spiritForm == null)
                 {
                     spiritForm = servant.health.AddHediff(MW_DefOf.MW_SpiritForm);
@@ -39,7 +42,6 @@ namespace MoonWorld
             {
                 StopCurrentActivity(servant);
             }
-
         }
 
         private static void StopCurrentActivity(Pawn servant)

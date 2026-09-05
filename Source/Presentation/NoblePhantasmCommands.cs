@@ -10,12 +10,6 @@ namespace MoonWorld
         {
             var defs = ServantIdentityUtility.GetIdentity(servant)?.noblePhantasms;
             if (defs == null || defs.Count == 0 || servant.Dead || servant.Destroyed) yield break;
-            foreach (AbilityDef def in defs)
-            {
-                Ability ability = servant.abilities?.GetAbility(def);
-                if (ability != null)
-                    foreach (Command command in ability.GetGizmos()) yield return command;
-            }
             var overcharge = new Command_Action
             {
                 defaultLabel = "宝具过载：" + servant.LabelShort,

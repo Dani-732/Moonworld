@@ -6,7 +6,6 @@ try {
     & $compiler /nologo /target:exe /out:$testOutput `
         (Join-Path $PSScriptRoot 'NoblePhantasmTests.cs') `
         (Join-Path $projectRoot 'Source\Abilities\Ability_NoblePhantasm.cs') `
-        (Join-Path $projectRoot 'Source\Presentation\Command_NoblePhantasm.cs') `
         (Join-Path $projectRoot 'Source\Abilities\NoblePhantasmService.cs')
     if ($LASTEXITCODE -ne 0) { throw 'Ability test compilation failed' }
     & $testOutput

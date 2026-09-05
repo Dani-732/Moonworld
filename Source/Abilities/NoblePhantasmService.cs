@@ -39,6 +39,8 @@ namespace MoonWorld
             Pawn servant = ability.pawn;
             string rejection = ValidateContract(ServantQuery.Instance.GetMaster(servant), servant);
             if (rejection != null) return rejection;
+            if (servant.Faction != Faction.OfPlayer || servant.HostFaction != null || servant.IsPrisoner || servant.IsSlave)
+                return "从者当前不受玩家控制。";
             if (!ServantQuery.Instance.IsMaterialized(servant)) return "灵体状态不能释放宝具。";
             if (servant.Downed || servant.InMentalState || servant.WorkTagIsDisabled(WorkTags.Violent))
                 return "从者当前不能施放攻击能力。";

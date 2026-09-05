@@ -6,10 +6,11 @@
     <description>MoonWorld 圣杯战争机制测试用英灵。</description>
     <comps>
       <li Class="MoonWorld.CompProperties_ServantState" />
+      <li Class="MoonWorld.CompProperties_ServantCommands" />
     </comps>
   </ThingDef>
-  <ThingDef ParentName="Human"><defName>MW_ArtoriaSpirit</defName><label>阿尔托莉雅·潘德拉贡</label><comps><li Class="MoonWorld.CompProperties_ServantState" /></comps></ThingDef>
-  <ThingDef ParentName="Human"><defName>MW_EmiyaSpirit</defName><label>卫宫士郎</label><comps><li Class="MoonWorld.CompProperties_ServantState" /></comps></ThingDef>
+  <ThingDef ParentName="Human"><defName>MW_ArtoriaSpirit</defName><label>阿尔托莉雅·潘德拉贡</label><comps><li Class="MoonWorld.CompProperties_ServantState" /><li Class="MoonWorld.CompProperties_ServantCommands" /></comps></ThingDef>
+  <ThingDef ParentName="Human"><defName>MW_EmiyaSpirit</defName><label>卫宫士郎</label><comps><li Class="MoonWorld.CompProperties_ServantState" /><li Class="MoonWorld.CompProperties_ServantCommands" /></comps></ThingDef>
   <PawnKindDef ParentName="BasePlayerPawnKind">
     <defName>MW_TestServant</defName>
     <label>测试英灵</label>

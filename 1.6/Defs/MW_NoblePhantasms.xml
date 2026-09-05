@@ -5,7 +5,6 @@
     <label>测试宝具_魔力爆发</label>
     <description>将魔力在目标地点引爆，造成高爆范围伤害。爆炸会波及范围内的友军和建筑。</description>
     <abilityClass>MoonWorld.Ability_NoblePhantasm</abilityClass>
-    <gizmoClass>MoonWorld.Command_NoblePhantasm</gizmoClass>
     <iconPath>UI/Commands/Attack</iconPath>
     <displayGizmoWhileUndrafted>true</displayGizmoWhileUndrafted>
     <disableGizmoWhileUndrafted>false</disableGizmoWhileUndrafted>

@@ -6,7 +6,8 @@ try {
     & $compiler /nologo /target:exe /out:$testOutput `
         (Join-Path $PSScriptRoot 'MembershipTests.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\ServantColonyMembership.cs') `
-        (Join-Path $projectRoot 'Source\Integration\Harmony_ServantColonyMembership.cs')
+        (Join-Path $projectRoot 'Source\Integration\Harmony_ServantColonyMembership.cs') `
+        (Join-Path $projectRoot 'Source\Integration\Harmony_ServantPlayerControl.cs')
     if ($LASTEXITCODE -ne 0) { throw 'Membership test compilation failed' }
     & $testOutput
     if ($LASTEXITCODE -ne 0) { throw 'Membership scenarios failed' }

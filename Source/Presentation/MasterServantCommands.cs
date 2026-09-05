@@ -46,7 +46,7 @@ namespace MoonWorld
             servants.Sort((left, right) => left.thingIDNumber.CompareTo(right.thingIDNumber));
             foreach (Pawn servant in servants)
             {
-                Command_Action command = CreateCommand(master, servant);
+                Command_Action command = CreatePresenceCommand(master, servant);
                 if (command != null)
                 {
                     yield return command;
@@ -70,7 +70,7 @@ namespace MoonWorld
             return false;
         }
 
-        private static Command_Action CreateCommand(Pawn master, Pawn servant)
+        public static Command_Action CreatePresenceCommand(Pawn master, Pawn servant)
         {
             CompServantState state = servant?.TryGetComp<CompServantState>();
             if (state == null || state.PresenceState == ServantPresenceState.Annihilated)
@@ -83,8 +83,8 @@ namespace MoonWorld
             {
                 defaultLabel = (materialized ? "灵体化：" : "实体化：") + servant.LabelShort,
                 defaultDesc = materialized
-                    ? "命令契约从者进入半透明灵体状态。灵体状态只会跟随御主，不可攻击、工作、进食或被正常选定。"
-                    : "命令契约从者解除灵体状态并恢复自主行动。",
+                    ? "命令契约从者进入半透明灵体状态。灵体只跟随御主，不可攻击、工作或进食，仍可查看状态。"
+                    : "命令契约从者解除灵体状态，恢复工作与战斗控制。",
                 icon = materialized ? TexButton.Suspend : TexButton.Reveal,
                 action = delegate
                 {

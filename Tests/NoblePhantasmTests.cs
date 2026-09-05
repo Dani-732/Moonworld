@@ -19,7 +19,7 @@ internal static class NoblePhantasmTests
         Find.Targeter = new Targeter();
         Map map = new Map();
         master = new Pawn { Map = map, Faction = Faction.OfPlayer };
-        servant = new Pawn { Map = map };
+        servant = new Pawn { Map = map, Faction = Faction.OfPlayer };
         servant.State.Master = master;
         servant.Identity.noblePhantasms.Add(new AbilityDef());
         NoblePhantasmService.EnsureAbilities(servant);
@@ -49,16 +49,10 @@ internal static class NoblePhantasmTests
     }
     public static void Main()
     {
-        Test("master command allows targeting by nonselected servant", () => {
-            new Command_NoblePhantasm(ability, servant).ProcessInput(new UnityEngine.Event());
-            Check(Find.Targeter.Source == ability.verb && Find.Targeter.AllowNonSelected, "targeting would cancel when only master is selected");
-            Check(servant.needs.Prana.CurLevel == 100 && ThingMaker.Last == null, "entering targeting cast the ability");
-        });
-        Test("disabled master command does not start targeting", () => {
-            servant.needs.Prana.CurLevel = 0;
-            new Command_NoblePhantasm(ability, servant).ProcessInput(new UnityEngine.Event());
-            Check(Find.Targeter.Source == null, "disabled ability entered targeting");
-        });
+        Test("nonplayer caster rejected", () => { servant.Faction = new Faction(); Reject(); });
+        Test("hosted caster rejected", () => { servant.HostFaction = Faction.OfPlayer; Reject(); });
+        Test("prisoner caster rejected", () => { servant.IsPrisoner = true; Reject(); });
+        Test("slave caster rejected", () => { servant.IsSlave = true; Reject(); });
         Test("normal cast pays once and attributes Bomb damage to servant", () => {
             Check(Cast(), "cast failed");
             Check(servant.needs.Prana.CurLevel == 60 && ThingMaker.Last.damAmount == 40, "wrong cost or damage");
@@ -142,8 +136,8 @@ namespace Verse
     }
     public class Pawn : Thing
     {
-        public bool Dead, Downed, InMentalState, NoViolence;
-        public Faction Faction; public Pawn_AbilityTracker abilities;
+        public bool Dead, Downed, InMentalState, NoViolence, IsPrisoner, IsSlave;
+        public Faction Faction, HostFaction; public Pawn_AbilityTracker abilities;
         public Needs needs = new Needs(); public Health health = new Health();
         public CompServantState State = new CompServantState();
         public CompMasterCommandSpells Spells = new CompMasterCommandSpells();

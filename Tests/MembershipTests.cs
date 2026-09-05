@@ -74,6 +74,28 @@ internal static class MembershipTests
         PawnsFinder.AllMapsAndWorld_Alive.Add(pawn);
         ServantColonyMembership.ReconcileLoadedGame();
         Check(pawn.Faction == Faction.OfPlayer && pawn.reconciled, "unspawned world pawn included in load migration");
+        foreach (ServantPresenceState state in new[] { ServantPresenceState.VoluntarySpirit, ServantPresenceState.DefeatedSpirit })
+        {
+            pawn = Legacy(state);
+            bool canOrder = true;
+            Harmony_SpiritForm_PlayerOrders.Postfix(pawn, ref canOrder);
+            var drafter = new Pawn_DraftController { pawn = pawn };
+            Check(!canOrder && !Harmony_SpiritForm_Drafting.Prefix(drafter, true), "spirit rejects orders and drafting: " + state);
+            Check(Harmony_SpiritForm_Drafting.Prefix(drafter, false), "spirit can undraft: " + state);
+            bool visible = true;
+            Harmony_SpiritForm_DraftGizmo.Postfix(drafter, ref visible);
+            Check(!visible, "spirit hides draft command: " + state);
+        }
+        foreach (string kind in new[] { "Ordinary", "Servant" })
+        {
+            pawn = new Pawn { kind = kind };
+            bool canOrder = true;
+            Harmony_SpiritForm_PlayerOrders.Postfix(pawn, ref canOrder);
+            Check(canOrder && Harmony_SpiritForm_Drafting.Prefix(new Pawn_DraftController { pawn = pawn }, true), "materialized orders unchanged: " + kind);
+            canOrder = false;
+            Harmony_SpiritForm_PlayerOrders.Postfix(pawn, ref canOrder);
+            Check(!canOrder, "vanilla rejection preserved: " + kind);
+        }
         Console.WriteLine(passed + " membership scenarios passed; real save/load and Harmony require in-game testing.");
     }
 }
@@ -87,6 +109,7 @@ namespace Verse
     {
         public bool Dead, Destroyed, IsPrisoner, IsSlave, throwDuringFactionChange, reconciled;
         public string kind = "Servant";
+        public string LabelShortCap => kind;
         public int prana = 73, factionChanges;
         public Pawn master;
         public ServantPresenceState state;
@@ -96,6 +119,7 @@ namespace Verse
         public WorkSettings workSettings = new WorkSettings();
         public Pawn() { guest = new GuestTracker(this); }
         public Lord GetLord() { return lord; }
+        public bool CanTakeOrder => true;
         public void ChangeKind() { if (Harmony_ServantColonyMembership_KeepKind.Prefix(this)) kind = "Colonist"; }
         public void SetFaction(Faction value)
         {
@@ -137,6 +161,8 @@ namespace Verse.AI.Group
 }
 namespace RimWorld
 {
+    public sealed class Pawn_DraftController { public Pawn pawn; }
+    public sealed class ColonistBarColonistDrawer { public void DrawColonist() { } }
     public sealed class Faction { public static readonly Faction OfPlayer = new Faction(); }
     public sealed class LordJob_DefendPoint { }
     public sealed class LordJob_LoadAndEnterTransporters { }
@@ -152,6 +178,7 @@ namespace MoonWorld
     {
         public static readonly ServantQuery Instance = new ServantQuery();
         public bool IsServant(Pawn pawn) { return pawn.kind == "Servant"; }
+        public bool IsSpirit(Pawn pawn) { return IsServant(pawn) && (pawn.state == ServantPresenceState.VoluntarySpirit || pawn.state == ServantPresenceState.DefeatedSpirit); }
         public bool TryGetSnapshot(Pawn pawn, out ServantSnapshot snapshot)
         {
             snapshot = new ServantSnapshot { master = pawn.master, presenceState = pawn.state };
@@ -159,4 +186,15 @@ namespace MoonWorld
         }
     }
     public static class ServantPresenceEffects { public static void Reconcile(Pawn pawn) { pawn.reconciled = true; } }
+}
+namespace UnityEngine
+{
+    public struct Rect { public Rect ContractedBy(float margin) { return this; } }
+    public struct Color { public Color(float r, float g, float b, float a) { } public static Color white; }
+    public static class GUI { public static Color color; }
+}
+namespace Verse
+{
+    public static class Widgets { public static void DrawBoxSolid(UnityEngine.Rect rect, UnityEngine.Color color) { } }
+    public static class TooltipHandler { public static void TipRegion(UnityEngine.Rect rect, string text) { } }
 }

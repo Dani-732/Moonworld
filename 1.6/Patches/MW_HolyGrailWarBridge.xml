@@ -4,6 +4,7 @@
     <xpath>Defs/AlienRace.ThingDef_AlienRace[defName="GWW_HeroicSpirit"]/comps</xpath>
     <value>
       <li Class="MoonWorld.CompProperties_ServantState" />
+      <li Class="MoonWorld.CompProperties_ServantCommands" />
     </value>
   </Operation>
 </Patch>
