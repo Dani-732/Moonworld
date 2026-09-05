@@ -118,10 +118,12 @@ namespace MoonWorld
                 explosion.instigator = servant;
                 explosion.damAmount = Mathf.RoundToInt(settings.damage * (pending == null ? 1f : settings.overchargeDamageMultiplier));
                 explosion.armorPenetration = settings.armorPenetration;
+                explosion.doVisualEffects = true;
+                explosion.doSoundEffects = true;
                 if (pending == null) prana.CurLevel -= settings.pranaCost;
                 else servant.health.RemoveHediff(pending);
                 GenSpawn.Spawn(explosion, target.Cell, map);
-                explosion.StartExplosion(null, null);
+                explosion.StartExplosion(DamageDefOf.Bomb.soundExplosion, null);
                 ability.CompleteCast(target);
                 return true;
             }

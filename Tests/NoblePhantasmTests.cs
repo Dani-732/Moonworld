@@ -16,6 +16,7 @@ internal static class NoblePhantasmTests
         ThingMaker.Last = null;
         ThingMaker.Fail = GenSpawn.Fail = Explosion.Fail = Ability.FailComplete = false;
         Explosion.Callback = null;
+        Find.Targeter = new Targeter();
         Map map = new Map();
         master = new Pawn { Map = map, Faction = Faction.OfPlayer };
         servant = new Pawn { Map = map };
@@ -48,11 +49,23 @@ internal static class NoblePhantasmTests
     }
     public static void Main()
     {
+        Test("master command allows targeting by nonselected servant", () => {
+            new Command_NoblePhantasm(ability, servant).ProcessInput(new UnityEngine.Event());
+            Check(Find.Targeter.Source == ability.verb && Find.Targeter.AllowNonSelected, "targeting would cancel when only master is selected");
+            Check(servant.needs.Prana.CurLevel == 100 && ThingMaker.Last == null, "entering targeting cast the ability");
+        });
+        Test("disabled master command does not start targeting", () => {
+            servant.needs.Prana.CurLevel = 0;
+            new Command_NoblePhantasm(ability, servant).ProcessInput(new UnityEngine.Event());
+            Check(Find.Targeter.Source == null, "disabled ability entered targeting");
+        });
         Test("normal cast pays once and attributes Bomb damage to servant", () => {
             Check(Cast(), "cast failed");
             Check(servant.needs.Prana.CurLevel == 60 && ThingMaker.Last.damAmount == 40, "wrong cost or damage");
             Check(ThingMaker.Last.instigator == servant && ThingMaker.Last.radius == 3, "wrong instigator or radius");
             Check(ThingMaker.Last.damType == DamageDefOf.Bomb && ability.CooldownTicksRemaining == 300, "wrong damage type or cooldown");
+            Check(ThingMaker.Last.doVisualEffects && ThingMaker.Last.doSoundEffects
+                && ThingMaker.Last.Sound == DamageDefOf.Bomb.soundExplosion, "vanilla Bomb effects or sound disabled");
             Check(!Cast() && servant.needs.Prana.CurLevel == 60, "cooldown bypass");
         });
         Test("exact magic cost accepted", () => { servant.needs.Prana.CurLevel = 40; Check(Cast() && servant.needs.Prana.CurLevel == 0, "boundary failed"); });
@@ -98,7 +111,12 @@ internal static class NoblePhantasmTests
     }
 }
 
-namespace UnityEngine { public static class Mathf { public static int RoundToInt(float f) => (int)Math.Round(f); } }
+namespace UnityEngine
+{
+    public class Event { }
+    public static class Mathf { public static int RoundToInt(float f) => (int)Math.Round(f); }
+}
+namespace Verse.Sound { public static class SoundExtensions { public static void PlayOneShotOnCamera(this object sound) { } } }
 namespace Verse
 {
     public class Map { }
@@ -149,10 +167,11 @@ namespace Verse
     public static class HediffMaker { public static Hediff MakeHediff(object def, Pawn pawn) => new Hediff { def = def }; }
     public class Explosion : Thing
     {
+        public bool doVisualEffects, doSoundEffects; public object Sound;
         public static bool Fail; public static Action Callback;
         public float radius, armorPenetration; public object damType; public Thing instigator; public int damAmount;
         public void StartExplosion(object sound, object ignored)
-        { if (Fail) throw new Exception("injected initialization failure"); Callback?.Invoke(); }
+        { Sound = sound; if (Fail) throw new Exception("injected initialization failure"); Callback?.Invoke(); }
     }
     public static class ThingMaker
     {
@@ -166,11 +185,31 @@ namespace Verse
     }
     public static class Messages { public static void Message(string s, object type, bool historical) { } }
     public static class Log { public static void Error(string s) { } }
+    public static class Find
+    {
+        public static Targeter Targeter = new Targeter();
+        public static DesignatorManager DesignatorManager = new DesignatorManager();
+    }
+    public class DesignatorManager { public void Deselect() { } }
 }
 namespace RimWorld
 {
+    public class Targeter
+    {
+        public Verb Source; public bool AllowNonSelected;
+        public void BeginTargeting(Verb source, bool allowNonSelectedTargetingSource = false)
+        { Source = source; AllowNonSelected = allowNonSelectedTargetingSource; }
+    }
+    public class Command_Ability
+    {
+        protected Ability ability;
+        public Command_Ability(Ability ability, Pawn pawn) { this.ability = ability; }
+        public virtual void ProcessInput(UnityEngine.Event ev) { }
+    }
+    public static class SoundDefOf { public static object Tick_Tiny = new object(); }
     public class Faction { public static Faction OfPlayer = new Faction(); }
-    public static class DamageDefOf { public static object Bomb = new object(); }
+    public class DamageDef { public object soundExplosion = new object(); }
+    public static class DamageDefOf { public static DamageDef Bomb = new DamageDef(); }
     public static class ThingDefOf { public static object Explosion = new object(); }
     public static class MessageTypeDefOf { public static object RejectInput = new object(); }
     public class AbilityDef
@@ -188,6 +227,7 @@ namespace RimWorld
         public Ability(Pawn pawn) { this.pawn = pawn; }
         public Ability(Pawn pawn, AbilityDef def) { this.pawn = pawn; this.def = def; }
         public virtual AcceptanceReport CanCast => CooldownTicksRemaining == 0;
+        public bool GizmoDisabled(out string reason) { reason = "disabled"; return !CanCast; }
         public virtual string Tooltip => "";
         public void ResetCooldown() { CooldownTicksRemaining = 0; }
         public virtual bool Activate(LocalTargetInfo target, LocalTargetInfo dest)
