@@ -3,24 +3,28 @@
   <NeedDef>
     <defName>MW_Prana</defName>
     <label>从者魔力</label>
+    <description>维持从者现世、修复伤势及释放宝具所需的魔力储备。</description>
     <needClass>MoonWorld.Need_Prana</needClass>
     <showOnNeedList>true</showOnNeedList>
   </NeedDef>
   <NeedDef>
     <defName>MW_MasterPrana</defName>
     <label>御主魔力</label>
+    <description>御主通过魔术回路积蓄的魔力，可用于向契约从者供魔。</description>
     <needClass>MoonWorld.Need_MasterPrana</needClass>
     <showOnNeedList>true</showOnNeedList>
   </NeedDef>
   <HediffDef>
     <defName>MW_PranaShortage</defName>
     <label>魔力不足</label>
+    <description>从者的魔力低于维持基准线，持续断供将损伤灵基。</description>
     <hediffClass>Verse.HediffWithComps</hediffClass>
     <isBad>true</isBad>
   </HediffDef>
   <HediffDef>
     <defName>MW_SpiritDamage</defName>
     <label>灵基受损</label>
+    <description>战败或持续断供造成的灵基损伤，累积至第四级时从者湮灭。</description>
     <hediffClass>Verse.HediffWithComps</hediffClass>
     <isBad>true</isBad>
   </HediffDef>

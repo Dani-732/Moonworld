@@ -44,6 +44,7 @@
     <defaultFactionDef>MW_WarOpposition</defaultFactionDef>
     <combatPower>60</combatPower>
     <isFighter>true</isFighter>
+    <initialResistanceRange>0~0</initialResistanceRange>
     <minGenerationAge>20</minGenerationAge>
     <maxGenerationAge>50</maxGenerationAge>
     <weaponMoney>200~300</weaponMoney>

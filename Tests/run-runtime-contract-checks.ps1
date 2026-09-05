@@ -54,6 +54,23 @@ try {
         throw 'Command seals must not be granted by random trait generation'
     }
     [xml]$mwOpposition = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_WarOpposition.xml') -Raw
+    if ([string]::IsNullOrWhiteSpace($mwOpposition.SelectSingleNode('/Defs/PawnKindDef[defName="MW_EnemyMaster"]/initialResistanceRange').InnerText)) {
+        throw 'Enemy humanlike master requires an initial resistance range'
+    }
+    [xml]$mwNeeds = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_Needs_Hediffs.xml') -Raw
+    foreach ($mwNeed in $mwNeeds.SelectNodes('/Defs/NeedDef | /Defs/HediffDef')) {
+        if ([string]::IsNullOrWhiteSpace($mwNeed.description)) { throw "Missing description: $($mwNeed.defName)" }
+    }
+    [xml]$mwLegacy = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_SummonedServants.xml') -Raw
+    foreach ($mwItem in $mwLegacy.SelectNodes('/Defs/ThingDef')) {
+        if ([string]::IsNullOrWhiteSpace($mwItem.statBases.Mass)) { throw "Missing authored mass: $($mwItem.defName)" }
+        if ($mwItem.ParentName -eq 'ApparelBase' -and $mwItem.smeltable -ne 'false') {
+            throw "Legacy apparel without material returns cannot be smeltable: $($mwItem.defName)"
+        }
+        if ($mwItem.ParentName -eq 'BaseWeapon' -and ([string]::IsNullOrWhiteSpace($mwItem.techLevel) -or $mwItem.techLevel -eq 'Undefined')) {
+            throw "Missing weapon tech level: $($mwItem.defName)"
+        }
+    }
     $mwFaction = $mwOpposition.SelectSingleNode('/Defs/FactionDef[defName="MW_WarOpposition"]')
     if ($mwOpposition.SelectNodes('/Defs/DutyDef[defName="MW_EnemyServantAssault"]/thinkNode/subNodes/li[1][@Class="MoonWorld.JobGiver_EnemyServantAssault"]').Count -ne 1) {
         throw 'Enemy duty must run servant targeting before vanilla assault fallback'
