@@ -7,7 +7,7 @@ namespace MoonWorld
 {
     public static class ServantDepartureService
     {
-        public static bool IsContractGuest(Pawn pawn)
+        public static bool IsContractServant(Pawn pawn)
         {
             ServantSnapshot snapshot;
             return pawn != null && !pawn.Dead && !pawn.Destroyed
@@ -15,7 +15,14 @@ namespace MoonWorld
                 && snapshot.presenceState != ServantPresenceState.Annihilated
                 && snapshot.master != null && !snapshot.master.Dead
                 && snapshot.master.Faction == Faction.OfPlayer
-                && pawn.HostFaction == Faction.OfPlayer && !pawn.IsPrisoner && !pawn.IsSlave;
+                && pawn.Faction == Faction.OfPlayer && pawn.HostFaction == null
+                && !pawn.IsPrisoner && !pawn.IsSlave;
+        }
+
+        // Compatibility name for existing Harmony call sites; semantics are now faction-based.
+        public static bool IsContractGuest(Pawn pawn)
+        {
+            return IsContractServant(pawn);
         }
 
         public static bool CanDepartTogether(IEnumerable<Pawn> departing, out string rejection)
@@ -27,7 +34,7 @@ namespace MoonWorld
             foreach (Pawn pawn in party)
             {
                 if (pawn == null || pawn.Dead || pawn.Destroyed) continue;
-                if (IsContractGuest(pawn) && !party.Contains(ServantQuery.Instance.GetMaster(pawn)))
+                if (IsContractServant(pawn) && !party.Contains(ServantQuery.Instance.GetMaster(pawn)))
                 {
                     rejection = pawn.LabelShortCap + " 必须与契约御主加入同一离图队伍。";
                     return false;

@@ -29,8 +29,7 @@ namespace MoonWorld
             Pawn generated = null;
             try
             {
-                Faction faction = Find.FactionManager.FirstFactionOfDef(FactionDefOf.OutlanderCivil) ?? Faction.OfAncients;
-                generated = PawnGenerator.GeneratePawn(new PawnGenerationRequest(selected.servantKind, faction, PawnGenerationContext.NonPlayer));
+                generated = PawnGenerator.GeneratePawn(new PawnGenerationRequest(selected.servantKind, Faction.OfPlayer, PawnGenerationContext.NonPlayer));
                 GenSpawn.Spawn(generated, cell, map, WipeMode.Vanish);
                 // The source mod's PostSpawnSetup owns appearance, loadout and body visibility.
                 if (!ServantLifecycleService.Instance.TryBind(master, generated, out rejection))

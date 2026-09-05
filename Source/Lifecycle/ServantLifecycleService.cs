@@ -29,6 +29,12 @@ namespace MoonWorld
                 rejection = "目标不是 MoonWorld 从者。";
                 return false;
             }
+            if (master.Faction != Faction.OfPlayer || master.Dead || servant.Dead || servant.Destroyed
+                || servant.IsPrisoner || servant.IsSlave)
+            {
+                rejection = "契约需要存活的玩家御主和非囚犯、非奴隶的从者。";
+                return false;
+            }
 
             CompServantState state = servant.TryGetComp<CompServantState>();
             if (state == null)
@@ -44,7 +50,7 @@ namespace MoonWorld
 
             state.Bind(master);
             state.SetPresence(ServantPresenceState.Materialized);
-            QuestLodgerAutonomyService.Initialize(servant);
+            ServantColonyMembership.Initialize(servant, newContract: true);
             ServantPresenceEffects.Reconcile(servant);
             return true;
         }

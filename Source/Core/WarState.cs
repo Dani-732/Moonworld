@@ -9,6 +9,11 @@ namespace MoonWorld
 
         public GameComponent_MoonWorld(Game game) { }
 
+        public override void LoadedGame()
+        {
+            ServantColonyMembership.ReconcileLoadedGame();
+        }
+
         public override void GameComponentTick()
         {
             int interval = Mathf.Max(1, MW_DefOf.MW_HolyGrailWarSettings.pranaUpdateIntervalTicks);

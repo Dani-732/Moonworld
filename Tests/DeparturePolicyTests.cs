@@ -20,7 +20,7 @@ internal static class DeparturePolicyTests
     private static void Main()
     {
         Pawn master = new Pawn { LabelShortCap = "Master", Faction = Faction.OfPlayer };
-        Pawn guest = new Pawn { LabelShortCap = "Guest", HostFaction = Faction.OfPlayer,
+        Pawn guest = new Pawn { LabelShortCap = "Guest", Faction = Faction.OfPlayer,
             state = new CompServantState { Master = master } };
         Pawn ordinary = new Pawn { LabelShortCap = "Ordinary", Faction = Faction.OfPlayer };
         ServantQuery.Pawns.Add(guest);
@@ -46,7 +46,7 @@ internal static class DeparturePolicyTests
         guest.Dead = true;
         Check(ServantDepartureService.CanDepartTogether(new[] { master }, out reason), "dead servant no longer blocks");
         guest.Dead = false;
-        Pawn other = new Pawn { LabelShortCap = "Second", HostFaction = Faction.OfPlayer,
+        Pawn other = new Pawn { LabelShortCap = "Second", Faction = Faction.OfPlayer,
             state = new CompServantState { Master = master } };
         ServantQuery.Pawns.Add(other);
         Check(!ServantDepartureService.CanDepartTogether(new[] { master, guest }, out reason), "all bound servants required");
@@ -57,9 +57,9 @@ internal static class DeparturePolicyTests
         master.caravan = null;
         master.carryTracker.CarriedThing = guest;
         Check(ServantDepartureService.CanExitIndividually(master, false, out reason), "carried companion belongs to departure party");
-        Check(ServantDepartureService.IsContractGuest(guest), "guest identity retained");
+        Check(ServantDepartureService.IsContractServant(guest), "player contract identity recognized");
         guest.IsPrisoner = true;
-        Check(!ServantDepartureService.IsContractGuest(guest), "prisoners do not gain guest travel privileges");
+        Check(!ServantDepartureService.IsContractServant(guest), "prisoners do not gain contract travel privileges");
         Console.WriteLine(passed + " departure scenarios passed; Unity AI and save/load require in-game testing.");
     }
 }

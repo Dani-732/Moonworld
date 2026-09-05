@@ -40,14 +40,6 @@ namespace MoonWorld
                 StopCurrentActivity(servant);
             }
 
-            CompServantState state = servant.TryGetComp<CompServantState>();
-            if (state?.PresenceState == ServantPresenceState.Materialized
-                && state.Master != null
-                && servant.Spawned
-                && !servant.Dead)
-            {
-                QuestLodgerAutonomyService.Initialize(servant);
-            }
         }
 
         private static void StopCurrentActivity(Pawn servant)

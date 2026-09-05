@@ -31,9 +31,9 @@ namespace MoonWorld
                 pawn.needs.AddOrRemoveNeedsAsAppropriate();
                 PawnNeedAccess.EnsureNeed(pawn, MW_DefOf.MW_Prana);
                 NoblePhantasmService.EnsureAbilities(pawn);
-                if (master != null)
+                if (master != null && !respawningAfterLoad)
                 {
-                    QuestLodgerAutonomyService.Initialize(pawn);
+                    ServantColonyMembership.Initialize(pawn);
                 }
                 ServantPresenceEffects.Reconcile(pawn);
             }
