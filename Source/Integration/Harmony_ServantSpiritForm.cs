@@ -36,12 +36,36 @@ namespace MoonWorld
     {
         private const float SpiritOpacity = 0.3f;
 
+        public static bool Prefix(Pawn __0, ref float __result)
+        {
+            if (__0 != null && __0.Dead && ServantQuery.Instance.IsServant(__0))
+            {
+                __result = 1f;
+                return false;
+            }
+            return true;
+        }
+
         public static void Postfix(Pawn __0, ref float __result)
         {
-            if (ServantQuery.Instance.IsSpirit(__0))
+            if (__0 != null && !__0.Dead && ServantQuery.Instance.IsSpirit(__0))
             {
                 __result = SpiritOpacity;
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(InvisibilityUtility), nameof(InvisibilityUtility.IsPsychologicallyInvisible))]
+    public static class Harmony_SpiritForm_DeadPawnVisibility
+    {
+        public static bool Prefix(Pawn pawn, ref bool __result)
+        {
+            if (pawn != null && pawn.Dead && ServantQuery.Instance.IsServant(pawn))
+            {
+                __result = false;
+                return false;
+            }
+            return true;
         }
     }
 

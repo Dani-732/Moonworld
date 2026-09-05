@@ -9,6 +9,11 @@ namespace MoonWorld
     {
         private static readonly List<Pawn> boundServants = new List<Pawn>();
 
+        public static void Prefix(Pawn __instance)
+        {
+            ServantLifecycleService.Instance.PrepareForVanillaDeath(__instance);
+        }
+
         public static void Postfix(Pawn __instance)
         {
             if (!MasterCircuitUtility.HasCircuit(__instance))

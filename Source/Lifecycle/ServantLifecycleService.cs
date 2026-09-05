@@ -188,6 +188,45 @@ namespace MoonWorld
             }
         }
 
+        public bool TryPreserveSpirit(Pawn servant, Hediff triggeringHediff = null)
+        {
+            CompServantState state = servant == null ? null : servant.TryGetComp<CompServantState>();
+            if (state == null || !ServantQuery.Instance.IsSpirit(servant) || state.DefeatResolutionInProgress)
+            {
+                return false;
+            }
+
+            state.SetDefeatResolutionInProgress(true);
+            try
+            {
+                return ServantFatalDamageRecovery.TryStabilize(servant, triggeringHediff);
+            }
+            finally
+            {
+                state.SetDefeatResolutionInProgress(false);
+            }
+        }
+
+        public void PrepareForVanillaDeath(Pawn servant)
+        {
+            CompServantState state = servant == null ? null : servant.TryGetComp<CompServantState>();
+            if (state == null || state.PresenceState == ServantPresenceState.Annihilated)
+            {
+                return;
+            }
+
+            state.SetDefeatResolutionInProgress(true);
+            try
+            {
+                state.SetPresence(ServantPresenceState.Annihilated);
+                ServantPresenceEffects.Reconcile(servant);
+            }
+            finally
+            {
+                state.SetDefeatResolutionInProgress(false);
+            }
+        }
+
         public void Annihilate(Pawn servant, ServantEndReason reason)
         {
             CompServantState state = servant == null ? null : servant.TryGetComp<CompServantState>();
@@ -196,8 +235,7 @@ namespace MoonWorld
                 return;
             }
 
-            state.SetPresence(ServantPresenceState.Annihilated);
-            ServantPresenceEffects.Reconcile(servant);
+            PrepareForVanillaDeath(servant);
             servant.Kill(null);
         }
 

@@ -19,7 +19,15 @@ namespace MoonWorld
             if (state != null
                 && (state.PresenceState == ServantPresenceState.VoluntarySpirit
                     || state.PresenceState == ServantPresenceState.DefeatedSpirit)
-                && (__instance.ShouldBeDead() || (!__instance.Downed && __instance.ShouldBeDowned())))
+                && __instance.ShouldBeDead())
+            {
+                return !ServantLifecycleService.Instance.TryPreserveSpirit(___pawn, hediff);
+            }
+            if (state != null
+                && (state.PresenceState == ServantPresenceState.VoluntarySpirit
+                    || state.PresenceState == ServantPresenceState.DefeatedSpirit)
+                && !__instance.Downed
+                && __instance.ShouldBeDowned())
             {
                 return false;
             }

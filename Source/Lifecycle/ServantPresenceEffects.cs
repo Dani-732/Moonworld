@@ -41,7 +41,10 @@ namespace MoonWorld
             }
 
             CompServantState state = servant.TryGetComp<CompServantState>();
-            if (state?.Master != null && servant.Spawned && !servant.Dead)
+            if (state?.PresenceState == ServantPresenceState.Materialized
+                && state.Master != null
+                && servant.Spawned
+                && !servant.Dead)
             {
                 QuestLodgerAutonomyService.Initialize(servant);
             }
