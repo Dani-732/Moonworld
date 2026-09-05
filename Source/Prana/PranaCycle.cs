@@ -230,7 +230,7 @@ namespace MoonWorld
             }
             if (shortage.ageTicks >= profile.shortageDurationTicks)
             {
-                ServantLifecycleService.Instance.ResolveDefeat(servant);
+                ServantLifecycleService.Instance.TryResolveDefeat(servant);
             }
         }
 

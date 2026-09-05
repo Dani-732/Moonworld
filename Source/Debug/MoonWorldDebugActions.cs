@@ -155,6 +155,30 @@ namespace MoonWorld
             Messages.Message("已执行一次魔力结算。", MessageTypeDefOf.PositiveEvent, false);
         }
 
+        [DebugAction("MoonWorld/战败测试", "选中从者：施加普通致命伤", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
+        public static void ApplyFatalDamageToSelectedServant()
+        {
+            Pawn servant;
+            if (!TryGetSelectedServant(out servant) || !ServantQuery.Instance.IsMaterialized(servant))
+            {
+                return;
+            }
+
+            BodyPartRecord brain = servant.health.hediffSet.GetBrain();
+            BodyPartRecord target = brain ?? servant.RaceProps.body.corePart;
+            servant.TakeDamage(new DamageInfo(DamageDefOf.Cut, 99999f, 999f, -1f, null, target));
+        }
+
+        [DebugAction("MoonWorld/战败测试", "选中从者：直接处决（应死亡）", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
+        public static void KillSelectedServantDirectly()
+        {
+            Pawn servant;
+            if (TryGetSelectedServant(out servant))
+            {
+                servant.Kill(null);
+            }
+        }
+
         private static bool TryGetSelectedMaster(out Pawn master)
         {
             master = Find.Selector.SingleSelectedThing as Pawn;

@@ -46,7 +46,7 @@ namespace MoonWorld
         bool TryBind(Pawn master, Pawn servant, out string rejection);
         bool TryEnterVoluntarySpirit(Pawn master, Pawn servant);
         bool TryRematerialize(Pawn master, Pawn servant);
-        void ResolveDefeat(Pawn servant);
+        bool TryResolveDefeat(Pawn servant, Hediff triggeringHediff = null);
         void Annihilate(Pawn servant, ServantEndReason reason);
     }
 }

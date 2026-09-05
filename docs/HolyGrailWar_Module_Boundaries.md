@@ -76,11 +76,15 @@ Pawn.PreApplyDamage
   -> IServantDamagePolicy
   -> 放行或吸收
 
+Pawn_HealthTracker.CheckForStateChange（普通伤害及其延迟健康后果）
+  -> IServantDefeatPolicy
+  -> IServantLifecycle.TryResolveDefeat
+
 御主死亡 / 地图离开 / 灵体命令 / 战败
   -> IServantLifecycle
 ```
 
-魔力管线是正常玩法中写入魔力 Need 的唯一入口。直接 `Pawn.Kill` 不经过战败处理。后续战斗切片只能在原版 `PreApplyDamage` 流程仍有效时请求战败转换。
+魔力管线是正常玩法中写入魔力 Need 的唯一入口。直接 `Pawn.Kill` 不经过战败处理。战败适配器只在伤害已经通过 `PreApplyDamage` 门控、且原版健康检查将触发倒地或死亡时请求战败转换；生命周期服务负责最低限度修复和状态结算。
 
 ## 已实现的开发切片
 
@@ -88,4 +92,6 @@ Pawn.PreApplyDamage
 
 灵体状态切片已经实现：御主持有的状态命令、同图与实体化落点校验、全 PawnRenderTree 节点 30% 不透明表现、复用 Core 心理不可见机制阻止普通索敌、灵体止血、根据权威状态定期校正派生效果、只跟随御主的专用 Job，以及攻击和能力入口门控。`MW_SpiritForm` 使用原版 Hediff `MoveSpeed` 统计倍率将移动速度提高至 300%；灵体近距离移动调用原版 Pawn 寻路，距离超过自治 Def 阈值时才使用原版位置与传送通知闪现到御主附近，不修改普通 Pawn 寻路、地形或建筑。该切片没有增加持久状态或自定义移速代码。
 
-仍未实现：战败拦截、顶部小人栏灵体灰显、LordJob 三阶索敌、令咒、宝具迁移。从者自治 LordJob 已阻止访客自行离图，但御主与从者的显式地图离开生命周期仍未接入。这些功能保持独立，不会以占位代码塞进无关模块。
+战败切片已经实现：原版 `CheckForStateChange` 前置适配、普通伤害及失血等延迟后果的倒地/死亡判定、本次致命伤的最低限度修复、战败资源与状态结算，以及灵体状态下的原版倒地/死亡状态检查抑制。致命部位缺失仅移除造成死亡的缺失状态；未缺失的致命伤或失血只降低到刚好不再致死，其他伤口与非致命缺失部位保留。重新实体化同时要求原版 `ShouldBeDead` 和 `ShouldBeDowned` 均为否。直接 `Pawn.Kill` 不经过本切片。
+
+仍未实现：顶部小人栏灵体灰显、LordJob 三阶索敌、令咒、宝具迁移。从者自治 LordJob 已阻止访客自行离图，但御主与从者的显式地图离开生命周期仍未接入。这些功能保持独立，不会以占位代码塞进无关模块。

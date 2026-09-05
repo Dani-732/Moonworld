@@ -124,6 +124,11 @@ namespace MoonWorld
                 rejection = "从者必须位于可站立、可通行的格子上才能实体化。";
                 return false;
             }
+            if (servant.health.ShouldBeDead() || servant.health.ShouldBeDowned())
+            {
+                rejection = "从者当前伤势仍会导致死亡或倒地，无法实体化。";
+                return false;
+            }
 
             state.SetPresence(ServantPresenceState.Materialized);
             state.SetRematerializationReadyTick(-1);
@@ -131,18 +136,24 @@ namespace MoonWorld
             return true;
         }
 
-        // Combat will call this after its vanilla-state-change integration has established a normal defeat.
-        public void ResolveDefeat(Pawn servant)
+        public bool TryResolveDefeat(Pawn servant, Hediff triggeringHediff = null)
         {
             CompServantState state = servant == null ? null : servant.TryGetComp<CompServantState>();
             if (state == null || state.PresenceState != ServantPresenceState.Materialized || state.DefeatResolutionInProgress)
             {
-                return;
+                return false;
             }
 
             state.SetDefeatResolutionInProgress(true);
             try
             {
+                if (servant.health.ShouldBeDead()
+                    && !ServantFatalDamageRecovery.TryStabilize(servant, triggeringHediff))
+                {
+                    Log.Warning("[MoonWorld] 无法稳定从者 " + servant.LabelShortCap + " 的致命伤，交还原版死亡流程。");
+                    return false;
+                }
+
                 Need_Prana prana = servant.needs.TryGetNeed<Need_Prana>();
                 if (prana != null)
                 {
@@ -160,12 +171,13 @@ namespace MoonWorld
                 if (profile == null || spiritDamage.Severity >= profile.maxSpiritDamageStages)
                 {
                     Annihilate(servant, ServantEndReason.SpiritDamageLimit);
-                    return;
+                    return true;
                 }
 
                 state.SetPresence(ServantPresenceState.DefeatedSpirit);
                 state.SetRematerializationReadyTick(Find.TickManager.TicksGame + profile.rematerializationCooldownTicks);
                 ServantPresenceEffects.Reconcile(servant);
+                return true;
             }
             finally
             {
