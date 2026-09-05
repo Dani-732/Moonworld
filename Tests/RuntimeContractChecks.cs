@@ -71,11 +71,24 @@ internal static class RuntimeContractChecks
         if (mod.GetType("MoonWorld.LordJob_ServantGuest") == null) throw new Exception("Legacy lord type removed");
         if (mod.GetType("MoonWorld.GameComponent_MoonWorld").GetField("warStartTick") == null)
             throw new Exception("War start field removed");
+        Assembly game = Assembly.LoadFrom(Path.Combine(directories[1], "Assembly-CSharp.dll"));
+        foreach (string[] pair in new[] {
+            new[] { "MoonWorld.ScenPart_HolyGrailWar", "RimWorld.ScenPart" },
+            new[] { "MoonWorld.IncidentWorker_HolyGrailWarInvitation", "RimWorld.IncidentWorker" },
+            new[] { "MoonWorld.ChoiceLetter_HolyGrailWar", "Verse.ChoiceLetter" },
+            new[] { "MoonWorld.HolyGrailWarEntry", "Verse.IExposable" } })
+        {
+            Type implementation = mod.GetType(pair[0]);
+            Type contract = game.GetType(pair[1]);
+            if (implementation == null || contract == null || !contract.IsAssignableFrom(implementation)
+                || implementation.GetConstructor(Type.EmptyTypes) == null)
+                throw new Exception("Invalid XML/Scribe entry type: " + pair[0]);
+        }
         foreach (string removed in new[] { "Harmony_ServantDeparture_Selectable", "Harmony_ServantDeparture_NoCapture",
             "Harmony_ServantTravelAutonomy", "Harmony_ServantTravelBoardingDuty", "Harmony_ServantTravelSection",
             "Harmony_ServantTravel_NoHaulingStandingGuest", "Command_NoblePhantasm" })
             if (mod.GetType("MoonWorld." + removed) != null) throw new Exception("Obsolete adapter remains: " + removed);
         Console.WriteLine(patches + " Harmony targets and injected parameter types resolved against installed RimWorld 1.6.");
-        Console.WriteLine("Legacy types and removed adapters checked. This does not execute patches or start Unity.");
+        Console.WriteLine("Legacy types, removed adapters and four scenario/incident/letter/save types checked. This does not execute patches or start Unity.");
     }
 }

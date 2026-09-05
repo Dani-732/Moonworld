@@ -33,7 +33,27 @@ try {
     if ($mwBridge.SelectNodes('//value/li[@Class="MoonWorld.CompProperties_ServantCommands"]').Count -ne 1) {
         throw 'Servant presentation component missing or duplicated'
     }
-    Write-Host "$($mwXmlFiles.Count) XML files parsed; native ability configuration and installed prototype patch target checked."
+    [xml]$mwEntry = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_HolyGrailWarEntry.xml') -Raw
+    [xml]$mwClassic = Get-Content (Join-Path $RimWorldPath 'Data\Core\Defs\Scenarios\Scenarios_Classic.xml') -Raw
+    $mwScenario = $mwEntry.SelectSingleNode('/Defs/ScenarioDef[defName="MW_HolyGrailWar"]')
+    $mwParent = $mwClassic.SelectSingleNode('/Defs/ScenarioDef[@Name="Crashlanded"]')
+    if ($mwScenario.ParentName -ne 'Crashlanded' -or $null -eq $mwParent -or
+        $mwScenario.label -notmatch '[\u4e00-\u9fff]' -or $mwScenario.description -notmatch '[\u4e00-\u9fff]' -or
+        $mwScenario.scenario.summary -notmatch '[\u4e00-\u9fff]') {
+        throw 'Chinese scenario content or installed scenario parent missing'
+    }
+    if ($mwParent.SelectSingleNode('scenario/parts/li[@Class="ScenPart_ConfigPage_ConfigureStartingPawns"]/pawnCount').InnerText -ne '3' -or
+        $mwScenario.SelectNodes('scenario/parts/li[@Class="MoonWorld.ScenPart_HolyGrailWar"][def="MW_HolyGrailWarStart"]').Count -ne 1 -or
+        $mwEntry.SelectSingleNode('/Defs/ScenPartDef[defName="MW_HolyGrailWarStart"]/scenPartClass').InnerText -ne 'MoonWorld.ScenPart_HolyGrailWar' -or
+        $mwEntry.SelectSingleNode('/Defs/LetterDef[defName="MW_HolyGrailWarInvitation"]/letterClass').InnerText -ne 'MoonWorld.ChoiceLetter_HolyGrailWar' -or
+        $mwEntry.SelectSingleNode('/Defs/IncidentDef[defName="MW_HolyGrailWarInvitation"]/workerClass').InnerText -ne 'MoonWorld.IncidentWorker_HolyGrailWarInvitation') {
+        throw 'Scenario or invitation Def linkage invalid'
+    }
+    [xml]$mwTraits = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_MasterCircuit.xml') -Raw
+    if ($mwTraits.SelectSingleNode('/Defs/TraitDef[defName="MW_CommandSpell"]/commonality').InnerText -ne '0') {
+        throw 'Command seals must not be granted by random trait generation'
+    }
+    Write-Host "$($mwXmlFiles.Count) XML files parsed; native ability, installed prototype target, Chinese scenario parent and entry Def links checked."
 }
 finally {
     if (Test-Path -LiteralPath $testOutput) { Remove-Item -LiteralPath $testOutput }

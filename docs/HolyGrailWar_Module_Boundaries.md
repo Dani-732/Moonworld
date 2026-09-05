@@ -28,6 +28,8 @@ Defs -> Core 查询/契约 -> Lifecycle 生命周期
 | `Prana` | Need 变化、来源管线、维持、断供、自愈及可治疗状态策略 | `PranaCycleService`、`ServantHealingPolicy` | 除请求生命周期服务外直接改变存在状态 |
 | `Combat` | 伤害许可与战败请求 | `IServantDamagePolicy` | 创建特效或直接修改 Need/Hediff |
 | `Lifecycle` 成员身份 | 玩家派系加入、旧 Guest 迁移及角色身份保护 | `ServantColonyMembership` | 保存第二份契约或工作/能力数值 |
+| `Core` 战争事件记录 | 开战 Tick、本届指定御主与一次常规召唤资格的存档 | `GameComponent_MoonWorld`、`HolyGrailWarEntry` | 角色终身召唤次数、阶段二战争状态机 |
+| `Lifecycle` 事件接入与召唤 | 接受者验证、令咒授予、召唤生成与失败清理 | `HolyGrailWarEntryService`、`ServantSummoningService` | 以己方人口数量限制从者、添加额外取得途径 |
 | `Autonomy` | 灵体跟随移动及灵体原版登舱 Job | `SpiritFollowJobPolicy`、`ServantTravelAutonomy` | 改变契约或伤害规则 |
 | `Abilities` | 能力消耗、有效性与结算结果 | `Ability_NoblePhantasm`、`NoblePhantasmService` | 自写渲染或直接写入生命周期字段 |
 | `Presentation` | Gizmo、声音、VFX 与渲染 | 只消费结果数据 | 充当玩法权威 |
@@ -39,6 +41,7 @@ Defs -> Core 查询/契约 -> Lifecycle 生命周期
 
 ```text
 GameComponent_MoonWorld.warStartTick
+GameComponent_MoonWorld.currentWarEntry -> HolyGrailWarEntry.designatedMaster / regularSummonUsed
 CompServantState.master
 CompServantState.presenceState
 CompMasterPranaControl.supplyThresholdOverride
@@ -46,6 +49,8 @@ CompMasterCommandSpells.commandSpellCharges
 ```
 
 魔力数值继续由 `Need_MasterPrana` 和 `Need_Prana` 保存；断供时长使用原版 Hediff 的 `ageTicks`，灵基受损使用 Hediff 的 severity。运行时递归保护不存档。契约反向索引由查询服务即时重建，不存档。
+
+本届事件资格属于战争接受记录，不附着在 Pawn 生命周期上。原版 Incident / ScenPart 发出同一种 ChoiceLetter；玩家指定回路持有者后调用 `HolyGrailWarEntryService.TryAccept`。原版信件负责拒绝、延后、到期和归档；资格记录独立于信件的删除。正式 `Command_Target` 与调试入口调用同一召唤服务，只有全部成功才消费资格并记录 `warStartTick`。不新增注册表、通用事件框架或多届战争生命周期。参战记录中的 Pawn 引用仅标明资格接受者，契约仍仅由从者组件保存。
 
 宝具能力与冷却使用原版 `Pawn_AbilityTracker` / `Ability` 存档。过载使用目标从者身上的 `MW_NoblePhantasmOvercharge` Hediff，不另存御主侧 pending 布尔值或目标引用；无超时、不可叠加，只在下一次成功释放 MoonWorld 宝具时消费。
 

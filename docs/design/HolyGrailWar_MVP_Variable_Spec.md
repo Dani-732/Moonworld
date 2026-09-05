@@ -19,6 +19,7 @@
 11. 御主魔力高于供魔安全线时，向所有未湮灭且未满魔的契约从者均分溢出魔力，不受实体或灵体形态限制；从者满魔即退出均分池。
 12. MVP 中只有英灵施放的攻击可以伤害实体化英灵；其他普通伤害在应用前拦截。直接 `Kill` 不拦截。
 13. 御主死亡时，其所有未湮灭的契约从者立即湮灭；实体化从者可以承受环境伤害，但免疫疾病、衰老和饥饿值归零的原版后果。
+14. 当前只做一届圣杯战争。事件由玩家指定一名有回路的自由殖民者接受，授予三划令咒和本届唯一一次常规召唤资格；不是每名殖民者各有一次，也不是角色终身标记。无己方从者总数上限，额外英灵取得方式不在 MVP 内。
 
 ## 2. 数据归属原则
 
@@ -27,6 +28,7 @@
 | 事实类型 | 唯一归属 |
 |---|---|
 | 战争开局时间 | `GameComponent` |
+| 本届事件指定的御主与常规召唤资格 | `GameComponent_MoonWorld.currentWarEntry` 深存 `HolyGrailWarEntry` |
 | 从者与御主的契约关系、灵体状态 | `CompServantState` |
 | 御主当前魔力 | `Need_MasterPrana` |
 | 御主回路天赋 | 回路 Trait 的 `DefModExtension` -> `MasterCircuitDef` |
@@ -41,11 +43,16 @@
 
 ## 3. 全局战争组件
 
-建议类型：`HolyGrailWarGameComponent : GameComponent`
+类型：`GameComponent_MoonWorld : GameComponent`，保留现有类型名和 `warStartTick` 键。
 
 | 字段 | 类型 | 存档 | 默认值 | 说明 |
 |---|---|---:|---:|---|
 | `warStartTick` | `int` | 是 | `-1` | 唯一自定义全局战争进度。`-1` 为未开战；开战时记录 `Find.TickManager.TicksGame`。 |
+| `currentWarEntry` | `HolyGrailWarEntry` | 深存 | `null` | 本届事件的接受记录，内含 `designatedMaster` Pawn 引用及 `regularSummonUsed` 布尔值。不是全局战争阶段，不含契约副本。 |
+
+接受事件时创建记录并授予令咒，不开战；唯一召唤服务完成生成、落地和绑定后才消费资格并幂等记录首次开战。两种操作均不可重复领取，取消/失败不消耗资格。Pawn 上不增加终身召唤标记或每人次数表。当前没有事件结束、重开或转让资格 API。
+
+旧档兼容：缺少 `currentWarEntry` 且 `warStartTick >= 0` 时创建已使用记录；无法可靠还原指定人时引用为空，但仍不能重新接取或召唤。不更改已有契约与剩余令咒。尚未开战的旧档需通过邀请指定接受者，不根据回路或旧令咒自动授予资格。
 
 以下均为推导值，不作为字段存档：
 
@@ -282,7 +289,7 @@ MVP 不创建 `hasMystery`、神秘度等级或攻击源注册表。判定只依
 | `commandSpellCharges` | `int` | 是 | `3` | 御主剩余令咒。 |
 | `MW_NoblePhantasmOvercharge` | 目标从者 Hediff | 原版保存 | 无 | 等待目标从者下一次成功释放 MoonWorld 宝具，无超时、不可叠加；不在御主组件保存 pending 布尔值。 |
 
-令咒 Trait 只表示资格。不要把计数存入 Trait，也不要在御主侧再保存 `boundServant` 引用；从者的 `master` 字段是唯一契约关系来源。
+令咒 Trait 只表示令咒身份，随机生成权重为 0；是否可以常规召唤还需本届事件指定与未用资格。不要把计数存入 Trait，也不要在御主侧再保存 `boundServant` 引用；从者的 `master` 字段是唯一契约关系来源。第一次接受本届事件授予三划令咒，重复接受不会重置计数。
 
 令咒动作必须先验证目标和效果，再扣除计数：
 
