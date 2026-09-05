@@ -24,7 +24,7 @@ Defs -> Core 查询/契约 -> Lifecycle 生命周期
 | `Core` 生理策略 | 从者无寿命与疾病分类 | `ServantPhysiologyPolicy` | 添加或移除 Hediff |
 | `Prana` | Need 变化、来源管线、维持、断供、自愈 | `IPranaSource` | 除请求生命周期服务外直接改变存在状态 |
 | `Combat` | 伤害许可与战败请求 | `IServantDamagePolicy` | 创建特效或直接修改 Need/Hediff |
-| `Autonomy` | Quest Lodger 贵客初始化、原版访客 Lord/Duty 与索敌策略 | `IServantAutonomyPolicy` | 改变契约或伤害规则 |
+| `Autonomy` | Quest Lodger 贵客初始化、原版访客 Lord/Duty、灵体跟随移动与索敌策略 | `IServantAutonomyPolicy` | 改变契约或伤害规则 |
 | `Abilities` | 能力消耗、有效性与结算结果 | `INoblePhantasmResolver` | 渲染或直接写入生命周期字段 |
 | `Presentation` | Gizmo、声音、VFX 与渲染 | 只消费结果数据 | 充当玩法权威 |
 | `Integration` | 接入原版方法的窄 Harmony 补丁，包括按身份过滤 Need | 不提供状态 API | 保存状态或实现跨模块业务流程 |
@@ -86,6 +86,6 @@ Pawn.PreApplyDamage
 
 基础切片已经实现：独立 Mod 外壳、静态参数 Def、身份与契约查询、从者状态组件、魔力 Need 管线、从者自然饥饿抑制、伤害白名单、御主死亡清理、无寿命与疾病免疫、睡眠 Need 抑制、中立贵客测试召唤、不会自行离图的原版访客 Lord、御主与魔力调试按钮，以及可拖动的御主供魔安全线 Gizmo。
 
-灵体状态切片已经实现：御主持有的状态命令、同图转换校验、全 PawnRenderTree 节点 50% 不透明表现、复用 Core 心理不可见机制阻止普通索敌、灵体止血、根据权威状态定期校正派生效果、只跟随御主的专用原版 Follow Job，以及攻击和能力入口门控。该切片没有增加持久状态。
+灵体状态切片已经实现：御主持有的状态命令、同图与实体化落点校验、全 PawnRenderTree 节点 30% 不透明表现、复用 Core 心理不可见机制阻止普通索敌、灵体止血、根据权威状态定期校正派生效果、无视地形只跟随御主的专用 Job，以及攻击和能力入口门控。灵体移动仅更新从者位置并调用原版传送通知，不修改普通 Pawn 寻路、地形或建筑。该切片没有增加持久状态。
 
 仍未实现：战败拦截、顶部小人栏灵体灰显、LordJob 三阶索敌、令咒、宝具迁移。从者自治 LordJob 已阻止访客自行离图，但御主与从者的显式地图离开生命周期仍未接入。这些功能保持独立，不会以占位代码塞进无关模块。

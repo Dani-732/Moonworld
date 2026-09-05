@@ -2,7 +2,7 @@
 <Defs>
   <JobDef>
     <defName>MW_SpiritFollow</defName>
-    <driverClass>JobDriver_Follow</driverClass>
+    <driverClass>MoonWorld.JobDriver_SpiritFollow</driverClass>
     <reportString>以灵体状态跟随 TargetA。</reportString>
   </JobDef>
 </Defs>

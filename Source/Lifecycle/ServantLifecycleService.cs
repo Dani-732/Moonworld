@@ -119,6 +119,11 @@ namespace MoonWorld
                 rejection = "从者当前不是可解除的灵体状态。";
                 return false;
             }
+            if (!servant.Position.Standable(servant.Map))
+            {
+                rejection = "从者必须位于可站立、可通行的格子上才能实体化。";
+                return false;
+            }
 
             state.SetPresence(ServantPresenceState.Materialized);
             state.SetRematerializationReadyTick(-1);

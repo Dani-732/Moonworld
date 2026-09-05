@@ -34,7 +34,7 @@ namespace MoonWorld
     [HarmonyPatch(typeof(InvisibilityUtility), nameof(InvisibilityUtility.GetAlpha))]
     public static class Harmony_SpiritForm_RenderAlpha
     {
-        private const float SpiritOpacity = 0.5f;
+        private const float SpiritOpacity = 0.3f;
 
         public static void Postfix(Pawn __0, ref float __result)
         {
