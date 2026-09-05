@@ -1,5 +1,6 @@
 using RimWorld;
 using Verse;
+using Verse.AI;
 
 namespace MoonWorld
 {
@@ -19,6 +20,7 @@ namespace MoonWorld
         public static LetterDef MW_HolyGrailWarInvitation;
         public static FactionDef MW_WarOpposition;
         public static PawnKindDef MW_EnemyMaster;
+        public static DutyDef MW_EnemyServantAssault;
         public static PawnKindDef MW_TestServant;
         public static PawnKindDef MW_Artoria;
         public static PawnKindDef MW_Emiya;

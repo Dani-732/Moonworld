@@ -55,6 +55,9 @@ try {
     }
     [xml]$mwOpposition = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_WarOpposition.xml') -Raw
     $mwFaction = $mwOpposition.SelectSingleNode('/Defs/FactionDef[defName="MW_WarOpposition"]')
+    if ($mwOpposition.SelectNodes('/Defs/DutyDef[defName="MW_EnemyServantAssault"]/thinkNode/subNodes/li[1][@Class="MoonWorld.JobGiver_EnemyServantAssault"]').Count -ne 1) {
+        throw 'Enemy duty must run servant targeting before vanilla assault fallback'
+    }
     if ($mwFaction.hidden -ne 'true' -or $mwFaction.permanentEnemy -ne 'true' -or
         $mwFaction.raidsForbidden -ne 'true' -or $mwFaction.startingCountAtWorldCreation -ne '0' -or
         $mwFaction.autoFlee -ne 'false' -or $mwFaction.pawnGroupMakers) {

@@ -34,6 +34,10 @@ internal static class EnemyPranaTests
             master.needs.Master.CurLevel = 0; Cycle(); Near(servant.needs.Prana.CurLevel, 50.975f); Near(master.needs.Master.CurLevel, 0);
         });
         Test("enemy supply works without a master need", () => { master.needs.Master = null; Cycle(); Near(servant.needs.Prana.CurLevel, 50.975f); });
+        Test("off-map master supplies lone raiding servant", () => {
+            master.Spawned = false; Find.Maps[0].mapPawns.AllPawnsSpawned.Remove(master); master.needs.Master = null;
+            Cycle(); Near(servant.needs.Prana.CurLevel, 50.975f);
+        });
         Test("spirit receives fixed supply with spirit upkeep", () => {
             servant.State.PresenceState = ServantPresenceState.DefeatedSpirit; Cycle(); Near(servant.needs.Prana.CurLevel, 50.99375f);
         });

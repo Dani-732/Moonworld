@@ -30,7 +30,8 @@ namespace MoonWorld
                 || ServantQuery.Instance.GetMaster(servant) != master
                 || servant.TryGetComp<CompServantState>()?.PresenceState == ServantPresenceState.Annihilated)
                 return "目标不是有效的契约从者。";
-            if (!master.Spawned || !servant.Spawned || master.Map != servant.Map)
+            if (!EnemyContractUtility.CanReceiveSupply(servant)
+                && (!master.Spawned || !servant.Spawned || master.Map != servant.Map))
                 return "御主与从者必须处于同一张地图。";
             return null;
         }

@@ -6,6 +6,8 @@ try {
     & $compiler /nologo /target:exe /out:$testOutput `
         (Join-Path $PSScriptRoot 'EnemyRetreatTests.cs') `
         (Join-Path $projectRoot 'Source\Autonomy\LordJob_EnemyWarParty.cs') `
+        (Join-Path $projectRoot 'Source\Autonomy\EnemyTargetingPolicy.cs') `
+        (Join-Path $projectRoot 'Source\Autonomy\JobGiver_EnemyServantAssault.cs') `
         (Join-Path $projectRoot 'Source\Autonomy\SpiritFollowJobPolicy.cs')
     if ($LASTEXITCODE -ne 0) { throw 'Enemy retreat tests did not compile' }
     & $testOutput

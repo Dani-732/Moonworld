@@ -26,10 +26,6 @@ namespace MoonWorld
             Pawn playerMaster = entry.DesignatedMaster;
             if (playerMaster != null && (playerMaster.Dead || !playerMaster.Spawned || playerMaster.Map != map))
             { rejection = "本届玩家御主必须存活并位于该地图。"; return false; }
-            IntVec3 servantCell;
-            if (!CellFinder.TryFindRandomCellNear(cell, map, 3,
-                c => c != cell && c.Standable(map) && !c.Fogged(map), out servantCell))
-            { rejection = "附近没有可供敌方从者落地的位置。"; return false; }
 
             generating = true;
             Pawn master = null;
@@ -57,17 +53,19 @@ namespace MoonWorld
                     PawnGenerationContext.NonPlayer, forceGenerateNewPawn: true, canGeneratePawnRelations: false,
                     validatorPreGear: pawn => { servant = pawn; return true; }));
                 if (servant == null) throw new InvalidOperationException("敌方从者生成失败。");
-                GenSpawn.Spawn(master, cell, map, WipeMode.Vanish);
-                GenSpawn.Spawn(servant, servantCell, map, WipeMode.Vanish);
-                if (!master.CanReachMapEdge() || !servant.CanReachMapEdge())
+                // The master stays off-map; only the servant takes part in the raid.
+                Find.WorldPawns.PassToWorld(master, PawnDiscardDecideMode.KeepForever);
+                GenSpawn.Spawn(servant, cell, map, WipeMode.Vanish);
+                if (!servant.CanReachMapEdge())
                     throw new InvalidOperationException("敌方落点必须有可通行的撤退路线。");
                 if (!ServantLifecycleService.Instance.TryBindEnemy(master, servant, out rejection))
                     throw new InvalidOperationException(rejection);
                 Need_Prana prana = servant.needs.TryGetNeed<Need_Prana>();
                 if (prana == null) throw new InvalidOperationException("敌方从者缺少魔力 Need。");
                 prana.CurLevel = prana.MaxLevel;
-                lord = LordMaker.MakeNewLord(faction, new LordJob_EnemyWarParty(), map, new[] { master, servant });
-                if (master.Dead || servant.Dead || !master.Spawned || !servant.Spawned
+                lord = LordMaker.MakeNewLord(faction, new LordJob_EnemyWarParty(), map, new[] { servant });
+                if (master.Dead || master.Destroyed || servant.Dead || master.Spawned || !servant.Spawned
+                    || !Find.WorldPawns.Contains(master)
                     || !EnemyContractUtility.HasEnemyContract(servant))
                     throw new InvalidOperationException("敌方生成后身份或契约无效。");
                 entry.RecordEnemyDeployment(master, servant);

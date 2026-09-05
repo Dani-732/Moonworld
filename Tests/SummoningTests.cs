@@ -20,7 +20,8 @@ internal static class SummoningTests
         Find.TickManager.TicksGame = 1234;
         Find.WorldPawns.Pawns.Clear();
         PawnGenerator.Created.Clear(); Find.FactionManager = new FactionManager();
-        CellFinder.Fail = Verse.AI.Group.LordMaker.Fail = false;
+        CellFinder.Fail = Verse.AI.Group.LordMaker.Fail = Pawn.EdgeBlocked = false;
+        Find.WorldPawns.FailPass = false;
         PawnGenerator.Last = null; PawnGenerator.Fail = 0; PawnGenerator.Callback = null;
         GenSpawn.Fail = ServantLifecycleService.Fail = false;
         GenSpawn.Callback = null; ServantLifecycleService.Callback = null;
@@ -73,6 +74,10 @@ internal static class SummoningTests
             Check(EnemyContractUtility.HasEnemyContract(State.CurrentWarEntry.EnemyServant)
                 && State.CurrentWarEntry.EnemyMaster.Faction != Faction.OfPlayer
                 && State.CurrentWarEntry.EnemyServant.Identity.warClass == HolyGrailWarClass.Archer, "incorrect pair");
+            Check(!State.CurrentWarEntry.EnemyMaster.Spawned && Find.WorldPawns.Contains(State.CurrentWarEntry.EnemyMaster)
+                && State.CurrentWarEntry.EnemyServant.Spawned, "master entered raid or was not retained");
+            Check(Verse.AI.Group.LordMaker.LastPawns.Length == 1
+                && Verse.AI.Group.LordMaker.LastPawns[0] == State.CurrentWarEntry.EnemyServant, "raid contains master");
             Check(!Deploy() && State.warStartTick == 1234, "repeat deployed or changed time");
         });
         Test("enemy generation failure preserves player settlement", () => { PrepareEnemy(); PawnGenerator.Fail = 1; FailedDeployment(); });
@@ -80,14 +85,16 @@ internal static class SummoningTests
         Test("enemy spawn failure cleans both generated pawns", () => { PrepareEnemy(); GenSpawn.Fail = true; FailedDeployment(); });
         Test("enemy partial binding failure cleans both pawns", () => { PrepareEnemy(); ServantLifecycleService.Fail = true; FailedDeployment(); });
         Test("enemy lord failure rolls back pair", () => { PrepareEnemy(); Verse.AI.Group.LordMaker.Fail = true; FailedDeployment(); });
+        Test("world master retention failure rolls back pair", () => { PrepareEnemy(); Find.WorldPawns.FailPass = true; FailedDeployment(); });
         Test("enemy placement failure permits retry", () => {
-            PrepareEnemy(); CellFinder.Fail = true; FailedDeployment(); CellFinder.Fail = false; Check(Deploy(), "retry failed");
+            PrepareEnemy(); Pawn.EdgeBlocked = true; FailedDeployment(); Pawn.EdgeBlocked = false; Check(Deploy(), "retry failed");
         });
         Test("enemy deployment and identities survive round trip", () => {
             PrepareEnemy(); Check(Deploy(), "deployment failed"); Pawn enemy = State.CurrentWarEntry.EnemyServant;
             State.ExposeData(); Scribe.Loading = true; Current.Game = new Game(); State.ExposeData(); State.LoadedGame();
             Check(State.CurrentWarEntry.EnemyServant == enemy && State.CurrentWarEntry.EnemyIdentity == enemy.Identity
                 && !Deploy(), "reloaded opponent replaced");
+            Check(!State.CurrentWarEntry.EnemyMaster.Spawned && Find.WorldPawns.Contains(State.CurrentWarEntry.EnemyMaster), "world master lost on reload");
         });
         Test("dead enemy cannot respawn", () => {
             PrepareEnemy(); Check(Deploy(), "deployment failed"); State.CurrentWarEntry.EnemyMaster.Dead = true;
@@ -205,11 +212,13 @@ namespace Verse
     public class TickManager { public int TicksGame; }
     public class WorldPawns
     {
+        public bool FailPass;
         public HashSet<Pawn> Pawns = new HashSet<Pawn>();
         public bool Contains(Pawn p) => Pawns.Contains(p);
         public void RemoveAndDiscardPawnViaGC(Pawn p) { Pawns.Remove(p); }
         public void RemovePawn(Pawn p) { Pawns.Remove(p); }
-        public void PassToWorld(Pawn p, RimWorld.Planet.PawnDiscardDecideMode mode) { Pawns.Add(p); }
+        public void PassToWorld(Pawn p, RimWorld.Planet.PawnDiscardDecideMode mode)
+        { Pawns.Add(p); if (FailPass) throw new Exception("world retention"); }
     }
     public class Map { public bool IsPlayerHome = true, CanEverExit = true; public Verse.AI.Group.LordManager lordManager = new Verse.AI.Group.LordManager(); }
     public struct IntVec3 { public bool Valid, Fog; public int Id; public bool InBounds(Map m) => Valid; public bool Standable(Map m) => Valid; public bool Fogged(Map m) => Fog;
@@ -226,7 +235,8 @@ namespace Verse
         public Map Map;
         public ServantIdentityDef Identity;
         public Needs needs = new Needs();
-        public bool CanReachMapEdge() => true;
+        public static bool EdgeBlocked;
+        public bool CanReachMapEdge() => !EdgeBlocked;
         public Story story = new Story();
         public CompMasterCommandSpells Spells;
         public CompServantState State = new CompServantState();
@@ -350,5 +360,6 @@ namespace Verse.AI.Group
 {
     public class Lord { }
     public class LordManager { public void RemoveLord(Lord l) { } }
-    public static class LordMaker { public static bool Fail; public static Lord MakeNewLord(Faction f, object job, Map m, Pawn[] pawns) { if (Fail) throw new Exception("lord"); return new Lord(); } }
+    public static class LordMaker { public static bool Fail; public static Pawn[] LastPawns;
+        public static Lord MakeNewLord(Faction f, object job, Map m, Pawn[] pawns) { LastPawns = pawns; if (Fail) throw new Exception("lord"); return new Lord(); } }
 }

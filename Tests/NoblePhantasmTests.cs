@@ -54,6 +54,11 @@ internal static class NoblePhantasmTests
             master.Faction = servant.Faction = new Faction { Enemy = true };
             Check(Cast() && servant.needs.Prana.CurLevel == 60 && ability.CooldownTicksRemaining == 300, "enemy settlement differs");
         });
+        Test("enemy casts with off-map master and pays normal cost", () => {
+            master.Faction = servant.Faction = new Faction { Enemy = true }; master.Spawned = false; master.Map = null;
+            Check(Cast() && servant.needs.Prana.CurLevel == 60, "remote enemy contract cannot cast");
+        });
+        Test("player still cannot cast with off-map master", () => { master.Spawned = false; master.Map = null; Reject(); });
         Test("enemy cannot use command seal overcharge", () => {
             master.Faction = servant.Faction = new Faction { Enemy = true }; string reason;
             Check(!NoblePhantasmService.TryOvercharge(master, servant, out reason) && master.Spells.Charges == 3, "enemy seal used");

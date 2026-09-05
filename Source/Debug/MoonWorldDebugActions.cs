@@ -7,7 +7,7 @@ namespace MoonWorld
 {
     public static class MoonWorldDebugActions
     {
-        [DebugAction("MoonWorld/敌方测试", "在鼠标处部署本届敌对主从", actionType = DebugActionType.ToolMap, allowedGameStates = AllowedGameStates.PlayingOnMap)]
+        [DebugAction("MoonWorld/敌方测试", "在鼠标处部署本届突袭从者", actionType = DebugActionType.ToolMap, allowedGameStates = AllowedGameStates.PlayingOnMap)]
         public static void DeployEnemyWarParty()
         {
             string rejection;
@@ -17,7 +17,7 @@ namespace MoonWorld
                 return;
             }
             HolyGrailWarEntry entry = Current.Game.GetComponent<GameComponent_MoonWorld>().CurrentWarEntry;
-            Messages.Message(entry.EnemyIdentity.warClass + " 阵营主从已进入战场。",
+            Messages.Message(entry.EnemyIdentity.warClass + " 从者独自进入战场，敌方御主留守场外。",
                 entry.EnemyServant, MessageTypeDefOf.ThreatBig, false);
         }
 
@@ -27,6 +27,14 @@ namespace MoonWorld
             Pawn servant = Find.Selector.SingleSelectedThing as Pawn;
             if (EnemyContractUtility.HasEnemyContract(servant))
                 ServantLifecycleService.Instance.TryResolveDefeat(servant);
+        }
+
+        [DebugAction("MoonWorld/敌方测试", "本届场外敌方御主：模拟死亡", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
+        public static void KillOffMapEnemyMaster()
+        {
+            Pawn master = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.EnemyMaster;
+            if (master != null && !master.Spawned && !master.Dead && !master.Destroyed)
+                master.Kill(null);
         }
 
         [DebugAction("MoonWorld", "将选中殖民者设为御主", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]

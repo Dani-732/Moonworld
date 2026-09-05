@@ -8,6 +8,8 @@ namespace MoonWorld
     public sealed class LordJob_EnemyWarParty : LordJob
     {
         private const string RetreatMemo = "MW_EnemyRetreat";
+        private Pawn preferredTarget;
+        private int lastTargetScanTick = -1;
         public override bool AddFleeToil => false;
         public override bool CanAutoAddPawns => false;
         public bool Retreating => lord.CurLordToil is LordToil_ExitMap;
@@ -15,7 +17,7 @@ namespace MoonWorld
         public override StateGraph CreateGraph()
         {
             StateGraph graph = new StateGraph();
-            LordToil assault = new LordToil_AssaultColony();
+            LordToil assault = new LordToil_EnemyServantAssault();
             LordToil exit = new LordToil_ExitMap(LocomotionUrgency.Jog, interruptCurrentJob: true);
             graph.AddToil(assault);
             graph.AddToil(exit);
@@ -35,13 +37,39 @@ namespace MoonWorld
                 || entry.EnemyServant.IsPrisoner || ServantQuery.Instance.IsSpirit(entry.EnemyServant))
             {
                 lord.ReceiveMemo(RetreatMemo);
-                Messages.Message("敌方主从退出本次交战，开始撤退。", MessageTypeDefOf.NeutralEvent, false);
+                Messages.Message("敌方从者退出本次交战，开始撤退。", MessageTypeDefOf.NeutralEvent, false);
                 return;
+            }
+            Pawn previous = preferredTarget;
+            Pawn current = GetPreferredTarget(entry.EnemyServant);
+            if (previous != current)
+            {
+                entry.EnemyServant.mindState.enemyTarget = null;
+                entry.EnemyServant.jobs.EndCurrentJob(JobCondition.InterruptForced);
             }
             if (Find.TickManager.TicksGame % 250 == 0) TryUseTestNoblePhantasm(entry.EnemyServant);
         }
 
-        private static void TryUseTestNoblePhantasm(Pawn servant)
+        public Pawn GetPreferredTarget(Pawn servant)
+        {
+            if (Retreating || !servant.Spawned || !EnemyContractUtility.HasEnemyContract(servant)) return null;
+            int tick = Find.TickManager.TicksGame;
+            if (lastTargetScanTick < 0 || tick - lastTargetScanTick >= 250
+                || (preferredTarget != null && !EnemyTargetingPolicy.IsServantTarget(servant, preferredTarget)))
+            {
+                preferredTarget = EnemyTargetingPolicy.FindPreferredTarget(servant);
+                lastTargetScanTick = tick;
+            }
+            return preferredTarget;
+        }
+
+        public override bool ValidateAttackTarget(Pawn searcher, Thing target)
+        {
+            return GetPreferredTarget(searcher) == null
+                || (target is Pawn pawn && EnemyTargetingPolicy.IsServantTarget(searcher, pawn));
+        }
+
+        private void TryUseTestNoblePhantasm(Pawn servant)
         {
             if (!servant.Spawned || servant.stances.FullBodyBusy) return;
             var defs = ServantIdentityUtility.GetIdentity(servant)?.noblePhantasms;
@@ -55,7 +83,7 @@ namespace MoonWorld
                 foreach (Pawn candidate in servant.Map.mapPawns.AllPawnsSpawned)
                 {
                     if (candidate.Dead || candidate.Downed || !candidate.HostileTo(servant)
-                        || ServantQuery.Instance.IsSpirit(candidate)) continue;
+                        || ServantQuery.Instance.IsSpirit(candidate) || !ValidateAttackTarget(servant, candidate)) continue;
                     float current = (candidate.Position - servant.Position).LengthHorizontalSquared;
                     if (current >= distance || !ability.verb.ValidateTarget(new LocalTargetInfo(candidate.Position), false)) continue;
                     bool friendlyInBlast = false;
@@ -71,6 +99,21 @@ namespace MoonWorld
                     ability.QueueCastingJob(new LocalTargetInfo(target.Position), LocalTargetInfo.Invalid);
                     return;
                 }
+            }
+        }
+    }
+
+    public sealed class LordToil_EnemyServantAssault : LordToil_AssaultColony
+    {
+        public override void UpdateAllDuties()
+        {
+            foreach (Pawn pawn in lord.ownedPawns)
+            {
+                DutyDef duty = EnemyContractUtility.HasEnemyContract(pawn)
+                    ? MW_DefOf.MW_EnemyServantAssault : DutyDefOf.AssaultColony;
+                if (pawn.mindState.duty?.def == duty) continue;
+                pawn.mindState.duty = new PawnDuty(duty);
+                pawn.jobs.EndCurrentJob(JobCondition.InterruptForced);
             }
         }
     }
