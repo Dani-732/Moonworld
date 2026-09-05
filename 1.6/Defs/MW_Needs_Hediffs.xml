@@ -34,6 +34,9 @@
     <stages>
       <li>
         <totalBleedFactor>0</totalBleedFactor>
+        <statFactors>
+          <MoveSpeed>3</MoveSpeed>
+        </statFactors>
       </li>
     </stages>
     <comps>

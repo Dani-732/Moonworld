@@ -323,6 +323,7 @@ MVP 不创建 `hasMystery`、神秘度等级或攻击源注册表。判定只依
 | 配置 | 类型 | 说明 |
 |---|---|---|
 | `pranaUpdateIntervalTicks` | `int` | 统一低频结算周期，覆盖魔力、进食转魔、维持、断供与自愈，建议 60 至 250 Tick。 |
+| `MW_SpiritForm.statFactors.MoveSpeed` | `float` | 灵体共通移动速度倍率，当前为 `3`；直接使用原版 Hediff StatFactor，不保存到 Pawn，也不增加自定义应用代码。 |
 | `spiritDamageMaxStage` | `int` | 固定为 4。 |
 
 ### 10.3 英灵共通种族规则
