@@ -38,4 +38,15 @@
     <earliestDay>3</earliestDay>
     <minRefireDays>15</minRefireDays>
   </IncidentDef>
+  <IncidentDef>
+    <defName>MW_HolyGrailWarEnemyServantRaid</defName>
+    <label>敌方从者突袭</label>
+    <category>ThreatSmall</category>
+    <targetTags><li>Map_PlayerHome</li></targetTags>
+    <workerClass>MoonWorld.IncidentWorker_EnemyServantRaid</workerClass>
+    <baseChance>0.08</baseChance>
+    <earliestDay>8</earliestDay>
+    <minRefireDays>10</minRefireDays>
+    <requireColonistsPresent>true</requireColonistsPresent>
+  </IncidentDef>
 </Defs>

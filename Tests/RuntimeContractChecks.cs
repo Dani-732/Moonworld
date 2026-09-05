@@ -75,6 +75,7 @@ internal static class RuntimeContractChecks
         foreach (string[] pair in new[] {
             new[] { "MoonWorld.ScenPart_HolyGrailWar", "RimWorld.ScenPart" },
             new[] { "MoonWorld.IncidentWorker_HolyGrailWarInvitation", "RimWorld.IncidentWorker" },
+            new[] { "MoonWorld.IncidentWorker_EnemyServantRaid", "RimWorld.IncidentWorker" },
             new[] { "MoonWorld.ChoiceLetter_HolyGrailWar", "Verse.ChoiceLetter" },
             new[] { "MoonWorld.HolyGrailWarEntry", "Verse.IExposable" },
             new[] { "MoonWorld.LordJob_EnemyWarParty", "Verse.AI.Group.LordJob" },

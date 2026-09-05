@@ -49,6 +49,10 @@ try {
         $mwEntry.SelectSingleNode('/Defs/IncidentDef[defName="MW_HolyGrailWarInvitation"]/workerClass').InnerText -ne 'MoonWorld.IncidentWorker_HolyGrailWarInvitation') {
         throw 'Scenario or invitation Def linkage invalid'
     }
+    $mwRaid = $mwEntry.SelectSingleNode('/Defs/IncidentDef[defName="MW_HolyGrailWarEnemyServantRaid"]')
+    if (($null -eq $mwRaid) -or ($mwRaid.workerClass -ne 'MoonWorld.IncidentWorker_EnemyServantRaid') -or ($mwRaid.targetTags.li -ne 'Map_PlayerHome') -or ($mwRaid.requireColonistsPresent -ne 'true')) {
+        throw 'Enemy servant raid incident linkage invalid'
+    }
     [xml]$mwTraits = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_MasterCircuit.xml') -Raw
     if ($mwTraits.SelectSingleNode('/Defs/TraitDef[defName="MW_CommandSpell"]/commonality').InnerText -ne '0') {
         throw 'Command seals must not be granted by random trait generation'
