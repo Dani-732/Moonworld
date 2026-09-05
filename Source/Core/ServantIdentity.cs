@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using RimWorld;
+using UnityEngine;
 using Verse;
 
 namespace MoonWorld
@@ -8,6 +10,10 @@ namespace MoonWorld
         public PawnKindDef servantKind;
         public ServantResourceProfileDef resourceProfile;
         public ServantAutonomyProfileDef autonomyProfile;
+        public string fixedName;
+        public ThingDef requiredWeapon;
+        public ThingDef requiredApparel;
+        public HairDef requiredHair;
         public List<NoblePhantasmDef> noblePhantasms = new List<NoblePhantasmDef>();
     }
 
@@ -81,6 +87,26 @@ namespace MoonWorld
         public static ServantResourceProfileDef GetProfile(Pawn pawn)
         {
             return GetIdentity(pawn)?.resourceProfile;
+        }
+
+        public static void Initialize(Pawn pawn, ServantIdentityDef identity)
+        {
+            if (pawn == null || identity == null) return;
+            if (!string.IsNullOrEmpty(identity.fixedName)) pawn.Name = new NameSingle(identity.fixedName);
+            if (identity.requiredHair != null && pawn.story != null) pawn.story.hairDef = identity.requiredHair;
+            if (identity.requiredApparel != null && pawn.apparel != null)
+            {
+                pawn.apparel.DestroyAll(DestroyMode.Vanish);
+                Apparel apparel = ThingMaker.MakeThing(identity.requiredApparel) as Apparel;
+                if (apparel != null) pawn.apparel.Wear(apparel, false);
+            }
+            if (identity.requiredWeapon != null && pawn.equipment != null)
+            {
+                pawn.equipment.DestroyAllEquipment(DestroyMode.Vanish);
+                Thing weapon = ThingMaker.MakeThing(identity.requiredWeapon);
+                pawn.equipment.AddEquipment(weapon as ThingWithComps);
+            }
+            pawn.Drawer?.renderer?.renderTree?.SetDirty();
         }
     }
 }

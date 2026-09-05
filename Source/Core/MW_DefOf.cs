@@ -15,6 +15,8 @@ namespace MoonWorld
         public static TraitDef MW_MageRank_Apprentice;
         public static TraitDef MW_MagusCircuit_Basic;
         public static PawnKindDef MW_TestServant;
+        public static PawnKindDef MW_Artoria;
+        public static PawnKindDef MW_Emiya;
         public static MoonWorldSettingsDef MW_HolyGrailWarSettings;
     }
 }

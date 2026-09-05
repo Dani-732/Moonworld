@@ -22,6 +22,25 @@ namespace MoonWorld
                 yield break;
             }
 
+            Command_Action summon = new Command_Action
+            {
+                defaultLabel = "召唤从者",
+                defaultDesc = "在鼠标处随机召唤阿尔托莉雅或卫宫。",
+                icon = TexButton.Add,
+                action = delegate
+                {
+                    string rejection;
+                    Pawn servant;
+                    if (ServantSummoningService.Instance.TrySummon(master, master.Map, UI.MouseCell(), out servant, out rejection))
+                        Messages.Message(servant.LabelShortCap + " 已完成召唤。", servant, MessageTypeDefOf.PositiveEvent, false);
+                    else
+                        Messages.Message(rejection, MessageTypeDefOf.RejectInput, false);
+                },
+                Order = -100f
+            };
+            if (ServantQueryHasActiveServant(master)) summon.Disable("已有未湮灭的契约从者。");
+            yield return summon;
+
             List<Pawn> servants = new List<Pawn>();
             ServantQuery.Instance.GetBoundServants(master, servants);
             servants.Sort((left, right) => left.thingIDNumber.CompareTo(right.thingIDNumber));
@@ -33,6 +52,16 @@ namespace MoonWorld
                     yield return command;
                 }
             }
+        }
+
+        private static bool ServantQueryHasActiveServant(Pawn master)
+        {
+            List<Pawn> servants = new List<Pawn>();
+            ServantQuery.Instance.GetBoundServants(master, servants);
+            foreach (Pawn servant in servants)
+                if (servant?.TryGetComp<CompServantState>()?.PresenceState != ServantPresenceState.Annihilated)
+                    return true;
+            return false;
         }
 
         private static Command_Action CreateCommand(Pawn master, Pawn servant)

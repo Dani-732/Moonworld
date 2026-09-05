@@ -51,16 +51,14 @@ namespace MoonWorld
             }
 
             Faction faction = Find.FactionManager.FirstFactionOfDef(FactionDefOf.OutlanderCivil);
-            Pawn servant = PawnGenerator.GeneratePawn(MW_DefOf.MW_TestServant, faction);
-            GenSpawn.Spawn(servant, cell, map, WipeMode.Vanish);
+            Pawn servant;
             string rejection;
-            if (!ServantLifecycleService.Instance.TryBind(master, servant, out rejection))
+            if (!ServantSummoningService.Instance.TrySummon(master, map, cell, out servant, out rejection))
             {
-                servant.Destroy();
                 Messages.Message(rejection, MessageTypeDefOf.RejectInput, false);
                 return;
             }
-            Messages.Message("测试从者已完成召唤，并作为尊贵访客自主行动。", servant, MessageTypeDefOf.PositiveEvent, false);
+            Messages.Message("正式从者已完成召唤，并作为尊贵访客自主行动。", servant, MessageTypeDefOf.PositiveEvent, false);
         }
 
         [DebugAction("MoonWorld/魔力测试", "选中御主：魔力回满", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]

@@ -10,29 +10,6 @@ namespace MoonWorld
         public int pranaUpdateIntervalTicks = 250;
     }
 
-    public sealed class GameComponent_MoonWorld : GameComponent
-    {
-        public int warStartTick = -1;
-
-        public GameComponent_MoonWorld(Game game)
-        {
-        }
-
-        public override void GameComponentTick()
-        {
-            int interval = Mathf.Max(1, MW_DefOf.MW_HolyGrailWarSettings.pranaUpdateIntervalTicks);
-            if (Find.TickManager.TicksGame % interval == 0)
-            {
-                PranaCycleService.Execute(interval);
-            }
-        }
-
-        public override void ExposeData()
-        {
-            Scribe_Values.Look(ref warStartTick, "warStartTick", -1);
-        }
-    }
-
     public static class PranaCycleService
     {
         private static readonly List<Pawn> servants = new List<Pawn>();

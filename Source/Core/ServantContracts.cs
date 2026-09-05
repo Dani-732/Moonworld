@@ -50,4 +50,9 @@ namespace MoonWorld
         void PrepareForVanillaDeath(Pawn servant);
         void Annihilate(Pawn servant, ServantEndReason reason);
     }
+
+    public interface IServantSummoningService
+    {
+        bool TrySummon(Pawn master, Map map, IntVec3 cell, out Pawn servant, out string rejection);
+    }
 }

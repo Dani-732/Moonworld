@@ -8,6 +8,8 @@
       <li Class="MoonWorld.CompProperties_ServantState" />
     </comps>
   </ThingDef>
+  <ThingDef ParentName="Human"><defName>MW_ArtoriaSpirit</defName><label>阿尔托莉雅·潘德拉贡</label><comps><li Class="MoonWorld.CompProperties_ServantState" /></comps></ThingDef>
+  <ThingDef ParentName="Human"><defName>MW_EmiyaSpirit</defName><label>卫宫士郎</label><comps><li Class="MoonWorld.CompProperties_ServantState" /></comps></ThingDef>
   <PawnKindDef ParentName="BasePlayerPawnKind">
     <defName>MW_TestServant</defName>
     <label>测试英灵</label>
@@ -16,4 +18,6 @@
     <isFighter>true</isFighter>
     <initialResistanceRange>0~0</initialResistanceRange>
   </PawnKindDef>
+  <PawnKindDef ParentName="BasePlayerPawnKind"><defName>MW_Artoria</defName><label>Saber - 阿尔托莉雅·潘德拉贡</label><race>MW_ArtoriaSpirit</race><fixedGender>Female</fixedGender><minGenerationAge>24</minGenerationAge><maxGenerationAge>26</maxGenerationAge><combatPower>180</combatPower><isFighter>true</isFighter><initialResistanceRange>0~0</initialResistanceRange><apparelMoney>0</apparelMoney><weaponMoney>0</weaponMoney></PawnKindDef>
+  <PawnKindDef ParentName="BasePlayerPawnKind"><defName>MW_Emiya</defName><label>Archer - 卫宫（红A）</label><race>MW_EmiyaSpirit</race><fixedGender>Male</fixedGender><minGenerationAge>28</minGenerationAge><maxGenerationAge>32</maxGenerationAge><combatPower>150</combatPower><isFighter>true</isFighter><initialResistanceRange>0~0</initialResistanceRange><apparelMoney>0</apparelMoney><weaponMoney>0</weaponMoney></PawnKindDef>
 </Defs>
