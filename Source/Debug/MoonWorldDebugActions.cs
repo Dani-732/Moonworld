@@ -7,6 +7,28 @@ namespace MoonWorld
 {
     public static class MoonWorldDebugActions
     {
+        [DebugAction("MoonWorld/敌方测试", "在鼠标处部署本届敌对主从", actionType = DebugActionType.ToolMap, allowedGameStates = AllowedGameStates.PlayingOnMap)]
+        public static void DeployEnemyWarParty()
+        {
+            string rejection;
+            if (!EnemyWarPartyService.TryDeploy(Find.CurrentMap, UI.MouseCell(), out rejection))
+            {
+                Messages.Message(rejection, MessageTypeDefOf.RejectInput, false);
+                return;
+            }
+            HolyGrailWarEntry entry = Current.Game.GetComponent<GameComponent_MoonWorld>().CurrentWarEntry;
+            Messages.Message(entry.EnemyIdentity.warClass + " 阵营主从已进入战场。",
+                entry.EnemyServant, MessageTypeDefOf.ThreatBig, false);
+        }
+
+        [DebugAction("MoonWorld/敌方测试", "选中敌方从者：触发一次战败", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
+        public static void DefeatEnemyServant()
+        {
+            Pawn servant = Find.Selector.SingleSelectedThing as Pawn;
+            if (EnemyContractUtility.HasEnemyContract(servant))
+                ServantLifecycleService.Instance.TryResolveDefeat(servant);
+        }
+
         [DebugAction("MoonWorld", "将选中殖民者设为御主", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
         public static void MakeSelectedPawnMaster()
         {

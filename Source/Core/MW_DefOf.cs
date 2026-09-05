@@ -17,6 +17,8 @@ namespace MoonWorld
         public static TraitDef MW_MagusCircuit_Basic;
         public static TraitDef MW_CommandSpell;
         public static LetterDef MW_HolyGrailWarInvitation;
+        public static FactionDef MW_WarOpposition;
+        public static PawnKindDef MW_EnemyMaster;
         public static PawnKindDef MW_TestServant;
         public static PawnKindDef MW_Artoria;
         public static PawnKindDef MW_Emiya;

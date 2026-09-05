@@ -31,6 +31,12 @@ namespace MoonWorld
                 if (candidates.Count == 0) { rejection = "当前没有可召唤的从者。"; return false; }
 
                 ServantIdentityDef selected = candidates.RandomElement();
+                ServantIdentityDef opponent = HolyGrailWarClassUtility.PickOpponent(selected);
+                if (opponent == null)
+                {
+                    rejection = "当前召唤职阶缺少对应的敌方英灵配置。";
+                    return false;
+                }
                 generated = PawnGenerator.GeneratePawn(new PawnGenerationRequest(selected.servantKind,
                     Faction.OfPlayer, PawnGenerationContext.NonPlayer, forceGenerateNewPawn: true,
                     canGeneratePawnRelations: false, validatorPreGear: pawn => { generated = pawn; return true; }));
@@ -46,6 +52,7 @@ namespace MoonWorld
                     throw new SummoningFailureException(rejection ?? "召唤完成前契约或落点状态发生变化。");
                 GameComponent_MoonWorld state = Current.Game.GetComponent<GameComponent_MoonWorld>();
                 state.CommitRegularSummon();
+                state.CurrentWarEntry.SetParticipants(selected, opponent);
                 servant = generated;
                 return true;
             }
@@ -87,7 +94,7 @@ namespace MoonWorld
             return null;
         }
 
-        private static void Rollback(Pawn pawn)
+        internal static void Rollback(Pawn pawn)
         {
             if (pawn == null) return;
             pawn.TryGetComp<CompServantState>()?.Bind(null);

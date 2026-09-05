@@ -8,6 +8,7 @@ namespace MoonWorld
     public class MoonWorldSettingsDef : Def
     {
         public int pranaUpdateIntervalTicks = 250;
+        public float enemyPranaSupplyPerDay = 240f;
     }
 
     public static class PranaCycleService
@@ -22,6 +23,8 @@ namespace MoonWorld
             PranaLedger ledger = new PranaLedger();
 
             ApplyMasterNaturalRegen(ledger, intervalTicks);
+            ledger.Commit();
+            ApplyEnemyFixedSupply(ledger, intervalTicks);
             ledger.Commit();
             ApplyFoodConversion(ledger, intervalTicks);
             ledger.Commit();
@@ -69,6 +72,7 @@ namespace MoonWorld
         {
             foreach (Pawn master in masters)
             {
+                if (EnemyContractUtility.IsWarPawn(master)) continue;
                 MasterCircuitDef circuit = MasterCircuitUtility.GetCircuit(master);
                 Need_MasterPrana prana = master.needs.TryGetNeed<Need_MasterPrana>();
                 if (circuit != null && prana != null)
@@ -78,10 +82,19 @@ namespace MoonWorld
             }
         }
 
+        private static void ApplyEnemyFixedSupply(PranaLedger ledger, int intervalTicks)
+        {
+            foreach (Pawn servant in servants)
+                if (EnemyContractUtility.CanReceiveSupply(servant))
+                    ledger.Add(servant.needs.TryGetNeed<Need_Prana>(),
+                        Mathf.Max(0f, MW_DefOf.MW_HolyGrailWarSettings.enemyPranaSupplyPerDay) * intervalTicks / 60000f);
+        }
+
         private static void ApplyFoodConversion(PranaLedger ledger, int intervalTicks)
         {
             foreach (Pawn servant in servants)
             {
+                if (EnemyContractUtility.HasEnemyContract(servant)) continue;
                 if (!ServantQuery.Instance.IsMaterialized(servant))
                 {
                     continue;
@@ -113,6 +126,7 @@ namespace MoonWorld
         {
             foreach (Pawn master in masters)
             {
+                if (EnemyContractUtility.IsWarPawn(master)) continue;
                 Need_MasterPrana masterPrana = master.needs.TryGetNeed<Need_MasterPrana>();
                 MasterCircuitDef circuit = MasterCircuitUtility.GetCircuit(master);
                 if (masterPrana == null || circuit == null)

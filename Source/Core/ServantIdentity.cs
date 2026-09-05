@@ -10,6 +10,7 @@ namespace MoonWorld
         public ServantResourceProfileDef resourceProfile;
         public ServantAutonomyProfileDef autonomyProfile;
         public bool summonable;
+        public HolyGrailWarClass warClass = HolyGrailWarClass.None;
         public string fixedName;
         public ThingDef requiredWeapon;
         public ThingDef requiredApparel;

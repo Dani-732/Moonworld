@@ -53,7 +53,19 @@ try {
     if ($mwTraits.SelectSingleNode('/Defs/TraitDef[defName="MW_CommandSpell"]/commonality').InnerText -ne '0') {
         throw 'Command seals must not be granted by random trait generation'
     }
-    Write-Host "$($mwXmlFiles.Count) XML files parsed; native ability, installed prototype target, Chinese scenario parent and entry Def links checked."
+    [xml]$mwOpposition = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_WarOpposition.xml') -Raw
+    $mwFaction = $mwOpposition.SelectSingleNode('/Defs/FactionDef[defName="MW_WarOpposition"]')
+    if ($mwFaction.hidden -ne 'true' -or $mwFaction.permanentEnemy -ne 'true' -or
+        $mwFaction.raidsForbidden -ne 'true' -or $mwFaction.startingCountAtWorldCreation -ne '0' -or
+        $mwFaction.autoFlee -ne 'false' -or $mwFaction.pawnGroupMakers) {
+        throw 'Enemy faction must be isolated from ordinary world generation and raids'
+    }
+    [xml]$mwIdentities = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_HolyGrailWarBridge.xml') -Raw
+    if ($mwIdentities.SelectSingleNode('/Defs/Def[servantKind="GWW_Artoria"]/warClass').InnerText -ne 'Saber' -or
+        $mwIdentities.SelectSingleNode('/Defs/Def[servantKind="GWW_Emiya"]/warClass').InnerText -ne 'Archer') {
+        throw 'Saber/Archer identities must define their war seats explicitly'
+    }
+    Write-Host "$($mwXmlFiles.Count) XML files parsed; native ability, installed prototype target, Chinese scenario, entry Defs and isolated enemy faction checked."
 }
 finally {
     if (Test-Path -LiteralPath $testOutput) { Remove-Item -LiteralPath $testOutput }

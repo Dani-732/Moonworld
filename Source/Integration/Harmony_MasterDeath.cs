@@ -7,8 +7,6 @@ namespace MoonWorld
     [HarmonyPatch(typeof(Pawn), nameof(Pawn.Kill))]
     public static class Harmony_MasterDeath
     {
-        private static readonly List<Pawn> boundServants = new List<Pawn>();
-
         public static void Prefix(Pawn __instance)
         {
             ServantLifecycleService.Instance.PrepareForVanillaDeath(__instance);
@@ -21,7 +19,8 @@ namespace MoonWorld
                 return;
             }
 
-            boundServants.Clear();
+            // Annihilation invokes Pawn.Kill recursively; each master needs its own enumeration.
+            List<Pawn> boundServants = new List<Pawn>();
             ServantQuery.Instance.GetBoundServants(__instance, boundServants);
             foreach (Pawn servant in boundServants)
             {

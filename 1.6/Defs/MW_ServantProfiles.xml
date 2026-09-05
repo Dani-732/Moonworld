@@ -3,6 +3,7 @@
   <Def Class="MoonWorld.MoonWorldSettingsDef">
     <defName>MW_HolyGrailWarSettings</defName>
     <pranaUpdateIntervalTicks>250</pranaUpdateIntervalTicks>
+    <enemyPranaSupplyPerDay>240</enemyPranaSupplyPerDay>
   </Def>
   <Def Class="MoonWorld.ServantResourceProfileDef">
     <defName>MW_TestServantResources</defName>

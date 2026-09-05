@@ -33,6 +33,7 @@ namespace MoonWorld
                     rejection = pawn.LabelShortCap + " 必须与契约御主加入同一离图队伍。";
                     return false;
                 }
+                if (pawn.Faction != Faction.OfPlayer) continue;
                 bound.Clear();
                 ServantQuery.Instance.GetBoundServants(pawn, bound);
                 foreach (Pawn servant in bound)

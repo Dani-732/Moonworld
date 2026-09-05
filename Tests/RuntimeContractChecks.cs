@@ -76,7 +76,8 @@ internal static class RuntimeContractChecks
             new[] { "MoonWorld.ScenPart_HolyGrailWar", "RimWorld.ScenPart" },
             new[] { "MoonWorld.IncidentWorker_HolyGrailWarInvitation", "RimWorld.IncidentWorker" },
             new[] { "MoonWorld.ChoiceLetter_HolyGrailWar", "Verse.ChoiceLetter" },
-            new[] { "MoonWorld.HolyGrailWarEntry", "Verse.IExposable" } })
+            new[] { "MoonWorld.HolyGrailWarEntry", "Verse.IExposable" },
+            new[] { "MoonWorld.LordJob_EnemyWarParty", "Verse.AI.Group.LordJob" } })
         {
             Type implementation = mod.GetType(pair[0]);
             Type contract = game.GetType(pair[1]);
@@ -89,6 +90,6 @@ internal static class RuntimeContractChecks
             "Harmony_ServantTravel_NoHaulingStandingGuest", "Command_NoblePhantasm" })
             if (mod.GetType("MoonWorld." + removed) != null) throw new Exception("Obsolete adapter remains: " + removed);
         Console.WriteLine(patches + " Harmony targets and injected parameter types resolved against installed RimWorld 1.6.");
-        Console.WriteLine("Legacy types, removed adapters and four scenario/incident/letter/save types checked. This does not execute patches or start Unity.");
+        Console.WriteLine("Legacy types, removed adapters and five scenario/incident/letter/save/lord types checked. This does not execute patches or start Unity.");
     }
 }

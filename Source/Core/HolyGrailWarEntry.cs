@@ -7,9 +7,22 @@ namespace MoonWorld
     {
         private Pawn designatedMaster;
         private bool regularSummonUsed;
+        private ServantIdentityDef playerIdentity;
+        private ServantIdentityDef enemyIdentity;
+        private Pawn enemyMaster;
+        private Pawn enemyServant;
+        private bool enemyDeployed;
 
         public Pawn DesignatedMaster => designatedMaster;
         public bool RegularSummonUsed => regularSummonUsed;
+        public ServantIdentityDef PlayerIdentity => playerIdentity;
+        public ServantIdentityDef EnemyIdentity => enemyIdentity;
+        public Pawn EnemyMaster => enemyMaster;
+        public Pawn EnemyServant => enemyServant;
+        public bool EnemyDeployed => enemyDeployed;
+        public bool EnemyEliminated => enemyDeployed &&
+            (enemyMaster == null || enemyMaster.Dead || enemyMaster.Destroyed
+             || enemyServant == null || enemyServant.Dead || enemyServant.Destroyed);
 
         public HolyGrailWarEntry() { }
 
@@ -24,10 +37,28 @@ namespace MoonWorld
             regularSummonUsed = true;
         }
 
+        internal void SetParticipants(ServantIdentityDef player, ServantIdentityDef enemy)
+        {
+            playerIdentity = player;
+            enemyIdentity = enemy;
+        }
+
+        internal void RecordEnemyDeployment(Pawn master, Pawn servant)
+        {
+            enemyMaster = master;
+            enemyServant = servant;
+            enemyDeployed = true;
+        }
+
         public void ExposeData()
         {
             Scribe_References.Look(ref designatedMaster, "designatedMaster");
             Scribe_Values.Look(ref regularSummonUsed, "regularSummonUsed", false);
+            Scribe_Defs.Look(ref playerIdentity, "playerIdentity");
+            Scribe_Defs.Look(ref enemyIdentity, "enemyIdentity");
+            Scribe_References.Look(ref enemyMaster, "enemyMaster");
+            Scribe_References.Look(ref enemyServant, "enemyServant");
+            Scribe_Values.Look(ref enemyDeployed, "enemyDeployed", false);
         }
     }
 }

@@ -13,6 +13,16 @@ namespace MoonWorld
 
         public bool TryBind(Pawn master, Pawn servant, out string rejection)
         {
+            return TryBindInternal(master, servant, false, out rejection);
+        }
+
+        internal bool TryBindEnemy(Pawn master, Pawn servant, out string rejection)
+        {
+            return TryBindInternal(master, servant, true, out rejection);
+        }
+
+        private bool TryBindInternal(Pawn master, Pawn servant, bool enemy, out string rejection)
+        {
             rejection = null;
             if (master == null || servant == null)
             {
@@ -29,10 +39,14 @@ namespace MoonWorld
                 rejection = "目标不是 MoonWorld 从者。";
                 return false;
             }
-            if (master.Faction != Faction.OfPlayer || master.Dead || servant.Dead || servant.Destroyed
+            bool factionValid = enemy
+                ? EnemyContractUtility.IsWarPawn(master) && servant.Faction == master.Faction
+                : master.Faction == Faction.OfPlayer;
+            if (!factionValid || master.Dead || master.Destroyed || master.IsPrisoner || master.IsSlave
+                || servant.Dead || servant.Destroyed
                 || servant.IsPrisoner || servant.IsSlave)
             {
-                rejection = "契约需要存活的玩家御主和非囚犯、非奴隶的从者。";
+                rejection = "契约双方必须存活、阵营有效，且不是囚犯或奴隶。";
                 return false;
             }
 
@@ -50,7 +64,7 @@ namespace MoonWorld
 
             state.Bind(master);
             state.SetPresence(ServantPresenceState.Materialized);
-            ServantColonyMembership.Initialize(servant, newContract: true);
+            if (!enemy) ServantColonyMembership.Initialize(servant, newContract: true);
             ServantPresenceEffects.Reconcile(servant);
             return true;
         }

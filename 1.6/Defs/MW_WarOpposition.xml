@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <FactionDef ParentName="FactionBase">
+    <defName>MW_WarOpposition</defName>
+    <label>圣杯战争敌对参战方</label>
+    <fixedName>圣杯战争敌对参战方</fixedName>
+    <description>响应本届圣杯呼唤的敌对御主与从者。</description>
+    <pawnSingular>参战者</pawnSingular>
+    <pawnsPlural>参战者</pawnsPlural>
+    <hidden>true</hidden>
+    <permanentEnemy>true</permanentEnemy>
+    <autoFlee>false</autoFlee>
+    <techLevel>Industrial</techLevel>
+    <startingCountAtWorldCreation>0</startingCountAtWorldCreation>
+    <requiredCountAtGameStart>0</requiredCountAtGameStart>
+    <maxConfigurableAtWorldCreation>0</maxConfigurableAtWorldCreation>
+    <displayInFactionSelection>false</displayInFactionSelection>
+    <canMakeRandomly>false</canMakeRandomly>
+    <canGenerateQuestSites>false</canGenerateQuestSites>
+    <raidsForbidden>true</raidsForbidden>
+    <backstoryFilters><li><categories><li>Outlander</li></categories></li></backstoryFilters>
+  </FactionDef>
+  <PawnKindDef ParentName="BasePlayerPawnKind">
+    <defName>MW_EnemyMaster</defName>
+    <label>敌方御主</label>
+    <race>Human</race>
+    <defaultFactionDef>MW_WarOpposition</defaultFactionDef>
+    <combatPower>60</combatPower>
+    <isFighter>true</isFighter>
+    <minGenerationAge>20</minGenerationAge>
+    <maxGenerationAge>50</maxGenerationAge>
+    <weaponMoney>200~300</weaponMoney>
+    <weaponTags><li>Gun</li></weaponTags>
+    <apparelMoney>200~300</apparelMoney>
+  </PawnKindDef>
+</Defs>

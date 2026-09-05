@@ -23,8 +23,9 @@ namespace MoonWorld
 
         private static string ValidateContract(Pawn master, Pawn servant)
         {
-            if (master == null || master.Dead || master.Destroyed || master.Faction != Faction.OfPlayer
-                || !MasterCircuitUtility.HasCircuit(master)) return "需要存活的玩家御主。";
+            if (master == null || master.Dead || master.Destroyed
+                || (master.Faction != Faction.OfPlayer && !EnemyContractUtility.HasEnemyContract(servant))
+                || !MasterCircuitUtility.HasCircuit(master)) return "需要存活的有效御主。";
             if (servant == null || servant.Dead || servant.Destroyed
                 || ServantQuery.Instance.GetMaster(servant) != master
                 || servant.TryGetComp<CompServantState>()?.PresenceState == ServantPresenceState.Annihilated)
@@ -39,8 +40,9 @@ namespace MoonWorld
             Pawn servant = ability.pawn;
             string rejection = ValidateContract(ServantQuery.Instance.GetMaster(servant), servant);
             if (rejection != null) return rejection;
-            if (servant.Faction != Faction.OfPlayer || servant.HostFaction != null || servant.IsPrisoner || servant.IsSlave)
-                return "从者当前不受玩家控制。";
+            if ((servant.Faction != Faction.OfPlayer && !EnemyContractUtility.CanReceiveSupply(servant))
+                || servant.HostFaction != null || servant.IsPrisoner || servant.IsSlave)
+                return "从者当前不属于有效参战方。";
             if (!ServantQuery.Instance.IsMaterialized(servant)) return "灵体状态不能释放宝具。";
             if (servant.Downed || servant.InMentalState || servant.WorkTagIsDisabled(WorkTags.Violent))
                 return "从者当前不能施放攻击能力。";
@@ -61,6 +63,7 @@ namespace MoonWorld
 
         public static string ValidateOvercharge(Pawn master, Pawn servant)
         {
+            if (master?.Faction != Faction.OfPlayer) return "只有玩家御主可以使用令咒过载。";
             string rejection = ValidateContract(master, servant);
             if (rejection != null) return rejection;
             var defs = ServantIdentityUtility.GetIdentity(servant)?.noblePhantasms;

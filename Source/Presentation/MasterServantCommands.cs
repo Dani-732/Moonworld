@@ -14,6 +14,17 @@ namespace MoonWorld
 
     public sealed class CompMasterServantCommands : ThingComp
     {
+        public override string CompInspectStringExtra()
+        {
+            HolyGrailWarEntry entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
+            if (entry == null) return null;
+            if (parent == entry.DesignatedMaster && entry.PlayerIdentity != null)
+                return "圣杯战争阵营：" + entry.PlayerIdentity.warClass + "\n敌对阵营：" + entry.EnemyIdentity?.warClass;
+            if (parent == entry.EnemyMaster && entry.EnemyIdentity != null)
+                return "圣杯战争阵营：" + entry.EnemyIdentity.warClass + "（敌对）";
+            return null;
+        }
+
         public override IEnumerable<Gizmo> CompGetGizmosExtra()
         {
             Pawn master = parent as Pawn;

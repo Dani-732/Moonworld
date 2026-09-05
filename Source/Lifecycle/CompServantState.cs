@@ -87,6 +87,8 @@ namespace MoonWorld
             }
 
             string result = "存在状态：" + stateLabel;
+            HolyGrailWarClass warClass = ServantIdentityUtility.GetIdentity(parent as Pawn)?.warClass ?? HolyGrailWarClass.None;
+            if (warClass != HolyGrailWarClass.None) result += "\n职阶：" + warClass;
             if (master != null)
             {
                 result += "\n契约御主：" + master.LabelShort;

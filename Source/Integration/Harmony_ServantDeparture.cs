@@ -100,6 +100,11 @@ namespace MoonWorld
     [HarmonyPatch(typeof(Pawn), nameof(Pawn.ExitMap))]
     public static class Harmony_ServantDeparture_ExitPawn
     {
+        public static void Postfix(Pawn __instance)
+        {
+            EnemyWarPartyService.RetainDepartedPawn(__instance);
+        }
+
         public static bool Prefix(Pawn __instance, bool allowedToJoinOrCreateCaravan)
         {
             // Caravans and transporters have already validated the whole party before taking ownership.

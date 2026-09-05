@@ -50,6 +50,17 @@ internal static class NoblePhantasmTests
     public static void Main()
     {
         Test("nonplayer caster rejected", () => { servant.Faction = new Faction(); Reject(); });
+        Test("enemy caster pays same cost and gets same cooldown", () => {
+            master.Faction = servant.Faction = new Faction { Enemy = true };
+            Check(Cast() && servant.needs.Prana.CurLevel == 60 && ability.CooldownTicksRemaining == 300, "enemy settlement differs");
+        });
+        Test("enemy cannot use command seal overcharge", () => {
+            master.Faction = servant.Faction = new Faction { Enemy = true }; string reason;
+            Check(!NoblePhantasmService.TryOvercharge(master, servant, out reason) && master.Spells.Charges == 3, "enemy seal used");
+        });
+        Test("enemy with insufficient magic cannot cast", () => {
+            master.Faction = servant.Faction = new Faction { Enemy = true }; servant.needs.Prana.CurLevel = 39; Reject();
+        });
         Test("hosted caster rejected", () => { servant.HostFaction = Faction.OfPlayer; Reject(); });
         Test("prisoner caster rejected", () => { servant.IsPrisoner = true; Reject(); });
         Test("slave caster rejected", () => { servant.IsSlave = true; Reject(); });
@@ -201,7 +212,7 @@ namespace RimWorld
         public virtual void ProcessInput(UnityEngine.Event ev) { }
     }
     public static class SoundDefOf { public static object Tick_Tiny = new object(); }
-    public class Faction { public static Faction OfPlayer = new Faction(); }
+    public class Faction { public bool Enemy; public static Faction OfPlayer = new Faction(); }
     public class DamageDef { public object soundExplosion = new object(); }
     public static class DamageDefOf { public static DamageDef Bomb = new DamageDef(); }
     public static class ThingDefOf { public static object Explosion = new object(); }
@@ -237,6 +248,13 @@ namespace RimWorld
 }
 namespace MoonWorld
 {
+    public static class EnemyContractUtility
+    {
+        public static bool HasEnemyContract(Pawn p) => p != null && p.Faction?.Enemy == true
+            && p.State.Master?.Faction == p.Faction;
+        public static bool CanReceiveSupply(Pawn p) => HasEnemyContract(p) && !p.State.Master.Dead
+            && !p.IsPrisoner && !p.IsSlave;
+    }
     public class Need_Prana { public float CurLevel = 100; }
     public enum ServantPresenceState { Materialized, VoluntarySpirit, DefeatedSpirit, Annihilated }
     public class CompServantState { public Pawn Master; public ServantPresenceState PresenceState; }

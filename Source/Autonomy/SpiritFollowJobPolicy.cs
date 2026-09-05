@@ -8,6 +8,8 @@ namespace MoonWorld
     {
         public static Job CreateJob(Pawn servant)
         {
+            Job retreat = EnemyRetreatUtility.ExitJob(servant);
+            if (retreat != null) return retreat;
             Job boarding = ServantTravelAutonomy.GetSpiritBoardingJob(servant);
             if (boarding != null) return boarding;
             Pawn master = ServantQuery.Instance.GetMaster(servant);
@@ -27,6 +29,9 @@ namespace MoonWorld
             {
                 return false;
             }
+            if (EnemyRetreatUtility.ShouldExit(servant) && job.def == JobDefOf.Goto
+                && job.exitMapOnArrival && job.targetA.Cell.InBounds(servant.Map)
+                && job.targetA.Cell.OnEdge(servant.Map)) return true;
             if (job.def == JobDefOf.EnterTransporter)
             {
                 Job boarding = ServantTravelAutonomy.GetSpiritBoardingJob(servant);

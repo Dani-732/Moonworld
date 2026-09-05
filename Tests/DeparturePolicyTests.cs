@@ -60,6 +60,11 @@ internal static class DeparturePolicyTests
         Check(ServantDepartureService.IsContractServant(guest), "player contract identity recognized");
         guest.IsPrisoner = true;
         Check(!ServantDepartureService.IsContractServant(guest), "prisoners do not gain contract travel privileges");
+        guest.IsPrisoner = false;
+        master.carryTracker.CarriedThing = null;
+        master.Faction = guest.Faction = new Faction();
+        Check(ServantDepartureService.CanExitIndividually(master, false, out reason), "enemy master can retreat before servant");
+        Check(ServantDepartureService.CanExitIndividually(guest, false, out reason), "enemy servant can finish retreat");
         Console.WriteLine(passed + " departure scenarios passed; Unity AI and save/load require in-game testing.");
     }
 }

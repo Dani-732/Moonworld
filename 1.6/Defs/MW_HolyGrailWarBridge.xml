@@ -3,6 +3,7 @@
   <Def Class="MoonWorld.ServantIdentityDef">
     <defName>MW_GWW_ArtoriaIdentity</defName>
     <servantKind>GWW_Artoria</servantKind>
+    <warClass>Saber</warClass>
     <resourceProfile>MW_TestServantResources</resourceProfile>
     <autonomyProfile>MW_QuestLodgerAutonomy</autonomyProfile>
     <summonable>true</summonable>
@@ -10,6 +11,7 @@
   <Def Class="MoonWorld.ServantIdentityDef">
     <defName>MW_GWW_EmiyaIdentity</defName>
     <servantKind>GWW_Emiya</servantKind>
+    <warClass>Archer</warClass>
     <resourceProfile>MW_TestServantResources</resourceProfile>
     <autonomyProfile>MW_QuestLodgerAutonomy</autonomyProfile>
     <summonable>true</summonable>

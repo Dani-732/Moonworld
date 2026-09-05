@@ -20,6 +20,7 @@ namespace MoonWorld
             if (nd == MW_DefOf.MW_MasterPrana)
             {
                 __result = !ServantQuery.Instance.IsServant(___pawn)
+                    && !EnemyContractUtility.IsWarPawn(___pawn)
                     && MasterCircuitUtility.HasCircuit(___pawn);
                 return false;
             }
