@@ -10,22 +10,38 @@ namespace MoonWorld
     {
         private static bool generating;
 
-        public static bool TryDeploy(Map map, IntVec3 cell, out string rejection)
+        public static string ValidateRaid(Map map)
         {
-            rejection = null;
             GameComponent_MoonWorld war = Current.Game?.GetComponent<GameComponent_MoonWorld>();
             HolyGrailWarEntry entry = war?.CurrentWarEntry;
             if (generating || war == null || war.warStartTick < 0 || entry == null || !entry.RegularSummonUsed)
-            { rejection = "请先完成本届玩家召唤。"; return false; }
-            if (entry.EnemyDeployed)
-            { rejection = "本届敌方主从已经部署，不能重新生成。"; return false; }
-            if (map == null || !map.IsPlayerHome || !map.CanEverExit || !cell.InBounds(map)
-                || !cell.Standable(map) || cell.Fogged(map))
-            { rejection = "请选择有地图出口的玩家基地内已探索的可站立格。"; return false; }
-            if (!TryResolveParticipants(entry, out rejection)) return false;
+                return "请先完成本届玩家召唤，并等待当前部署结束。";
+            if (map == null || !map.IsPlayerHome || !map.CanEverExit)
+                return "敌方突袭需要有出口的玩家基地。";
             Pawn playerMaster = entry.DesignatedMaster;
-            if (playerMaster != null && (playerMaster.Dead || !playerMaster.Spawned || playerMaster.Map != map))
-            { rejection = "本届玩家御主必须存活并位于该地图。"; return false; }
+            if (playerMaster == null || playerMaster.Dead || playerMaster.Destroyed || !playerMaster.Spawned
+                || playerMaster.Map != map || playerMaster.Faction != Faction.OfPlayer
+                || playerMaster.IsPrisoner || playerMaster.IsSlave)
+                return "本届玩家御主必须存活、自由且位于该基地。";
+            if (entry.EnemyEliminated) return "本届敌对阵营已淘汰，不会再袭或重新生成。";
+            return entry.EnemyDeployed ? EnemyRestUtility.ReadinessRejection(entry.EnemyServant) : null;
+        }
+
+        public static bool TryDeploy(Map map, IntVec3 cell, out string rejection)
+        {
+            rejection = ValidateRaid(map);
+            if (rejection != null) return false;
+            if (!cell.InBounds(map) || !cell.Standable(map) || cell.Fogged(map)
+                || cell.GetFirstPawn(map) != null)
+            { rejection = "请选择已探索且未被角色占用的可站立格。"; return false; }
+            HolyGrailWarEntry entry = Current.Game.GetComponent<GameComponent_MoonWorld>().CurrentWarEntry;
+            if (!TryResolveParticipants(entry, out rejection)) return false;
+            if (entry.EnemyDeployed)
+            {
+                generating = true;
+                try { return TryRedeployExisting(entry, map, cell, out rejection); }
+                finally { generating = false; }
+            }
 
             generating = true;
             Pawn master = null;
@@ -81,6 +97,47 @@ namespace MoonWorld
                 return false;
             }
             finally { generating = false; }
+        }
+
+        private static bool TryRedeployExisting(HolyGrailWarEntry entry, Map map, IntVec3 cell, out string rejection)
+        {
+            rejection = null;
+            Pawn servant = entry.EnemyServant;
+            int worldSince = servant.becameWorldPawnTickAbs;
+            Lord lord = null;
+            try
+            {
+                Find.WorldPawns.RemovePawn(servant);
+                GenSpawn.Spawn(servant, cell, map, WipeMode.Vanish);
+                if (!servant.Spawned || servant.Map != map || !servant.CanReachMapEdge()
+                    || !EnemyContractUtility.HasEnemyContract(servant)
+                    || ServantQuery.Instance.GetMaster(servant) != entry.EnemyMaster)
+                    throw new InvalidOperationException("敌方再袭落点、撤退路线或契约无效。");
+                lord = LordMaker.MakeNewLord(servant.Faction, new LordJob_EnemyWarParty(), map, new[] { servant });
+                // Commit presence last; earlier failures must leave a resting spirit unchanged.
+                if (!ServantLifecycleService.Instance.TryPrepareEnemyRaid(servant, out rejection))
+                    throw new InvalidOperationException(rejection);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    // LordMaker can throw after registering a partially constructed lord.
+                    Lord activeLord = lord ?? servant.GetLord();
+                    if (activeLord != null) map.lordManager.RemoveLord(activeLord);
+                }
+                finally
+                {
+                    if (servant.Spawned) servant.DeSpawn();
+                    if (!Find.WorldPawns.Contains(servant))
+                        Find.WorldPawns.PassToWorld(servant, PawnDiscardDecideMode.KeepForever);
+                    servant.becameWorldPawnTickAbs = worldSince;
+                }
+                Log.Error("[MoonWorld] 敌方从者再袭部署失败: " + ex);
+                rejection = "敌方再袭失败，原从者已退回场外，保留契约与休整时间。";
+                return false;
+            }
         }
 
         private static bool TryResolveParticipants(HolyGrailWarEntry entry, out string rejection)

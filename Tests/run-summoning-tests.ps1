@@ -11,6 +11,8 @@ try {
         (Join-Path $projectRoot 'Source\Lifecycle\HolyGrailWarEntryService.cs') `
         (Join-Path $projectRoot 'Source\Core\EnemyContractUtility.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\EnemyWarPartyService.cs') `
+        (Join-Path $projectRoot 'Source\Lifecycle\EnemyRestUtility.cs') `
+        (Join-Path $projectRoot 'Source\Integration\IncidentWorker_EnemyServantRaid.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\ServantSummoningService.cs')
     if ($LASTEXITCODE -ne 0) { throw 'Summoning test compilation failed' }
     & $testOutput

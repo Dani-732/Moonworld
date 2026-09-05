@@ -7,9 +7,35 @@ namespace MoonWorld
 {
     public static class MoonWorldDebugActions
     {
+        [DebugAction("MoonWorld", "查看敌方休整状态", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
+        public static void InspectEnemyRest()
+        {
+            HolyGrailWarEntry entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
+            Pawn servant = entry?.EnemyServant;
+            if (servant == null)
+            {
+                Messages.Message("本届尚无敌方从者。", MessageTypeDefOf.NeutralEvent, false);
+                return;
+            }
+            Need_Prana prana = servant.needs?.TryGetNeed<Need_Prana>();
+            Hediff damage = servant.health.hediffSet.GetFirstHediffOfDef(MW_DefOf.MW_SpiritDamage);
+            string text = servant.LabelShortCap + "（" + servant.ThingID + "）"
+                + "\n灵基损伤：" + (damage?.Severity ?? 0f).ToString("F0")
+                + "\n魔力：" + (prana == null ? "无" : prana.CurLevel.ToString("F1") + "/" + prana.MaxLevel.ToString("F1"))
+                + "\n最短休整剩余：" + (EnemyRestUtility.TicksRemaining(servant) / 60000f).ToString("F2") + " 天"
+                + "\n" + (EnemyWarPartyService.ValidateRaid(Find.CurrentMap) ?? "可以再次出战，等待突袭事件。");
+            Find.WindowStack.Add(new Dialog_MessageBox(text));
+        }
+
         [DebugAction("MoonWorld", "执行正式敌方从者突袭事件", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
         public static void ExecuteEnemyServantRaidIncident()
         {
+            string rejection = EnemyWarPartyService.ValidateRaid(Find.CurrentMap);
+            if (rejection != null)
+            {
+                Messages.Message(rejection, MessageTypeDefOf.RejectInput, false);
+                return;
+            }
             IncidentParms parms = new IncidentParms
             {
                 target = Find.CurrentMap,

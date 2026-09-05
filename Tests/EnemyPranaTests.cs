@@ -11,6 +11,7 @@ internal static class EnemyPranaTests
     private static int passed;
     private static void Setup()
     {
+        Current.Game = new Game(); Find.WorldPawns.Pawns.Clear();
         Find.Maps.Clear(); Map map = new Map(); Find.Maps.Add(map);
         Faction faction = new Faction { def = MW_DefOf.MW_WarOpposition };
         master = new Pawn { Faction = faction, Circuit = true };
@@ -24,8 +25,48 @@ internal static class EnemyPranaTests
     private static void Near(float actual, float expected) { Check(Math.Abs(actual - expected) < .001f, actual + " != " + expected); }
     private static void Test(string name, Action body) { Setup(); body(); passed++; Console.WriteLine("PASS " + name); }
     private static void Cycle() => PranaCycleService.Execute(250);
+    private static void Rest()
+    {
+        Find.Maps[0].mapPawns.AllPawnsSpawned.Clear();
+        master.Spawned = servant.Spawned = false;
+        Find.WorldPawns.Pawns.Add(master); Find.WorldPawns.Pawns.Add(servant);
+        Current.Game.State.CurrentWarEntry = new HolyGrailWarEntry { EnemyMaster = master, EnemyServant = servant, EnemyDeployed = true };
+        servant.State.PresenceState = ServantPresenceState.DefeatedSpirit;
+    }
     public static void Main()
     {
+        Test("current resting opponent receives one fixed supply cycle", () => {
+            Rest(); Cycle(); Near(servant.needs.Prana.CurLevel, 50.99375f); Near(master.needs.Master.CurLevel, 100);
+        });
+        Test("off-map recovery heals injuries and preserves spirit damage", () => {
+            Rest(); servant.needs.Prana.CurLevel = 0;
+            var injury = new Hediff_Injury { Severity = 20 }; var spiritDamage = new Hediff { Severity = 3 };
+            servant.health.hediffSet.hediffs.Add(injury); servant.health.hediffSet.hediffs.Add(spiritDamage);
+            for (int i = 0; i < 720; i++) Cycle();
+            Near(injury.Severity, 0); Near(spiritDamage.Severity, 3);
+            Check(servant.needs.Prana.CurLevel > 80 && servant.State.PresenceState == ServantPresenceState.DefeatedSpirit,
+                "rest did not recover mana or prematurely materialized");
+        });
+        Test("rest healing spends exactly same mana as map healing", () => {
+            Rest(); servant.health.hediffSet.hediffs.Add(new Hediff_Injury { Severity = 10 }); Cycle();
+            Near(servant.needs.Prana.CurLevel, 46.99375f);
+        });
+        Test("captured resting servant receives no remote simulation", () => {
+            Rest(); servant.IsPrisoner = true; Cycle(); Near(servant.needs.Prana.CurLevel, 50);
+        });
+        Test("dead off-map master prevents rest supply", () => {
+            Rest(); master.Dead = true; Cycle(); Near(servant.needs.Prana.CurLevel, 50);
+        });
+        Test("rest does not reach into transport containers", () => {
+            Rest(); servant.ParentHolder = new object(); Cycle(); Near(servant.needs.Prana.CurLevel, 50);
+        });
+        Test("player world servant gains no enemy subsidy", () => {
+            Rest(); master.Faction = servant.Faction = Faction.OfPlayer; Cycle(); Near(servant.needs.Prana.CurLevel, 50);
+        });
+        Test("no double settlement when resting pawn returns to map", () => {
+            Rest(); servant.Spawned = true; Find.Maps[0].mapPawns.AllPawnsSpawned.Add(servant);
+            Cycle(); Near(servant.needs.Prana.CurLevel, 50.99375f);
+        });
         Test("enemy fixed supply is one point per interval before upkeep", () => {
             Cycle(); Near(servant.needs.Prana.CurLevel, 50.975f); Near(master.needs.Master.CurLevel, 100);
             Near(servant.needs.food.CurLevel, 1);
@@ -54,7 +95,7 @@ internal static class EnemyPranaTests
             MW_DefOf.MW_HolyGrailWarSettings.enemyPranaSupplyPerDay = -100; Cycle(); Near(servant.needs.Prana.CurLevel, 49.975f);
         });
         Test("supply capped at max", () => { servant.needs.Prana.CurLevel = 100; Cycle(); Near(servant.needs.Prana.CurLevel, 99.975f); });
-        Test("world servant is not simulated", () => {
+        Test("unregistered world servant is not simulated", () => {
             servant.Spawned = false; Find.Maps[0].mapPawns.AllPawnsSpawned.Remove(servant); Cycle(); Near(servant.needs.Prana.CurLevel, 50);
         });
         Test("enemy healing still spends actual mana", () => {
@@ -95,6 +136,7 @@ namespace Verse
     {
         public bool Dead, Destroyed, IsPrisoner, IsSlave, Circuit, Servant;
         public bool Spawned = true;
+        public object ParentHolder;
         public int thingIDNumber, Defeats;
         public Faction Faction;
         public CompServantState State = new CompServantState();
@@ -108,7 +150,10 @@ namespace Verse
     }
     public class Map { public MapPawns mapPawns = new MapPawns(); }
     public class MapPawns { public List<Pawn> AllPawnsSpawned = new List<Pawn>(); }
-    public static class Find { public static List<Map> Maps = new List<Map>(); }
+    public static class Find { public static List<Map> Maps = new List<Map>(); public static WorldPawns WorldPawns = new WorldPawns(); }
+    public class WorldPawns { public HashSet<Pawn> Pawns = new HashSet<Pawn>(); public bool Contains(Pawn p) => Pawns.Contains(p); }
+    public static class Current { public static Game Game; }
+    public class Game { public GameComponent_MoonWorld State = new GameComponent_MoonWorld(); public T GetComponent<T>() where T : class => State as T; }
     public class Hediff { public object def; public float Severity; public int ageTicks; }
     public class Hediff_Injury : Hediff { public void Heal(float amount) { Severity -= amount; } }
     public class HediffSet { public List<Hediff> hediffs = new List<Hediff>(); public Hediff GetFirstHediffOfDef(object d) => hediffs.Find(h => h.def == d); }
@@ -121,13 +166,16 @@ namespace Verse
 }
 namespace RimWorld
 {
-    public class Faction { public object def; public static Faction OfPlayer = new Faction(); }
+    public class Faction { public object def; public static Faction OfPlayer = new Faction(); public bool HostileTo(Faction f) => def == MW_DefOf.MW_WarOpposition; }
     public class Need { public float CurLevel, MaxLevel = 100; public float CurLevelPercentage => CurLevel / MaxLevel; }
     public class Need_Food : Need { }
     public static class HealthUtility { public static void Cure(Hediff h) { } }
 }
 namespace MoonWorld
 {
+    public class GameComponent_MoonWorld { public HolyGrailWarEntry CurrentWarEntry; }
+    public class HolyGrailWarEntry { public Pawn EnemyMaster, EnemyServant; public bool EnemyDeployed;
+        public bool EnemyEliminated => EnemyMaster == null || EnemyMaster.Dead || EnemyMaster.Destroyed || EnemyServant == null || EnemyServant.Dead || EnemyServant.Destroyed; }
     public class Need_Prana : Need { }
     public class Need_MasterPrana : Need_Prana { }
     public enum ServantPresenceState { Materialized, DefeatedSpirit, Annihilated }

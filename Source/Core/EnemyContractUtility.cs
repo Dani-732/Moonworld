@@ -22,8 +22,25 @@ namespace MoonWorld
             Pawn master = ServantQuery.Instance.GetMaster(servant);
             return HasEnemyContract(servant) && master != null && !master.Dead && !master.Destroyed
                 && !master.IsPrisoner && !master.IsSlave && !servant.IsPrisoner && !servant.IsSlave
-                && !servant.Dead && !servant.Destroyed && servant.Spawned
+                && !servant.Dead && !servant.Destroyed && (servant.Spawned || IsResting(servant))
                 && servant.TryGetComp<CompServantState>()?.PresenceState != ServantPresenceState.Annihilated;
+        }
+
+        public static bool IsResting(Pawn servant)
+        {
+            HolyGrailWarEntry entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
+            return entry != null && entry.EnemyDeployed && !entry.EnemyEliminated
+                && servant == entry.EnemyServant && HasEnemyContract(servant)
+                && ServantQuery.Instance.GetMaster(servant) == entry.EnemyMaster
+                && IsFreeWorldPawn(servant) && IsFreeWorldPawn(entry.EnemyMaster)
+                && servant.TryGetComp<CompServantState>()?.PresenceState != ServantPresenceState.Annihilated;
+        }
+
+        private static bool IsFreeWorldPawn(Pawn pawn)
+        {
+            return pawn != null && !pawn.Spawned && !pawn.Dead && !pawn.Destroyed
+                && !pawn.IsPrisoner && !pawn.IsSlave && pawn.ParentHolder == null
+                && Find.WorldPawns.Contains(pawn) && pawn.Faction != null && pawn.Faction.HostileTo(Faction.OfPlayer);
         }
     }
 }

@@ -147,6 +147,33 @@ namespace MoonWorld
             return true;
         }
 
+        internal bool TryPrepareEnemyRaid(Pawn servant, out string rejection)
+        {
+            rejection = "敌方从者当前无法实体化出战。";
+            Pawn master = ServantQuery.Instance.GetMaster(servant);
+            CompServantState state = GetBoundState(master, servant);
+            if (state == null || !EnemyContractUtility.HasEnemyContract(servant)
+                || !EnemyContractUtility.CanReceiveSupply(servant) || master.Spawned || master.Downed
+                || !servant.Spawned || !servant.Position.Standable(servant.Map)
+                || servant.health.ShouldBeDead() || servant.health.ShouldBeDowned()) return false;
+            ServantPresenceState previous = state.PresenceState;
+            if (previous != ServantPresenceState.Materialized && previous != ServantPresenceState.DefeatedSpirit
+                && previous != ServantPresenceState.VoluntarySpirit) return false;
+            try
+            {
+                state.SetPresence(ServantPresenceState.Materialized);
+                ServantPresenceEffects.Reconcile(servant);
+                rejection = null;
+                return true;
+            }
+            catch
+            {
+                state.SetPresence(previous);
+                ServantPresenceEffects.Reconcile(servant);
+                throw;
+            }
+        }
+
         public bool TryResolveDefeat(Pawn servant, Hediff triggeringHediff = null)
         {
             CompServantState state = servant == null ? null : servant.TryGetComp<CompServantState>();

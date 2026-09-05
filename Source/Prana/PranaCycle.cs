@@ -9,6 +9,8 @@ namespace MoonWorld
     {
         public int pranaUpdateIntervalTicks = 250;
         public float enemyPranaSupplyPerDay = 240f;
+        public int enemyRestDurationTicks = 180000;
+        public float enemyRaidPranaFraction = 0.8f;
     }
 
     public static class PranaCycleService
@@ -66,6 +68,10 @@ namespace MoonWorld
                     }
                 }
             }
+            // Only the current, freely resting opponent joins off-map settlement, not all world pawns.
+            Pawn resting = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.EnemyServant;
+            if (EnemyContractUtility.IsResting(resting) && seenServants.Add(resting))
+                servants.Add(resting);
         }
 
         private static void ApplyMasterNaturalRegen(PranaLedger ledger, int intervalTicks)
