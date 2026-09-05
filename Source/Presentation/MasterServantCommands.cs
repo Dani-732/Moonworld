@@ -48,7 +48,7 @@ namespace MoonWorld
             {
                 defaultLabel = (materialized ? "灵体化：" : "实体化：") + servant.LabelShort,
                 defaultDesc = materialized
-                    ? "命令契约从者进入灵体状态。灵体状态不可攻击、工作、进食或被正常选定。"
+                    ? "命令契约从者进入半透明灵体状态。灵体状态只会跟随御主，不可攻击、工作、进食或被正常选定。"
                     : "命令契约从者解除灵体状态并恢复自主行动。",
                 icon = materialized ? TexButton.Suspend : TexButton.Reveal,
                 action = delegate

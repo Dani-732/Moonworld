@@ -27,7 +27,7 @@
   <HediffDef>
     <defName>MW_SpiritForm</defName>
     <label>灵体化</label>
-    <description>从者以不可感知的灵体形态存在。</description>
+    <description>从者以半透明、不可被正常锁定的灵体形态跟随御主。</description>
     <hediffClass>Verse.HediffWithComps</hediffClass>
     <isBad>false</isBad>
     <duplicationAllowed>false</duplicationAllowed>
@@ -38,7 +38,7 @@
     </stages>
     <comps>
       <li Class="HediffCompProperties_Invisibility">
-        <visibleToPlayer>false</visibleToPlayer>
+        <visibleToPlayer>true</visibleToPlayer>
         <affectedByDisruptor>false</affectedByDisruptor>
         <fadeDurationTicks>60</fadeDurationTicks>
       </li>

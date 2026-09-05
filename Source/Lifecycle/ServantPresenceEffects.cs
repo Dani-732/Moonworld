@@ -23,13 +23,21 @@ namespace MoonWorld
 
                 HediffComp_Invisibility invisibility = spiritForm?.TryGetComp<HediffComp_Invisibility>();
                 invisibility?.BecomeInvisible(false);
-                StopPhysicalActivity(servant);
+                if (servant.jobs?.curJob != null && !SpiritFollowJobPolicy.IsAllowed(servant, servant.jobs.curJob))
+                {
+                    StopCurrentActivity(servant);
+                }
                 return;
             }
 
             if (spiritForm != null)
             {
                 servant.health.RemoveHediff(spiritForm);
+            }
+
+            if (servant.jobs?.curJob?.def == MW_DefOf.MW_SpiritFollow)
+            {
+                StopCurrentActivity(servant);
             }
 
             CompServantState state = servant.TryGetComp<CompServantState>();
@@ -39,7 +47,7 @@ namespace MoonWorld
             }
         }
 
-        private static void StopPhysicalActivity(Pawn servant)
+        private static void StopCurrentActivity(Pawn servant)
         {
             servant.jobs?.StopAll(false, false);
             servant.pather?.StopDead();

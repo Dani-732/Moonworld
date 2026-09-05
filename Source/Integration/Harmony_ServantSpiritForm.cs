@@ -5,21 +5,43 @@ using Verse.AI;
 
 namespace MoonWorld
 {
-    [HarmonyPatch(typeof(Pawn_JobTracker), nameof(Pawn_JobTracker.JobTrackerTick))]
-    public static class Harmony_SpiritForm_JobTrackerTick
+    [HarmonyPatch(typeof(Pawn_JobTracker), "DetermineNextJob")]
+    public static class Harmony_SpiritForm_DetermineNextJob
     {
-        public static bool Prefix(Pawn ___pawn)
+        public static bool Prefix(Pawn ___pawn, ref ThinkTreeDef thinkTree, ref ThinkResult __result)
         {
-            return !ServantQuery.Instance.IsSpirit(___pawn);
+            if (!ServantQuery.Instance.IsSpirit(___pawn))
+            {
+                return true;
+            }
+
+            thinkTree = null;
+            __result = new ThinkResult(SpiritFollowJobPolicy.CreateJob(___pawn), null, null, false);
+            return false;
         }
     }
 
     [HarmonyPatch(typeof(Pawn_JobTracker), nameof(Pawn_JobTracker.StartJob))]
     public static class Harmony_SpiritForm_StartJob
     {
-        public static bool Prefix(Pawn ___pawn)
+        public static bool Prefix(Pawn ___pawn, Job newJob)
         {
-            return !ServantQuery.Instance.IsSpirit(___pawn);
+            return !ServantQuery.Instance.IsSpirit(___pawn)
+                || SpiritFollowJobPolicy.IsAllowed(___pawn, newJob);
+        }
+    }
+
+    [HarmonyPatch(typeof(InvisibilityUtility), nameof(InvisibilityUtility.GetAlpha))]
+    public static class Harmony_SpiritForm_RenderAlpha
+    {
+        private const float SpiritOpacity = 0.5f;
+
+        public static void Postfix(Pawn __0, ref float __result)
+        {
+            if (ServantQuery.Instance.IsSpirit(__0))
+            {
+                __result = SpiritOpacity;
+            }
         }
     }
 

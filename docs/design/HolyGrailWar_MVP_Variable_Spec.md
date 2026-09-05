@@ -93,12 +93,12 @@ public enum ServantPresenceState
 
 状态含义：
 
-| 状态 | 可攻击/受攻击 | 可工作 | 可由御主解除 | 冷却 |
+| 状态 | 可攻击/受攻击 | 行为 | 可由御主解除 | 冷却 |
 |---|---|---|---|---|
 | `Materialized` | 是 | 按自主 AI | 不适用 | 无 |
-| `VoluntarySpirit` | 否 | 否 | 是 | 无 |
-| `DefeatedSpirit` | 否 | 否 | 否 | 至 `rematerializationReadyTick` |
-| `Annihilated` | 否 | 否 | 否 | 永久 |
+| `VoluntarySpirit` | 否 | 仅以原版 Follow Job 跟随御主 | 是 | 无 |
+| `DefeatedSpirit` | 否 | 仅以原版 Follow Job 跟随御主 | 否 | 至 `rematerializationReadyTick` |
+| `Annihilated` | 否 | 无 | 否 | 永久 |
 
 “重新实体化中”不是持久枚举值。它只是将 `DefeatedSpirit` 转为 `Materialized` 的一次短暂运行时操作，避免存档中出现“已转换但冷却还在”之类的非法组合。
 
@@ -354,6 +354,8 @@ bool malnutritionImmune;
 | 御主死亡后的从者状态 | 所有 `master` 指向该御主且未湮灭的从者立即湮灭。 |
 | 是否可被敌方选定/攻击 | 仅实体化从者可被正常选定；灵体状态由从者状态模块拦截。 |
 | 是否可工作、攻击、施放宝具 | 仅实体化从者，且由自主 AI / 当前 Job 决定。 |
+| 灵体状态执行何种 Job | 有效御主同图时只执行专用跟随 Job，复用原版 `JobDriver_Follow`；御主暂时无有效地图目标时原地等待。 |
+| 灵体状态如何显示 | 全部 PawnRenderTree 渲染层使用统一 `50%` 不透明度；该值不保存为运行时状态。 |
 
 ## 12. 明确不进入 MVP 的字段
 

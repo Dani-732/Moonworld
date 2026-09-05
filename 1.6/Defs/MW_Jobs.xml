@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <JobDef>
+    <defName>MW_SpiritFollow</defName>
+    <driverClass>JobDriver_Follow</driverClass>
+    <reportString>以灵体状态跟随 TargetA。</reportString>
+  </JobDef>
+</Defs>
