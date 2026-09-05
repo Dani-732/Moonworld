@@ -24,6 +24,10 @@ namespace MoonWorld
             {
                 pawn.story.traits.GainTrait(new Trait(MW_DefOf.MW_MageRank_Apprentice, 0, false));
             }
+            if (!pawn.story.traits.HasTrait(MW_DefOf.MW_CommandSpell))
+            {
+                pawn.story.traits.GainTrait(new Trait(MW_DefOf.MW_CommandSpell, 0, false));
+            }
             MasterCircuitUtility.EnsureMasterPranaNeed(pawn);
             Need_MasterPrana prana = pawn.needs.TryGetNeed<Need_MasterPrana>();
             if (prana != null)

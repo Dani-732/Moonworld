@@ -8,6 +8,17 @@
     <supplyThresholdFraction>0.8</supplyThresholdFraction>
   </Def>
   <TraitDef>
+    <defName>MW_CommandSpell</defName>
+    <label>令咒</label>
+    <description>拥有三枚可用于奇迹重铸的令咒。</description>
+    <degreeDatas>
+      <li>
+        <label>令咒</label>
+        <description>拥有三枚可用于奇迹重铸的令咒。</description>
+      </li>
+    </degreeDatas>
+  </TraitDef>
+  <TraitDef>
     <defName>MW_MagusCircuit_Basic</defName>
     <label>基础魔力回路</label>
     <description>拥有可供给从者的基础魔术回路。</description>

@@ -1,0 +1,105 @@
+using System.Collections.Generic;
+using RimWorld;
+using Verse;
+
+namespace MoonWorld
+{
+    public sealed class CompProperties_MasterCommandSpells : CompProperties
+    {
+        public CompProperties_MasterCommandSpells()
+        {
+            compClass = typeof(CompMasterCommandSpells);
+        }
+    }
+
+    public sealed class CompMasterCommandSpells : ThingComp
+    {
+        private const int DefaultCharges = 3;
+        private int charges = DefaultCharges;
+
+        public int Charges => charges;
+
+        public override void PostExposeData()
+        {
+            Scribe_Values.Look(ref charges, "commandSpellCharges", DefaultCharges);
+        }
+
+        public override string CompInspectStringExtra()
+        {
+            Pawn master = parent as Pawn;
+            if (!MasterCircuitUtility.HasCircuit(master))
+                return null;
+            return "令咒：" + charges + " / " + DefaultCharges;
+        }
+
+        public static Command_Action CreateMiracleCommand(Pawn master, Pawn servant)
+        {
+            CompMasterCommandSpells spells = master?.TryGetComp<CompMasterCommandSpells>();
+            if (spells == null || !MasterCircuitUtility.HasCircuit(master) || !IsValidTarget(master, servant))
+                return null;
+
+            bool damaged = HasSpiritDamage(servant);
+            Command_Action command = new Command_Action
+            {
+                defaultLabel = "奇迹重铸：" + servant.LabelShort,
+                defaultDesc = "清除该契约从者全部灵基受损状态，消耗一枚令咒。",
+                icon = TexButton.Reveal,
+                action = delegate
+                {
+                    string rejection;
+                    if (spells.TryRecastMiracle(servant, out rejection))
+                        Messages.Message(servant.LabelShortCap + " 的灵基受损已被奇迹重铸清除。", servant, MessageTypeDefOf.PositiveEvent, false);
+                    else
+                        Messages.Message(rejection, MessageTypeDefOf.RejectInput, false);
+                },
+                Order = -96f
+            };
+            if (spells.charges <= 0)
+                command.Disable("令咒已耗尽。");
+            else if (!damaged)
+                command.Disable("目标没有灵基受损。");
+            return command;
+        }
+
+        public bool TryRecastMiracle(Pawn servant, out string rejection)
+        {
+            Pawn master = parent as Pawn;
+            rejection = null;
+            if (charges <= 0) { rejection = "令咒已耗尽。"; return false; }
+            if (!IsValidTarget(master, servant)) { rejection = "目标不是有效的己方契约从者。"; return false; }
+            List<Hediff> damages = servant.health.hediffSet.hediffs;
+            bool removed = false;
+            for (int i = damages.Count - 1; i >= 0; i--)
+            {
+                if (damages[i].def == MW_DefOf.MW_SpiritDamage)
+                {
+                    servant.health.RemoveHediff(damages[i]);
+                    removed = true;
+                }
+            }
+            if (!removed) { rejection = "目标没有灵基受损。"; return false; }
+            charges--;
+            if (charges == 0 && master.story?.traits?.HasTrait(MW_DefOf.MW_CommandSpell) == true)
+            {
+                Trait commandSpell = master.story.traits.allTraits.Find(t => t.def == MW_DefOf.MW_CommandSpell);
+                if (commandSpell != null)
+                    master.story.traits.RemoveTrait(commandSpell);
+            }
+            ServantPresenceEffects.Reconcile(servant);
+            return true;
+        }
+
+        private static bool IsValidTarget(Pawn master, Pawn servant)
+        {
+            CompServantState state = servant?.TryGetComp<CompServantState>();
+            return master != null && servant != null && master.Faction == Faction.OfPlayer
+                && MasterCircuitUtility.HasCircuit(master) && ServantQuery.Instance.GetMaster(servant) == master
+                && state != null && state.PresenceState != ServantPresenceState.Annihilated;
+        }
+
+        private static bool HasSpiritDamage(Pawn servant)
+        {
+            return servant?.health?.hediffSet?.GetFirstHediffOfDef(MW_DefOf.MW_SpiritDamage) != null;
+        }
+    }
+}

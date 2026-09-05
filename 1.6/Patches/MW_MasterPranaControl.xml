@@ -5,6 +5,7 @@
     <value>
       <li Class="MoonWorld.CompProperties_MasterPranaControl" />
       <li Class="MoonWorld.CompProperties_MasterServantCommands" />
+      <li Class="MoonWorld.CompProperties_MasterCommandSpells" />
     </value>
   </Operation>
 </Patch>

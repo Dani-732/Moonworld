@@ -51,6 +51,10 @@ namespace MoonWorld
                 {
                     yield return command;
                 }
+
+                Command_Action miracle = CompMasterCommandSpells.CreateMiracleCommand(master, servant);
+                if (miracle != null)
+                    yield return miracle;
             }
         }
 
