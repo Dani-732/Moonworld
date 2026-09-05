@@ -96,8 +96,8 @@ public enum ServantPresenceState
 | 状态 | 可攻击/受攻击 | 行为 | 可由御主解除 | 冷却 |
 |---|---|---|---|---|
 | `Materialized` | 是 | 按自主 AI | 不适用 | 无 |
-| `VoluntarySpirit` | 否 | 以专用 Job 无视地形跟随御主 | 是 | 无 |
-| `DefeatedSpirit` | 否 | 以专用 Job 无视地形跟随御主 | 否 | 至 `rematerializationReadyTick` |
+| `VoluntarySpirit` | 否 | 原版寻路跟随，过远时闪现 | 是 | 无 |
+| `DefeatedSpirit` | 否 | 原版寻路跟随，过远时闪现 | 否 | 至 `rematerializationReadyTick` |
 | `Annihilated` | 否 | 无 | 否 | 永久 |
 
 “重新实体化中”不是持久枚举值。它只是将 `DefeatedSpirit` 转为 `Materialized` 的一次短暂运行时操作，避免存档中出现“已转换但冷却还在”之类的非法组合。
@@ -310,6 +310,9 @@ MVP 不创建 `hasMystery`、神秘度等级或攻击源注册表。判定只依
 | `healingMaxPerInterval` | `float` | 单次自愈最大恢复量。 |
 | `pranaPerHealingPoint` | `float` | 每单位自愈消耗魔力。 |
 | `rematerializationCooldownTicks` | `int` | 战败后冷却时长。 |
+| `spiritFollowDistance` | `float` | 灵体使用原版寻路跟随时的停留距离，默认 `4` 格。 |
+| `spiritTeleportDistance` | `float` | 灵体与御主距离超过该值时闪现，默认 `10` 格。 |
+| `spiritTeleportRadius` | `int` | 闪现落点在御主周围的搜索半径，默认 `2` 格。 |
 | `noblePhantasmDefs` | `List<AbilityDef>` | 从者可用宝具定义。 |
 | `targetPriorityPolicy` | 枚举/Def | 英灵 > 御主 > 普通敌人/建筑的索敌策略。 |
 
@@ -354,7 +357,7 @@ bool malnutritionImmune;
 | 御主死亡后的从者状态 | 所有 `master` 指向该御主且未湮灭的从者立即湮灭。 |
 | 是否可被敌方选定/攻击 | 仅实体化从者可被正常选定；灵体状态由从者状态模块拦截。 |
 | 是否可工作、攻击、施放宝具 | 仅实体化从者，且由自主 AI / 当前 Job 决定。 |
-| 灵体状态执行何种 Job | 有效御主同图时只执行专用跟随 Job；约 4 格外按原版移动速度逐格接近御主，不检查地形、门或建筑的可通行性，也不改变沿途物体；御主暂时无有效地图目标时原地等待。 |
+| 灵体状态执行何种 Job | 有效御主同图时只执行专用跟随 Job；默认 4 格内停留，4 至 10 格调用原版 Pawn 寻路，超过 10 格时闪现到御主周围 2 格内的原版可站立格；御主暂时无有效地图目标时原地等待。 |
 | 灵体状态如何显示 | 全部 PawnRenderTree 渲染层使用统一 `30%` 不透明度；该值不保存为运行时状态。 |
 
 ## 12. 明确不进入 MVP 的字段

@@ -24,6 +24,9 @@
     <defName>MW_QuestLodgerAutonomy</defName>
     <lordJobKey>QuestLodger</lordJobKey>
     <targetPriorityKey>ServantMasterNormal</targetPriorityKey>
+    <spiritFollowDistance>4</spiritFollowDistance>
+    <spiritTeleportDistance>10</spiritTeleportDistance>
+    <spiritTeleportRadius>2</spiritTeleportRadius>
   </Def>
   <Def Class="MoonWorld.ServantIdentityDef">
     <defName>MW_TestServantIdentity</defName>

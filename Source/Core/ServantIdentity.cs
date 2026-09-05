@@ -32,6 +32,9 @@ namespace MoonWorld
     {
         public string lordJobKey = "QuestLodger";
         public string targetPriorityKey = "ServantMasterNormal";
+        public float spiritFollowDistance = 4f;
+        public float spiritTeleportDistance = 10f;
+        public int spiritTeleportRadius = 2;
     }
 
     public class NoblePhantasmDef : Def
