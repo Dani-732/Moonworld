@@ -2,7 +2,7 @@
 
 > 用途：供独立评估者审查 HolyGrailWar MVP 的数据模型、原版复用边界与变量完整性。
 >
-> 本文只定义当前已确认的 MVP 数据归属，不等于实现代码，不提前引入信赖、玩家控制、七职阶池、敌方据点生成等后续系统。
+> 本文定义已确认的 MVP 及首个敌方切片的数据归属，不等于游戏验收。信赖、敌方据点、完整七队生成及战争胜负仍属后续系统。
 
 ## 1. 已冻结的 MVP 规则
 
@@ -48,7 +48,21 @@
 | 字段 | 类型 | 存档 | 默认值 | 说明 |
 |---|---|---:|---:|---|
 | `warStartTick` | `int` | 是 | `-1` | 唯一自定义全局战争进度。`-1` 为未开战；开战时记录 `Find.TickManager.TicksGame`。 |
-| `currentWarEntry` | `HolyGrailWarEntry` | 深存 | `null` | 本届事件的接受记录，内含 `designatedMaster` Pawn 引用及 `regularSummonUsed` 布尔值。不是全局战争阶段，不含契约副本。 |
+| `currentWarEntry` | `HolyGrailWarEntry` | 深存 | `null` | 本届接受记录与双方参战身份，字段见下表。不是全局战争阶段，不含契约副本。 |
+
+`HolyGrailWarEntry` 的字段：
+
+| 字段 | 保存方式 | 用途 |
+|---|---|---|
+| `designatedMaster` | Pawn 引用 | 本届资格接受者 |
+| `regularSummonUsed` | bool，默认 false | 本届唯一常规召唤资格是否已消费 |
+| `playerIdentity` / `enemyIdentity` | Def 引用 | 首次成功召唤确定双方身份；职阶由身份 Def 派生 |
+| `enemyMaster` / `enemyServant` | Pawn 引用 | 本届实际敌方参与者，离图保留原 Pawn；不是契约权威 |
+| `enemyDeployed` | bool，默认 false | 成功生成、落地、绑定及建立 Lord 后记为 true，淘汰后也不重置 |
+
+`ServantIdentityDef.warClass` 是静态枚举：None（旧定义兼容）、Saber、Archer、Lancer、Assassin、Caster、Rider、Berserker。当前只有 Saber/Archer 可互选为对席，不保存七个空槽或派系副本。旧档只有明确识别己方身份后才能补全双方 Def，无法确定时拒绝部署。
+
+敌方淘汰由已部署且任一参与者为空、死亡或销毁推导，不另存布尔值。进攻/撤退由原版 Lord 的当前 Toil 保存，不添加重复战斗阶段。敌方固定供魔配置为 `MoonWorldSettingsDef.enemyPranaSupplyPerDay = 240`，负值按零处理；使用统一魔力周期和现有账本，仍扣维持、自愈与宝具费用。敌方御主无魔力 Need，不参与玩家库存分配及食物转魔。世界 Pawn 不执行地图内供魔。
 
 接受事件时创建记录并授予令咒，不开战；唯一召唤服务完成生成、落地和绑定后才消费资格并幂等记录首次开战。两种操作均不可重复领取，取消/失败不消耗资格。Pawn 上不增加终身召唤标记或每人次数表。当前没有事件结束、重开或转让资格 API。
 

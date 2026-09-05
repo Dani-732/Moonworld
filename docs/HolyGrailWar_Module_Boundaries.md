@@ -8,6 +8,8 @@
 
 ## 依赖规则
 
+新增范围仅为已批准的七职阶定义与一组敌方主从交战测试：目前 Saber/Archer 互为对席，其余为空；不扩展到据点、自动突袭、休整再袭或战争胜负。敌方通过独立调试入口部署，用户游戏验收前不记为完成。
+
 ```text
 Defs -> Core 查询/契约 -> Lifecycle 生命周期
                          -> Prana 魔力管线
@@ -30,6 +32,9 @@ Defs -> Core 查询/契约 -> Lifecycle 生命周期
 | `Lifecycle` 成员身份 | 玩家派系加入、旧 Guest 迁移及角色身份保护 | `ServantColonyMembership` | 保存第二份契约或工作/能力数值 |
 | `Core` 战争事件记录 | 开战 Tick、本届指定御主与一次常规召唤资格的存档 | `GameComponent_MoonWorld`、`HolyGrailWarEntry` | 角色终身召唤次数、阶段二战争状态机 |
 | `Lifecycle` 事件接入与召唤 | 接受者验证、令咒授予、召唤生成与失败清理 | `HolyGrailWarEntryService`、`ServantSummoningService` | 以己方人口数量限制从者、添加额外取得途径 |
+| `Core` 敌方身份 | 七职阶及当前对席选择、敌方契约/供魔资格查询 | `HolyGrailWarClassUtility`、`EnemyContractUtility` | 创建空派系注册表或复制契约状态 |
+| `Lifecycle` 敌方部署 | 专用敌对派系、一次性主从生成、共享绑定、失败清理及离图保留 | `EnemyWarPartyService` | 玩家成员转换、自动突袭、战争胜负 |
+| `Autonomy` 敌方交战 | 原版进攻/撤退 Lord、测试宝具选点及灵体出口 Job | `LordJob_EnemyWarParty`、`EnemyRetreatUtility` | 免费施法、直接修改魔力或存在状态 |
 | `Autonomy` | 灵体跟随移动及灵体原版登舱 Job | `SpiritFollowJobPolicy`、`ServantTravelAutonomy` | 改变契约或伤害规则 |
 | `Abilities` | 能力消耗、有效性与结算结果 | `Ability_NoblePhantasm`、`NoblePhantasmService` | 自写渲染或直接写入生命周期字段 |
 | `Presentation` | Gizmo、声音、VFX 与渲染 | 只消费结果数据 | 充当玩法权威 |
@@ -42,6 +47,8 @@ Defs -> Core 查询/契约 -> Lifecycle 生命周期
 ```text
 GameComponent_MoonWorld.warStartTick
 GameComponent_MoonWorld.currentWarEntry -> HolyGrailWarEntry.designatedMaster / regularSummonUsed
+HolyGrailWarEntry.playerIdentity / enemyIdentity
+HolyGrailWarEntry.enemyMaster / enemyServant / enemyDeployed
 CompServantState.master
 CompServantState.presenceState
 CompMasterPranaControl.supplyThresholdOverride
@@ -50,7 +57,9 @@ CompMasterCommandSpells.commandSpellCharges
 
 魔力数值继续由 `Need_MasterPrana` 和 `Need_Prana` 保存；断供时长使用原版 Hediff 的 `ageTicks`，灵基受损使用 Hediff 的 severity。运行时递归保护不存档。契约反向索引由查询服务即时重建，不存档。
 
-本届事件资格属于战争接受记录，不附着在 Pawn 生命周期上。原版 Incident / ScenPart 发出同一种 ChoiceLetter；玩家指定回路持有者后调用 `HolyGrailWarEntryService.TryAccept`。原版信件负责拒绝、延后、到期和归档；资格记录独立于信件的删除。正式 `Command_Target` 与调试入口调用同一召唤服务，只有全部成功才消费资格并记录 `warStartTick`。不新增注册表、通用事件框架或多届战争生命周期。参战记录中的 Pawn 引用仅标明资格接受者，契约仍仅由从者组件保存。
+本届事件资格属于战争接受记录，不附着在 Pawn 生命周期上。原版 Incident / ScenPart 发出同一种 ChoiceLetter；玩家指定回路持有者后调用 `HolyGrailWarEntryService.TryAccept`。原版信件负责拒绝、延后、到期和归档；资格记录独立于信件的删除。正式 `Command_Target` 与调试入口调用同一召唤服务，只有全部成功才消费资格并记录 `warStartTick`。不新增注册表、通用事件框架或多届战争生命周期。参战记录中的 Pawn 引用标明资格接受者及实际敌方参与者，契约仍仅由从者组件保存。
+
+敌方供魔在现有 `PranaCycleService` 内按共享配置执行固定补给；敌方御主不进入玩家魔力库存与分配阶段，敌方从者不转化食物。维持、断供、自愈及宝具费用继续共用既有规则。撤退状态交由原版 Lord 保存，离图原 Pawn 交由 WorldPawns 保留；没有第二套进度、血量或魔力快照。
 
 宝具能力与冷却使用原版 `Pawn_AbilityTracker` / `Ability` 存档。过载使用目标从者身上的 `MW_NoblePhantasmOvercharge` Hediff，不另存御主侧 pending 布尔值或目标引用；无超时、不可叠加，只在下一次成功释放 MoonWorld 宝具时消费。
 
