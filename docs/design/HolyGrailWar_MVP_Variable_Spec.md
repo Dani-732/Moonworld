@@ -388,6 +388,8 @@ bool hasMystery;
 2. 从者在 caravan、运输舱、传送、地图撤离时的灵体状态如何表现？
 3. 六维参数、额外具备神秘度的攻击来源及其他魔力来源如何扩展，而不改变当前 MVP 的存档模型？
 4. 敌对御主被击杀后，其从者的具体退场状态和装备处理规则是什么。
+5. 宝具最终统一使用原版 `AbilityDef`，还是保留当前代码中的 `NoblePhantasmDef` 作为配置包装？实现宝具迁移前必须只保留一个权威契约。
+6. “宝具过载”作用于指定从者，但当前草案把单个布尔值保存在御主组件；多从者下无法表达目标。实现前应评估改用目标从者 Hediff 或专属宝具状态，而不是直接落地该字段。
 
 ## 14. 审查目标
 
@@ -410,4 +412,4 @@ Hediff_ServantPranaShortage / Hediff_ServantSpiritDamage 只由生命周期或�
 表现层、Gizmo、VFX、AI 和 Harmony Patch 不得直接改写上述字段
 ```
 
-跨模块只能通过 `IServantQuery`、`IContractLookup`、`IServantLifecycle`、`IPranaSource`、`IServantDamagePolicy` 等稳定接口协作。完整目录、接口和 Harmony 入口见 [HolyGrailWar_Module_Boundaries.md](../HolyGrailWar_Module_Boundaries.md)。
+跨模块优先通过 `IServantQuery`、`IContractLookup`、`IServantLifecycle`、`IServantDamagePolicy` 等已有稳定接口协作。当前只有单一实现的魔力来源和实体自治继续通过各自模块服务承接；出现第二种实现需求时再建立真实接口，不预放没有消费者的抽象。完整目录、接口和 Harmony 入口见 [HolyGrailWar_Module_Boundaries.md](../HolyGrailWar_Module_Boundaries.md)。

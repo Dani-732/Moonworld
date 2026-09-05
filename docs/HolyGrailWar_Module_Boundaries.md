@@ -22,9 +22,9 @@ Defs -> Core 查询/契约 -> Lifecycle 生命周期
 | `Core` | 身份查询、契约查询、不可变快照 | `IServantQuery`、`IContractLookup` | 保存可变状态或执行游戏 Tick 逻辑 |
 | `Lifecycle` | 契约绑定、实体/灵体/湮灭状态转换及其派生效果 | `IServantLifecycle` | 魔力运算、索敌、VFX |
 | `Core` 生理策略 | 从者无寿命与疾病分类 | `ServantPhysiologyPolicy` | 添加或移除 Hediff |
-| `Prana` | Need 变化、来源管线、维持、断供、自愈及可治疗状态策略 | `IPranaSource`、`ServantHealingPolicy` | 除请求生命周期服务外直接改变存在状态 |
+| `Prana` | Need 变化、来源管线、维持、断供、自愈及可治疗状态策略 | `PranaCycleService`、`ServantHealingPolicy` | 除请求生命周期服务外直接改变存在状态 |
 | `Combat` | 伤害许可与战败请求 | `IServantDamagePolicy` | 创建特效或直接修改 Need/Hediff |
-| `Autonomy` | Guest 关系初始化、原版驻点 Lord/Duty、灵体跟随移动与索敌策略 | `IServantAutonomyPolicy` | 改变契约或伤害规则 |
+| `Autonomy` | Guest 关系初始化、原版驻点 Lord/Duty、灵体跟随移动与索敌策略 | `QuestLodgerAutonomyService`、`SpiritFollowJobPolicy` | 改变契约或伤害规则 |
 | `Abilities` | 能力消耗、有效性与结算结果 | `INoblePhantasmResolver` | 渲染或直接写入生命周期字段 |
 | `Presentation` | Gizmo、声音、VFX 与渲染 | 只消费结果数据 | 充当玩法权威 |
 | `Integration` | 接入原版方法的窄 Harmony 补丁，包括按身份过滤 Need | 不提供状态 API | 保存状态或实现跨模块业务流程 |
@@ -59,7 +59,7 @@ TraitDef + MasterCircuitExtension
   -> MasterCircuitDef
 ```
 
-新增普通从者时通常只需添加 XML。新增魔力来源、索敌策略或宝具时，应实现对应接口并添加一项 Def 引用，而不修改生命周期或伤害代码。
+新增普通从者时通常只需添加 XML。当前魔力与实体自治各只有一条实现路径，不建立空注册表；出现新的魔力来源、自治类型、索敌策略或宝具解析器时，再为该变化点建立真实接口与 Def 引用，不修改生命周期或伤害代码。
 
 ## 权威调用路径
 
@@ -96,3 +96,5 @@ Pawn_HealthTracker.CheckForStateChange（普通伤害及其延迟健康后果）
 战败灵体化不设置独立实体化冷却。御主供魔不受从者实体或灵体形态限制；战败灵体可持续获得供魔并执行自愈，伤势恢复到不会被原版立即判定为倒地或死亡、且当前格可站立后即可实体化。肉体自愈的目标筛选由 `ServantHealingPolicy` 独立负责：普通伤口逐点治疗，背痛等非伤口有害状态按固定魔力消耗调用原版治愈机制，缺失部位及 MoonWorld 系统状态不进入候选。
 
 仍未实现：顶部小人栏灵体灰显、LordJob 三阶索敌、令咒、宝具迁移。当前从者使用不含离图转换的原版驻点 Lord；御主与从者的显式地图离开生命周期仍未接入。这些功能保持独立，不会以占位代码塞进无关模块。
+
+当前进度、已验收提交、结构债务和下一开发切片统一记录在 [PROJECT_STATUS.md](PROJECT_STATUS.md)。
