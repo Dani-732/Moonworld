@@ -7,6 +7,19 @@ namespace MoonWorld
 {
     public static class MoonWorldDebugActions
     {
+        [DebugAction("MoonWorld", "执行正式敌方从者突袭事件", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
+        public static void ExecuteEnemyServantRaidIncident()
+        {
+            IncidentParms parms = new IncidentParms
+            {
+                target = Find.CurrentMap,
+                forced = true,
+                sendLetter = false
+            };
+            if (!MW_DefOf.MW_HolyGrailWarEnemyServantRaid.Worker.TryExecute(parms))
+                Messages.Message("敌方突袭事件当前无法执行，请检查召唤、御主位置和本届部署状态。", MessageTypeDefOf.RejectInput, false);
+        }
+
         [DebugAction("MoonWorld/敌方测试", "在鼠标处部署本届突袭从者", actionType = DebugActionType.ToolMap, allowedGameStates = AllowedGameStates.PlayingOnMap)]
         public static void DeployEnemyWarParty()
         {
