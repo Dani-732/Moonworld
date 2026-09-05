@@ -19,7 +19,8 @@ namespace MoonWorld
 
             if (nd == MW_DefOf.MW_MasterPrana)
             {
-                __result = MasterCircuitUtility.HasCircuit(___pawn);
+                __result = !ServantQuery.Instance.IsServant(___pawn)
+                    && MasterCircuitUtility.HasCircuit(___pawn);
                 return false;
             }
 
