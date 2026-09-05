@@ -33,7 +33,6 @@ namespace MoonWorld
             snapshot.servant = pawn;
             snapshot.master = state.Master;
             snapshot.presenceState = state.PresenceState;
-            snapshot.rematerializationReadyTick = state.RematerializationReadyTick;
             snapshot.identity = ServantIdentityUtility.GetIdentity(pawn);
             return snapshot.identity != null;
         }

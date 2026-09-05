@@ -17,7 +17,6 @@
     <foodConversionThreshold>0.2</foodConversionThreshold>
     <healingMaxPerInterval>1</healingMaxPerInterval>
     <pranaPerHealingPoint>4</pranaPerHealingPoint>
-    <rematerializationCooldownTicks>10000</rematerializationCooldownTicks>
     <maxSpiritDamageStages>4</maxSpiritDamageStages>
   </Def>
   <Def Class="MoonWorld.ServantAutonomyProfileDef">

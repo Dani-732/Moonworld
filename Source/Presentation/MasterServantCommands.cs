@@ -74,14 +74,6 @@ namespace MoonWorld
             {
                 command.Disable("御主与从者必须处于同一张地图。");
             }
-            else if (state.PresenceState == ServantPresenceState.DefeatedSpirit)
-            {
-                int remaining = state.RematerializationReadyTick - Find.TickManager.TicksGame;
-                if (remaining > 0)
-                {
-                    command.Disable("战败后的灵基仍在凝聚，还需 " + remaining.ToStringTicksToPeriod() + "。");
-                }
-            }
             return command;
         }
     }

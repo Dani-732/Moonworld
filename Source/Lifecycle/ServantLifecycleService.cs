@@ -44,7 +44,6 @@ namespace MoonWorld
 
             state.Bind(master);
             state.SetPresence(ServantPresenceState.Materialized);
-            state.SetRematerializationReadyTick(-1);
             QuestLodgerAutonomyService.Initialize(servant);
             ServantPresenceEffects.Reconcile(servant);
             return true;
@@ -106,13 +105,6 @@ namespace MoonWorld
                 rejection = "御主与从者必须存活并处于同一张地图。";
                 return false;
             }
-            if (state.PresenceState == ServantPresenceState.DefeatedSpirit
-                && Find.TickManager.TicksGame < state.RematerializationReadyTick)
-            {
-                int remaining = state.RematerializationReadyTick - Find.TickManager.TicksGame;
-                rejection = "战败后的灵基仍在凝聚，还需 " + remaining.ToStringTicksToPeriod() + "。";
-                return false;
-            }
             if (state.PresenceState != ServantPresenceState.VoluntarySpirit
                 && state.PresenceState != ServantPresenceState.DefeatedSpirit)
             {
@@ -131,7 +123,6 @@ namespace MoonWorld
             }
 
             state.SetPresence(ServantPresenceState.Materialized);
-            state.SetRematerializationReadyTick(-1);
             ServantPresenceEffects.Reconcile(servant);
             return true;
         }
@@ -175,7 +166,6 @@ namespace MoonWorld
                 }
 
                 state.SetPresence(ServantPresenceState.DefeatedSpirit);
-                state.SetRematerializationReadyTick(Find.TickManager.TicksGame + profile.rematerializationCooldownTicks);
                 ServantPresenceEffects.Reconcile(servant);
                 return true;
             }

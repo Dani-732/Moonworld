@@ -23,7 +23,6 @@ namespace MoonWorld
         public Pawn servant;
         public Pawn master;
         public ServantPresenceState presenceState;
-        public int rematerializationReadyTick;
         public ServantIdentityDef identity;
     }
 

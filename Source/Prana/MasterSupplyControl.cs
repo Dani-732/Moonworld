@@ -124,7 +124,7 @@ namespace MoonWorld
                 Widgets.DrawHighlight(outerRect);
                 TooltipHandler.TipRegion(
                     outerRect,
-                    "显示御主当前魔力。拖动黄色指针可调整供魔安全线；高于安全线的魔力会供给实体化从者。");
+                    "显示御主当前魔力。拖动黄色指针可调整供魔安全线；高于安全线的魔力会供给所有未满魔的契约从者。");
             }
 
             return new GizmoResult(GizmoState.Clear);

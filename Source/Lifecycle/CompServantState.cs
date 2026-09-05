@@ -1,5 +1,4 @@
 using RimWorld;
-using UnityEngine;
 using Verse;
 
 namespace MoonWorld
@@ -17,12 +16,10 @@ namespace MoonWorld
     {
         private Pawn master;
         private ServantPresenceState presenceState = ServantPresenceState.Materialized;
-        private int rematerializationReadyTick = -1;
         private bool defeatResolutionInProgress;
 
         public Pawn Master => master;
         public ServantPresenceState PresenceState => presenceState;
-        public int RematerializationReadyTick => rematerializationReadyTick;
         public bool DefeatResolutionInProgress => defeatResolutionInProgress;
 
         public override void PostSpawnSetup(bool respawningAfterLoad)
@@ -61,11 +58,6 @@ namespace MoonWorld
             presenceState = newState;
         }
 
-        public void SetRematerializationReadyTick(int tick)
-        {
-            rematerializationReadyTick = tick;
-        }
-
         public void SetDefeatResolutionInProgress(bool value)
         {
             defeatResolutionInProgress = value;
@@ -95,13 +87,6 @@ namespace MoonWorld
             {
                 result += "\n契约御主：" + master.LabelShort;
             }
-            if (presenceState == ServantPresenceState.DefeatedSpirit && rematerializationReadyTick >= 0)
-            {
-                int remaining = Find.TickManager == null
-                    ? 0
-                    : Mathf.Max(0, rematerializationReadyTick - Find.TickManager.TicksGame);
-                result += "\n实体化冷却：" + remaining.ToStringTicksToPeriod();
-            }
             return result;
         }
 
@@ -109,7 +94,6 @@ namespace MoonWorld
         {
             Scribe_References.Look(ref master, "master");
             Scribe_Values.Look(ref presenceState, "presenceState", ServantPresenceState.Materialized);
-            Scribe_Values.Look(ref rematerializationReadyTick, "rematerializationReadyTick", -1);
         }
     }
 }

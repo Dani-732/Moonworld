@@ -16,7 +16,7 @@
 8. 从者保留原版 `Need_Food` 与原版进食 Job；原版自然饥饿下降关闭，只有进食转魔会降低饥饿值。
 9. 仅实体化从者可进食或转魔；魔力未满且饥饿值高于原版寻食边界时，饥饿值缓慢转化为魔力；降至边界后，原版进食 AI 负责补充食物。灵体化期间 `Need_Food` 不变。
 10. 御主魔术回路数量决定魔力上限，质量决定自然回复；独立的回路 Trait 通过 `DefModExtension` 引用 `MasterCircuitDef`；魔术师位阶 Trait 仅是身份标签。
-11. 御主魔力高于供魔安全线时，仅向未满魔、实体化的契约从者均分溢出魔力；从者满魔即退出均分池。
+11. 御主魔力高于供魔安全线时，向所有未湮灭且未满魔的契约从者均分溢出魔力，不受实体或灵体形态限制；从者满魔即退出均分池。
 12. MVP 中只有英灵施放的攻击可以伤害实体化英灵；其他普通伤害在应用前拦截。直接 `Kill` 不拦截。
 13. 御主死亡时，其所有未湮灭的契约从者立即湮灭；实体化从者可以承受环境伤害，但免疫疾病、衰老和饥饿值归零的原版后果。
 
@@ -27,7 +27,7 @@
 | 事实类型 | 唯一归属 |
 |---|---|
 | 战争开局时间 | `GameComponent` |
-| 从者与御主的契约关系、灵体状态、战败冷却 | `CompServantState` |
+| 从者与御主的契约关系、灵体状态 | `CompServantState` |
 | 御主当前魔力 | `Need_MasterPrana` |
 | 御主回路天赋 | 回路 Trait 的 `DefModExtension` -> `MasterCircuitDef` |
 | 当前魔力 | `Need_Prana` |
@@ -79,7 +79,6 @@ List<Pawn> allServants;
 |---|---|---:|---:|---|
 | `master` | `Pawn` | 是，`Scribe_References` | `null` | 契约御主。此字段是唯一持久的主从关系来源。 |
 | `presenceState` | `ServantPresenceState` | 是，`Scribe_Values` | `Materialized` | 从者当前存在形式。 |
-| `rematerializationReadyTick` | `int` | 是，`Scribe_Values` | `-1` | 战败灵体化的冷却结束绝对 Tick。只在战败灵体状态有意义。 |
 
 ```csharp
 public enum ServantPresenceState
@@ -93,14 +92,14 @@ public enum ServantPresenceState
 
 状态含义：
 
-| 状态 | 可攻击/受攻击 | 行为 | 可由御主解除 | 冷却 |
-|---|---|---|---|---|
-| `Materialized` | 是 | 按自主 AI | 不适用 | 无 |
-| `VoluntarySpirit` | 否 | 原版寻路跟随，过远时闪现 | 是 | 无 |
-| `DefeatedSpirit` | 否 | 原版寻路跟随，过远时闪现 | 否 | 至 `rematerializationReadyTick` |
-| `Annihilated` | 否 | 无 | 否 | 永久 |
+| 状态 | 可攻击/受攻击 | 行为 | 可由御主解除 |
+|---|---|---|---|
+| `Materialized` | 是 | 按自主 AI | 不适用 |
+| `VoluntarySpirit` | 否 | 原版寻路跟随，过远时闪现 | 是 |
+| `DefeatedSpirit` | 否 | 原版寻路跟随，过远时闪现 | 是，伤势与落点满足实体化检查后 |
+| `Annihilated` | 否 | 无 | 否 |
 
-“重新实体化中”不是持久枚举值。它只是将 `DefeatedSpirit` 转为 `Materialized` 的一次短暂运行时操作，避免存档中出现“已转换但冷却还在”之类的非法组合。
+“重新实体化中”不是持久枚举值。将灵体状态转为 `Materialized` 是一次即时运行时操作，不增加额外状态或时间字段。
 
 ### 4.2 运行时字段，不存档
 
@@ -151,7 +150,7 @@ int defeatCount;
 每个统一低频魔力结算周期：
 1. 御主自然回魔。
 2. 实体化、未满魔且食物储备高于阈值的从者执行进食转魔。
-3. 若 CurrentMasterPrana > SupplyThreshold，取得所有未满魔、实体化且 master 指向该御主的从者；将全部溢出魔力在它们之间均分，满魔者立即移出均分池。
+3. 若 CurrentMasterPrana > SupplyThreshold，取得所有未湮灭、未满魔且 master 指向该御主的从者，不受实体或灵体形态限制；将全部溢出魔力在它们之间均分，满魔者立即移出均分池。
 4. 处理从者形态维持消耗与断供 Hediff。
 5. 仅用高于当前形态维持线的魔力执行自愈。
 ```
@@ -309,7 +308,6 @@ MVP 不创建 `hasMystery`、神秘度等级或攻击源注册表。判定只依
 | `foodConversionThreshold` | `float` | 转魔停止点；必须与原版进食 Job 的可用边界同源或严格对齐。 |
 | `healingMaxPerInterval` | `float` | 单次自愈最大恢复量。 |
 | `pranaPerHealingPoint` | `float` | 每单位自愈消耗魔力。 |
-| `rematerializationCooldownTicks` | `int` | 战败后冷却时长。 |
 | `spiritFollowDistance` | `float` | 灵体使用原版寻路跟随时的停留距离，默认 `4` 格。 |
 | `spiritTeleportDistance` | `float` | 灵体与御主距离超过该值时闪现，默认 `10` 格。 |
 | `spiritTeleportRadius` | `int` | 闪现落点在御主周围的搜索半径，默认 `2` 格。 |
@@ -350,7 +348,7 @@ bool malnutritionImmune;
 | 规则 | 派生条件 |
 |---|---|
 | 能否由御主解除主动灵体化 | `presenceState == VoluntarySpirit`，御主有效，双方当前同图，且从者当前格满足原版 `Standable`。 |
-| 战败灵体能否实体化 | `presenceState == DefeatedSpirit`，当前 Tick 到达 `rematerializationReadyTick`，当前格满足原版 `Standable`，且保留伤势不会立即导致倒地或死亡。 |
+| 战败灵体能否实体化 | `presenceState == DefeatedSpirit`，当前格满足原版 `Standable`，且保留伤势不会立即导致倒地或死亡；不设置独立时间冷却。 |
 | 御主能否离开地图 | 契约从者已湮灭，或从者已加入同一离图队伍；否则阻止离图并提示原因。 |
 | 普通伤害是否触发战败 | 从者非湮灭、非灵体，且该伤害将导致原版倒地或死亡。 |
 | 直接 `Pawn.Kill` 是否触发战败 | 否，直接进入原版死亡流程。 |
@@ -385,7 +383,7 @@ bool hasMystery;
 这些不是遗漏字段，而是尚未冻结的规则；在做对应功能前必须先定案：
 
 1. 战争胜利或失败后，`warStartTick` 保留用于历史显示，还是由 Quest 结束后停用所有战争事件？
-2. 从者在 caravan、运输舱、传送、地图撤离时的灵体状态如何表现；尤其是战败冷却中的从者能否随御主同行？
+2. 从者在 caravan、运输舱、传送、地图撤离时的灵体状态如何表现？
 3. 六维参数、额外具备神秘度的攻击来源及其他魔力来源如何扩展，而不改变当前 MVP 的存档模型？
 4. 敌对御主被击杀后，其从者的具体退场状态和装备处理规则是什么。
 

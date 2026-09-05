@@ -37,7 +37,6 @@ Defs -> Core 查询/契约 -> Lifecycle 生命周期
 GameComponent_MoonWorld.warStartTick
 CompServantState.master
 CompServantState.presenceState
-CompServantState.rematerializationReadyTick
 CompMasterPranaControl.supplyThresholdOverride
 CompMasterCommandSpells.commandSpellCharges（未来 MVP 切片）
 ```
@@ -68,7 +67,7 @@ TraitDef + MasterCircuitExtension
 GameComponent Tick
   1. 御主自然回魔
   2. 实体化从者进食转魔
-  3. 分配御主安全线以上的魔力
+  3. 向所有未湮灭且未满魔的契约从者分配御主安全线以上的魔力
   4. 结算维持消耗与断供
   5. 使用维持线以上的魔力自愈
 
@@ -93,5 +92,7 @@ Pawn_HealthTracker.CheckForStateChange（普通伤害及其延迟健康后果）
 灵体状态切片已经实现：御主持有的状态命令、同图与实体化落点校验、全 PawnRenderTree 节点 30% 不透明表现、复用 Core 心理不可见机制阻止普通索敌、灵体止血、根据权威状态定期校正派生效果、只跟随御主的专用 Job，以及攻击和能力入口门控。`MW_SpiritForm` 使用原版 Hediff `MoveSpeed` 统计倍率将移动速度提高至 300%；灵体近距离移动调用原版 Pawn 寻路，距离超过自治 Def 阈值时才使用原版位置与传送通知闪现到御主附近，不修改普通 Pawn 寻路、地形或建筑。该切片没有增加持久状态或自定义移速代码。
 
 战败切片已经实现：原版 `CheckForStateChange` 前置适配、普通伤害及失血等延迟后果的倒地/死亡判定、本次致命伤的最低限度修复、战败资源与状态结算，以及灵体状态下的原版倒地/死亡状态检查抑制。若同一次伤害先满足倒地、随后才升级为致死，生命周期服务会继续稳定后续致命变化。致命部位缺失仅移除造成死亡的缺失状态；未缺失的致命伤或失血只降低到刚好不再致死，其他伤口与非致命缺失部位保留。重新实体化同时要求原版 `ShouldBeDead` 和 `ShouldBeDowned` 均为否。直接 `Pawn.Kill` 不经过战败转换，但会先清除灵体派生效果，避免原版尸体持有隐形组件。
+
+战败灵体化不设置独立实体化冷却。御主供魔不受从者实体或灵体形态限制；战败灵体可持续获得供魔并执行自愈，伤势恢复到不会被原版立即判定为倒地或死亡、且当前格可站立后即可实体化。
 
 仍未实现：顶部小人栏灵体灰显、LordJob 三阶索敌、令咒、宝具迁移。从者自治 LordJob 已阻止访客自行离图，但御主与从者的显式地图离开生命周期仍未接入。这些功能保持独立，不会以占位代码塞进无关模块。

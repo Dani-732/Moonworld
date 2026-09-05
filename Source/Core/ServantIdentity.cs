@@ -24,7 +24,6 @@ namespace MoonWorld
         public float foodConversionThreshold = 0.2f;
         public float healingMaxPerInterval = 1f;
         public float pranaPerHealingPoint = 4f;
-        public int rematerializationCooldownTicks = 10000;
         public int maxSpiritDamageStages = 4;
     }
 

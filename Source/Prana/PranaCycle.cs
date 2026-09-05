@@ -154,7 +154,7 @@ namespace MoonWorld
                     foreach (Pawn servant in masterServants)
                     {
                         Need_Prana prana = servant.needs.TryGetNeed<Need_Prana>();
-                        if (ServantQuery.Instance.IsMaterialized(servant) && prana != null && ledger.RemainingCapacity(prana) > 0.001f)
+                        if (CanReceiveMasterSupply(servant, prana) && ledger.RemainingCapacity(prana) > 0.001f)
                         {
                             recipients++;
                         }
@@ -169,7 +169,7 @@ namespace MoonWorld
                     foreach (Pawn servant in masterServants)
                     {
                         Need_Prana prana = servant.needs.TryGetNeed<Need_Prana>();
-                        if (!ServantQuery.Instance.IsMaterialized(servant) || prana == null)
+                        if (!CanReceiveMasterSupply(servant, prana))
                         {
                             continue;
                         }
@@ -188,6 +188,16 @@ namespace MoonWorld
                     available -= transferred;
                 }
             }
+        }
+
+        private static bool CanReceiveMasterSupply(Pawn servant, Need_Prana prana)
+        {
+            CompServantState state = servant?.TryGetComp<CompServantState>();
+            return prana != null
+                && servant != null
+                && !servant.Dead
+                && state != null
+                && state.PresenceState != ServantPresenceState.Annihilated;
         }
 
         private static void ApplyServantUpkeepAndShortage(PranaLedger ledger, int intervalTicks)
