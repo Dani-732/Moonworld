@@ -57,7 +57,15 @@ namespace RimWorld
 }
 namespace RimWorld.Planet
 {
-    public struct PlanetTile { public object Layer => null; }
+    public struct PlanetTile
+    {
+        public int Id; public object Layer => null;
+        public static PlanetTile Invalid => new PlanetTile { Id = -1 };
+        public static bool operator ==(PlanetTile a, PlanetTile b) => a.Id == b.Id;
+        public static bool operator !=(PlanetTile a, PlanetTile b) => a.Id != b.Id;
+        public override bool Equals(object value) => value is PlanetTile other && this == other;
+        public override int GetHashCode() => Id;
+    }
     public class WorldObject { public virtual void Destroy() { } }
     public class Caravan { }
     public class TransportersArrivalAction { }
@@ -95,7 +103,7 @@ namespace RimWorld.Planet
     {
         public static bool Fail;
         public static bool TryFindNewSiteTile(out PlanetTile tile, PlanetTile origin, float selectLandmarkChance, object layer)
-        { tile = new PlanetTile(); return !Fail; }
+        { tile = new PlanetTile { Id = origin.Id + 1 }; return !Fail; }
     }
 }
 namespace MoonWorld

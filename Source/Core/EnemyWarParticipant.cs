@@ -1,4 +1,5 @@
 using Verse;
+using RimWorld.Planet;
 
 namespace MoonWorld
 {
@@ -10,6 +11,11 @@ namespace MoonWorld
         private Pawn master, servant;
         private bool prepared, deployed;
         private int restStartTickAbs = -1;
+        private int workshopRebuildAtTickAbs = -1;
+        private PlanetTile lostWorkshopTile = PlanetTile.Invalid;
+        public int WorkshopRebuildAtTickAbs => workshopRebuildAtTickAbs;
+        public bool WorkshopRebuildPending => workshopRebuildAtTickAbs >= 0;
+        public PlanetTile LostWorkshopTile => lostWorkshopTile;
         public ServantIdentityDef EnemyIdentity => identity;
         public HolyGrailWarClassDef Seat => seat ?? HolyGrailWarClassDef.For(identity);
         public Pawn EnemyMaster => master;
@@ -37,12 +43,21 @@ namespace MoonWorld
         internal void RecordEnemyDeparture(Pawn pawn)
         { if (pawn == servant && restStartTickAbs < 0) restStartTickAbs = GenTicks.TicksAbs; }
         internal void MarkPrepared() { prepared = true; }
+        internal void ScheduleWorkshopRebuild(PlanetTile tile)
+        {
+            if (WorkshopRebuildPending) return;
+            lostWorkshopTile = tile;
+            workshopRebuildAtTickAbs = GenTicks.TicksAbs + System.Math.Max(0, Seat?.workshopRebuildDelayTicks ?? 180000);
+        }
+        internal void CompleteWorkshopRebuild() { workshopRebuildAtTickAbs = -1; lostWorkshopTile = PlanetTile.Invalid; }
         public void ExposeData()
         {
             Scribe_Defs.Look(ref identity, "identity"); Scribe_Defs.Look(ref seat, "seat");
             Scribe_References.Look(ref master, "master"); Scribe_References.Look(ref servant, "servant");
             Scribe_Values.Look(ref prepared, "prepared", false); Scribe_Values.Look(ref deployed, "deployed", false);
             Scribe_Values.Look(ref restStartTickAbs, "restStartTickAbs", -1);
+            Scribe_Values.Look(ref workshopRebuildAtTickAbs, "workshopRebuildAtTickAbs", -1);
+            Scribe_Values.Look(ref lostWorkshopTile, "lostWorkshopTile", PlanetTile.Invalid);
         }
     }
 }

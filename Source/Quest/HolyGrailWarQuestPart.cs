@@ -61,8 +61,13 @@ namespace MoonWorld
                 if (entry != null && quest != null && !quest.Historical) Initialize(warStartTick, entry);
                 var text = new System.Text.StringBuilder("圣杯战争参战阵营：");
                 foreach (var faction in factions)
+                {
                     text.Append("\n").Append(faction.SeatLabel).Append("：")
                         .Append(faction.Qualified ? "参战中" : "已失去资格");
+                    if (faction.Qualified && quest != null && !quest.Historical
+                        && entry?.FindEnemy(faction.Master)?.WorkshopRebuildPending == true)
+                        text.Append("（工坊失守，等待休整并重建）");
+                }
                 return text.ToString();
             }
         }

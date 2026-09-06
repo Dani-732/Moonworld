@@ -27,8 +27,9 @@ namespace MoonWorld
                 || playerMaster.IsPrisoner || playerMaster.IsSlave)
                 return "本届玩家御主必须存活、自由且位于该基地。";
             foreach (var enemy in entry.Enemies)
-                if (!enemy.EnemyEliminated && EnemyRestUtility.ReadinessRejection(enemy.EnemyServant) == null) return null;
-            return "当前没有可出战的敌方阵营：可能正在出击、休整或已经淘汰。";
+                if (!enemy.EnemyEliminated && !WorkshopRebuildService.BlocksRaid(enemy)
+                    && EnemyRestUtility.ReadinessRejection(enemy.EnemyServant) == null) return null;
+            return "当前没有可出战的敌方阵营：可能正在出击、休整、撤离重建或已经淘汰。";
         }
 
         public static bool TryDeploy(Map map, IntVec3 cell, out string rejection)
@@ -45,7 +46,8 @@ namespace MoonWorld
             HolyGrailWarEntry entry = Current.Game.GetComponent<GameComponent_MoonWorld>().CurrentWarEntry;
             var ready = new List<EnemyWarParticipant>();
             foreach (var enemy in entry.Enemies)
-                if (!enemy.EnemyEliminated && EnemyRestUtility.ReadinessRejection(enemy.EnemyServant) == null) ready.Add(enemy);
+                if (!enemy.EnemyEliminated && !WorkshopRebuildService.BlocksRaid(enemy)
+                    && EnemyRestUtility.ReadinessRejection(enemy.EnemyServant) == null) ready.Add(enemy);
             EnemyWarParticipant selected = ready.RandomElement();
             generating = true;
             try

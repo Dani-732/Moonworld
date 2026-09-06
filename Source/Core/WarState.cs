@@ -38,6 +38,7 @@ namespace MoonWorld
         public override void GameComponentTick()
         {
             WarOutcomeService.Tick(this);
+            if (Find.TickManager.TicksGame % 2500 == 0) WorkshopRebuildService.Tick(this);
             int interval = Mathf.Max(1, MW_DefOf.MW_HolyGrailWarSettings.pranaUpdateIntervalTicks);
             if (Find.TickManager.TicksGame % interval == 0)
             {

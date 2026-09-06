@@ -214,6 +214,7 @@ namespace MoonWorld
 
                 state.SetPresence(ServantPresenceState.DefeatedSpirit);
                 ServantPresenceEffects.Reconcile(servant);
+                (servant.Map?.Parent as Site_WarWorkshop)?.NotifyServantDefeated(servant);
                 return true;
             }
             finally

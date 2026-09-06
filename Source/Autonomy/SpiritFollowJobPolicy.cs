@@ -64,6 +64,7 @@ namespace MoonWorld
                 && servant.Spawned
                 && master.Spawned
                 && servant.Map == master.Map
+                && !EnemyRetreatUtility.ShouldExit(servant)
                 && !ServantTravelAutonomy.HasTravelAssignment(servant);
         }
     }

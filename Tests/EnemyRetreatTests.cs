@@ -30,6 +30,21 @@ internal static class EnemyRetreatTests
     }
     public static void Main()
     {
+        Test("workshop master uses native exit toil without combat fallback", () => {
+            var retreat = new LordJob_WorkshopRetreat(); var graph = retreat.CreateGraph();
+            Check(!retreat.AddFleeToil && !retreat.CanAutoAddPawns && graph.Toils.Count == 1
+                && graph.Toils[0] is LordToil_ExitMap, "master exit graph invalid");
+        });
+        Test("workshop retreat cancels same-map follow and teleport", () => {
+            servant.Map.Parent = new Site_WarWorkshop { RetreatOrdered = true };
+            servant.Spirit = true; party.BeginRetreat();
+            Job exit = SpiritFollowJobPolicy.CreateJob(servant);
+            Check(EnemyRetreatUtility.ShouldExit(servant) && exit.exitMapOnArrival
+                && SpiritFollowJobPolicy.IsAllowed(servant, exit)
+                && !SpiritFollowJobPolicy.CanFollow(servant, master)
+                && !SpiritFollowJobPolicy.IsAllowed(servant, JobMaker.MakeJob(MW_DefOf.MW_SpiritFollow, master)),
+                "retreat spirit still follows same-map master");
+        });
         Test("another faction defeat cannot force this lord to retreat", () => {
             var own = Current.Game.Entry;
             Current.Game.Entry = new HolyGrailWarEntry { EnemyMaster = new Pawn(), EnemyServant = new Pawn(),
@@ -215,7 +230,7 @@ namespace Verse.AI
     public class DutyDef { }
     public class PawnDuty { public DutyDef def; public PawnDuty(DutyDef d) { def = d; } }
     public static class AttackTargetFinder { public static bool IsAutoTargetable(Pawn p) => p.AutoTargetable; }
-    public enum LocomotionUrgency { Jog }
+    public enum LocomotionUrgency { Jog, Sprint }
     public class Job { public object def; public bool exitMapOnArrival, checkOverrideOnExpire; public LocalTargetInfo targetA; public int expiryInterval; }
     public static class JobMaker { public static Job MakeJob(object d, Pawn p = null) => new Job { def = d, targetA = new LocalTargetInfo { Thing = p } }; }
     public class JobGiver_ExitMapBest { protected Job TryGiveJob(Pawn p) => new Job { def = JobDefOf.Goto, exitMapOnArrival = true, targetA = new LocalTargetInfo(new IntVec3 { Edge = true }) }; }
@@ -239,7 +254,7 @@ namespace Verse.AI.Group
 }
 namespace MoonWorld
 {
-    public class Site_WarWorkshop { }
+    public class Site_WarWorkshop { public bool RetreatOrdered; }
     public class GameComponent_MoonWorld { public HolyGrailWarEntry CurrentWarEntry => Current.Game.Entry; }
     public class HolyGrailWarEntry
     {

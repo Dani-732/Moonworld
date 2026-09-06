@@ -18,6 +18,14 @@ internal static class IndependentPresenceTests
     private static bool Return() => ServantLifecycleService.Instance.TryRematerialize(master, servant, out _);
     public static void Main()
     {
+        Test("only resolved battle defeat notifies workshop after spirit state commits", () => {
+            var site = new Site_WarWorkshop(); servant.Map.Parent = site;
+            Check(Enter() && site.Notifications == 0 && Return(), "voluntary spirit notified workshop");
+            Check(ServantLifecycleService.Instance.TryResolveDefeat(servant) && site.Notifications == 1
+                && site.LastPresence == ServantPresenceState.DefeatedSpirit, "defeat event missing or premature");
+            ServantLifecycleService.Instance.TryResolveDefeat(servant);
+            Check(site.Notifications == 1, "repeat defeat duplicated notification");
+        });
         Test("different maps allow voluntary spirit and rematerialization", () => {
             Check(Enter() && servant.State.PresenceState == ServantPresenceState.VoluntarySpirit, "enter failed");
             Check(Return() && servant.State.PresenceState == ServantPresenceState.Materialized, "return failed");
@@ -42,7 +50,7 @@ internal static class IndependentPresenceTests
 }
 namespace Verse
 {
-    public class Map { public bool Standable = true; }
+    public class Map { public bool Standable = true; public object Parent; }
     public struct IntVec3 { public bool Standable(Map map) => map != null && map.Standable; }
     public class Pawn
     {
@@ -70,6 +78,11 @@ namespace Verse
 namespace RimWorld { public class Faction { public static Faction OfPlayer = new Faction(); } }
 namespace MoonWorld
 {
+    public class Site_WarWorkshop
+    {
+        public int Notifications; public ServantPresenceState LastPresence;
+        public void NotifyServantDefeated(Pawn pawn) { Notifications++; LastPresence = pawn.State.PresenceState; }
+    }
     public interface IServantLifecycle { }
     public enum ServantPresenceState { Materialized, VoluntarySpirit, DefeatedSpirit, Annihilated }
     public enum ServantEndReason { SpiritDamageLimit }

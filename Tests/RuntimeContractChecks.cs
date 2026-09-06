@@ -84,6 +84,7 @@ internal static class RuntimeContractChecks
             new[] { "MoonWorld.QuestPart_HolyGrailWar", "RimWorld.QuestPart" },
             new[] { "MoonWorld.Site_WarWorkshop", "RimWorld.Planet.Site" },
             new[] { "MoonWorld.LordJob_EnemyWarParty", "Verse.AI.Group.LordJob" },
+            new[] { "MoonWorld.LordJob_WorkshopRetreat", "Verse.AI.Group.LordJob" },
             new[] { "MoonWorld.LordToil_EnemyServantAssault", "Verse.AI.Group.LordToil" },
             new[] { "MoonWorld.JobGiver_EnemyServantAssault", "RimWorld.JobGiver_AIFightEnemies" } })
         {
@@ -127,8 +128,8 @@ internal static class RuntimeContractChecks
             "Harmony_ServantDeparture_LaunchCheck" })
             if (mod.GetType("MoonWorld." + removed) != null) throw new Exception("Obsolete adapter remains: " + removed);
         Type exitPatch = mod.GetType("MoonWorld.Harmony_ServantDeparture_ExitPawn", true);
-        if (exitPatch.GetMethod("Prefix") != null || exitPatch.GetMethod("Postfix") == null)
-            throw new Exception("Pawn exit must keep enemy retention only, without a travel veto");
+        if (exitPatch.GetMethod("Prefix")?.ReturnType != typeof(void) || exitPatch.GetMethod("Postfix") == null)
+            throw new Exception("Pawn exit may capture source map but must not veto departure");
         Assembly content = Assembly.LoadFrom(Path.Combine(directories[3], "HolyGrailWarTest.dll"));
         Type identityUtility = content.GetType("HolyGrailWar.ServantIdentityUtility", true);
         Type pawnType = game.GetType("Verse.Pawn", true);

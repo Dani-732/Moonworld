@@ -17,6 +17,7 @@ namespace MoonWorld
 
         internal static bool TryPlaceDefenders(Site_WarWorkshop site)
         {
+            if (site.RetreatOrdered) return true;
             EnemyWarParticipant entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.FindEnemy(site.OwnerMaster);
             if (entry == null || site.OwnerMaster != entry.EnemyMaster) return true;
             Map map = site.Map;
@@ -75,10 +76,46 @@ namespace MoonWorld
 
         internal static void ReturnDefendersToWorld(Site_WarWorkshop site)
         {
+            if (site.RetreatOrdered) return;
             EnemyWarParticipant entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.FindEnemy(site.OwnerMaster);
             if (entry == null || site.OwnerMaster != entry.EnemyMaster) return;
             Return(entry.EnemyMaster, site.Map);
             Return(entry.EnemyServant, site.Map);
+        }
+
+        internal static bool HasWithdrawingPawnOnMap(Site_WarWorkshop site)
+        {
+            var enemy = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.FindEnemy(site.OwnerMaster);
+            return enemy != null && (IsFreeOnMap(enemy.EnemyMaster, site.Map) || IsFreeOnMap(enemy.EnemyServant, site.Map));
+        }
+
+        private static bool IsFreeOnMap(Pawn pawn, Map map)
+        {
+            return map != null && pawn != null && pawn.MapHeld == map && !pawn.Dead && !pawn.Destroyed
+                && !pawn.IsPrisoner && !pawn.IsSlave;
+        }
+
+        internal static void OrderRetreat(Site_WarWorkshop site, EnemyWarParticipant enemy)
+        {
+            Pawn master = enemy.EnemyMaster;
+            if (IsFreeOnMap(master, site.Map) && master.Spawned && !(master.GetLord()?.LordJob is LordJob_WorkshopRetreat))
+            {
+                Lord previous = master.GetLord();
+                if (previous != null) site.Map.lordManager.RemoveLord(previous);
+                try
+                {
+                    LordMaker.MakeNewLord(master.Faction, new LordJob_WorkshopRetreat(), site.Map, new[] { master });
+                }
+                catch
+                {
+                    Lord partial = master.GetLord();
+                    if (partial != null) site.Map.lordManager.RemoveLord(partial);
+                    throw;
+                }
+            }
+            Pawn servant = enemy.EnemyServant;
+            if (IsFreeOnMap(servant, site.Map) && servant.Spawned)
+                (servant.GetLord()?.LordJob as LordJob_EnemyWarParty)?.BeginRetreat();
         }
 
         private static void Return(Pawn pawn, Map map)

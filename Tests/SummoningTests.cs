@@ -6,7 +6,7 @@ using Verse;
 using RimWorld.Planet;
 
 // Production entry, war state and summoning service; Unity generation and Scribe use host doubles.
-internal static class SummoningTests
+internal static partial class SummoningTests
 {
     private static Pawn master;
     private static Map map;
@@ -120,6 +120,7 @@ internal static class SummoningTests
     }
     public static void Main()
     {
+        RunWorkshopTests();
         Test("seven faction war only ends after all six opponents lose qualification", () => {
             SevenClasses(); PrepareEnemy(); var enemies = State.CurrentWarEntry.Enemies;
             Check(enemies.Count == 6 && State.warQuest.GetFirstPartOfType<QuestPart_HolyGrailWar>().Factions.Count == 7, "roster incomplete");
@@ -770,7 +771,7 @@ namespace Verse
         public void PassToWorld(Pawn p, RimWorld.Planet.PawnDiscardDecideMode mode)
         { if (!Pawns.Add(p)) throw new Exception("duplicate world pawn"); p.becameWorldPawnTickAbs = GenTicks.TicksAbs; if (FailPass) throw new Exception("world retention"); }
     }
-    public class Map { public IntVec3 Center => new IntVec3 { Valid = true }; public Reachability reachability = new Reachability(); public PlanetTile Tile = new PlanetTile(); public bool IsPlayerHome = true, CanEverExit = true; public Verse.AI.Group.LordManager lordManager = new Verse.AI.Group.LordManager(); }
+    public class Map { public object Parent; public IntVec3 Center => new IntVec3 { Valid = true }; public Reachability reachability = new Reachability(); public PlanetTile Tile = new PlanetTile(); public bool IsPlayerHome = true, CanEverExit = true; public Verse.AI.Group.LordManager lordManager = new Verse.AI.Group.LordManager(); }
     public enum TraverseMode { PassDoors }
     public struct TraverseParms { public static TraverseParms For(TraverseMode mode) => new TraverseParms(); }
     public class Reachability { public bool CanReachMapEdge(IntVec3 cell, TraverseParms parms) => !Pawn.EdgeBlocked; }
@@ -784,6 +785,7 @@ namespace Verse
     public enum WipeMode { Vanish }
     public class Pawn
     {
+        public Map MapHeld => Spawned ? Map : null;
         public bool Dead, Destroyed, IsPrisoner, IsSlave, Lodger, Servant, Downed, InMentalState;
         public object ParentHolder; public int becameWorldPawnTickAbs = -1;
         public string LabelShortCap => "测试御主"; public object Rotation; public Health health = new Health(); public Verse.AI.Group.Lord Lord;
@@ -942,7 +944,8 @@ namespace MoonWorld
     public class ServantResourceProfileDef { public float materializedSustainThreshold = 30; }
     public static class ServantSustainPolicy { public static float Threshold(Pawn p, ServantPresenceState state) => 60; }
     public static class ServantHealingPolicy { public static Hediff FindWorstCurableCondition(Pawn p) => null; }
-    public class LordJob_EnemyWarParty { }
+    public class LordJob_EnemyWarParty { public bool Retreating; internal void BeginRetreat() { Retreating = true; } }
+    public class LordJob_WorkshopRetreat { }
     public class ServantIdentityDef { public HolyGrailWarClassDef classDef; public bool summonable = true; public HolyGrailWarClass warClass; public PawnKindDef servantKind = new PawnKindDef(); }
     public class ServantLifecycleService
     {
@@ -958,9 +961,9 @@ namespace MoonWorld
 namespace RimWorld.Planet { public enum PawnDiscardDecideMode { Decide, KeepForever } }
 namespace Verse.AI.Group
 {
-    public class Lord { public Pawn Pawn; }
+    public class Lord { public Pawn Pawn; public object LordJob; }
     public static class LordExtensions { public static Lord GetLord(this Pawn p) => p.Lord; }
     public class LordManager { public void RemoveLord(Lord l) { if (l.Pawn != null) l.Pawn.Lord = null; l.Pawn = null; } }
     public static class LordMaker { public static bool Fail; public static Pawn[] LastPawns;
-        public static Lord MakeNewLord(Faction f, object job, Map m, Pawn[] pawns) { LastPawns = pawns; Lord result = new Lord { Pawn = pawns[0] }; pawns[0].Lord = result; if (Fail) throw new Exception("lord"); return result; } }
+        public static Lord MakeNewLord(Faction f, object job, Map m, Pawn[] pawns) { LastPawns = pawns; Lord result = new Lord { Pawn = pawns[0], LordJob = job }; pawns[0].Lord = result; if (Fail) throw new Exception("lord"); return result; } }
 }

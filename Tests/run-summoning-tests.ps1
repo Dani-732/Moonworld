@@ -8,6 +8,9 @@ try {
         (Join-Path $projectRoot 'Source\Lifecycle\EnemyWarPreparation.cs') `
         (Join-Path $projectRoot 'Source\Integration\Site_WarWorkshop.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\WarWorkshopService.cs') `
+        (Join-Path $projectRoot 'Source\Lifecycle\WorkshopRebuildService.cs') `
+        (Join-Path $projectRoot 'Source\Autonomy\WorkshopRetreatPolicy.cs') `
+        (Join-Path $PSScriptRoot 'WorkshopRetreatTests.cs') `
         (Join-Path $PSScriptRoot 'SummoningTests.cs') `
         (Join-Path $projectRoot 'Source\Core\HolyGrailWarEntry.cs') `
         (Join-Path $projectRoot 'Source\Core\HolyGrailWarClass.cs') `

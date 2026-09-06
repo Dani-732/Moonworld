@@ -13,6 +13,7 @@ namespace MoonWorld
         public override bool AddFleeToil => false;
         public override bool CanAutoAddPawns => false;
         public bool Retreating => lord.CurLordToil is LordToil_ExitMap;
+        internal void BeginRetreat() { if (!Retreating) lord.ReceiveMemo(RetreatMemo); }
 
         public override StateGraph CreateGraph()
         {
@@ -133,6 +134,7 @@ namespace MoonWorld
             if (!EnemyContractUtility.HasEnemyContract(servant)
                 || !(servant.GetLord()?.LordJob is LordJob_EnemyWarParty party) || !party.Retreating) return false;
             Pawn master = ServantQuery.Instance.GetMaster(servant);
+            if (servant.Map?.Parent is Site_WarWorkshop workshop && workshop.RetreatOrdered) return true;
             return master == null || !master.Spawned || master.Map != servant.Map;
         }
 

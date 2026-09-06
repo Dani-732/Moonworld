@@ -6,9 +6,12 @@ namespace MoonWorld
     [HarmonyPatch(typeof(Pawn), nameof(Pawn.ExitMap))]
     public static class Harmony_ServantDeparture_ExitPawn
     {
-        public static void Postfix(Pawn __instance)
+        public static void Prefix(Pawn __instance, out Map __state) { __state = __instance.Map; }
+
+        public static void Postfix(Pawn __instance, Map __state)
         {
             EnemyWarPartyService.RetainDepartedPawn(__instance);
+            (__state?.Parent as Site_WarWorkshop)?.NotifyPawnExited(__instance);
         }
     }
 }
