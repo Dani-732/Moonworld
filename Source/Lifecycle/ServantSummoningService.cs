@@ -20,16 +20,10 @@ namespace MoonWorld
             Pawn generated = null;
             try
             {
-                using (var enemyPreparation = new EnemyWarPreparation())
+                using (var enemyPreparation = new WarRosterPreparation())
                 {
                     ServantIdentityDef selected = ServantSummonPoolDef.Pick();
                     if (selected == null) { rejection = "当前没有可召唤的从者，请检查职阶召唤池与前置模组。"; return false; }
-                    ServantIdentityDef opponent = HolyGrailWarClassUtility.PickOpponent(selected);
-                    if (opponent == null)
-                    {
-                        rejection = "当前召唤职阶缺少对应的敌方英灵配置。";
-                        return false;
-                    }
                     generated = PawnGenerator.GeneratePawn(new PawnGenerationRequest(selected.servantKind,
                         Faction.OfPlayer, PawnGenerationContext.NonPlayer, forceGenerateNewPawn: true,
                         canGeneratePawnRelations: false, validatorPreGear: pawn => { generated = pawn; return true; }));
@@ -40,17 +34,20 @@ namespace MoonWorld
                     // The source mod's PostSpawnSetup owns appearance, loadout and body visibility.
                     if (!ServantLifecycleService.Instance.TryBind(master, generated, out rejection))
                         throw new SummoningFailureException(rejection);
-                    enemyPreparation.Prepare(map, opponent);
+                    enemyPreparation.Prepare(map, selected);
                     rejection = HolyGrailWarEntryService.RegularSummonRejection(master);
                     if (rejection != null || !master.Spawned || master.Map != map
                         || !generated.Spawned || generated.Map != map || generated.Dead || generated.Destroyed
                         || generated.TryGetComp<CompServantState>()?.Master != master)
                         throw new SummoningFailureException(rejection ?? "召唤完成前契约或落点状态发生变化。");
                     GameComponent_MoonWorld state = Current.Game.GetComponent<GameComponent_MoonWorld>();
+                    enemyPreparation.ValidatePrepared();
                     state.CommitRegularSummon();
-                    state.CurrentWarEntry.SetParticipants(selected, opponent);
-                    enemyPreparation.Commit(state.CurrentWarEntry);
-                    HolyGrailWarQuestService.Ensure(state);
+                    state.CurrentWarEntry.SetEnemies(selected, enemyPreparation.Participants);
+                    enemyPreparation.Commit();
+                    // Quest UI failure cannot roll back an already committed war and leave dangling participants.
+                    try { HolyGrailWarQuestService.Ensure(state); }
+                    catch (System.Exception ex) { Log.Error("[MoonWorld] 战争已建立，任务显示将在读档时重试：" + ex); }
                     servant = generated;
                     return true;
                 }

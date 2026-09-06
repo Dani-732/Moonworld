@@ -56,10 +56,15 @@ namespace MoonWorld
                 if (seenServants.Add(pawn)) servants.Add(pawn);
                 if (IsActive(snapshot.master) && seenMasters.Add(snapshot.master)) masters.Add(snapshot.master);
             }
-            // Only the current, freely resting opponent joins off-map settlement, not all world pawns.
-            Pawn resting = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.EnemyServant;
-            if (IsActive(resting) && EnemyContractUtility.IsResting(resting) && seenServants.Add(resting))
-                servants.Add(resting);
+            // Only registered participants join off-map settlement, not arbitrary world pawns.
+            var entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
+            if (entry != null)
+                foreach (var enemy in entry.Enemies)
+                {
+                    Pawn resting = enemy.EnemyServant;
+                    if (IsActive(resting) && EnemyContractUtility.IsResting(resting) && seenServants.Add(resting))
+                        servants.Add(resting);
+                }
         }
 
         private static bool IsActive(Pawn pawn)

@@ -4,36 +4,43 @@
   <MoonWorld.ServantSummonPoolDef>
     <defName>MW_SaberSummonPool</defName>
     <warClass>Saber</warClass>
+    <classDef>MW_Class_Saber</classDef>
     <servants><li>MW_GWW_ArtoriaIdentity</li></servants>
   </MoonWorld.ServantSummonPoolDef>
   <MoonWorld.ServantSummonPoolDef>
     <defName>MW_ArcherSummonPool</defName>
     <warClass>Archer</warClass>
+    <classDef>MW_Class_Archer</classDef>
     <servants><li>MW_GWW_EmiyaIdentity</li></servants>
   </MoonWorld.ServantSummonPoolDef>
   <MoonWorld.ServantSummonPoolDef>
     <defName>MW_LancerSummonPool</defName>
     <warClass>Lancer</warClass>
+    <classDef>MW_Class_Lancer</classDef>
     <servants><li>MW_GWW_CuChulainnIdentity</li></servants>
   </MoonWorld.ServantSummonPoolDef>
   <MoonWorld.ServantSummonPoolDef>
     <defName>MW_AssassinSummonPool</defName>
     <warClass>Assassin</warClass>
+    <classDef>MW_Class_Assassin</classDef>
     <servants><li>MW_GWW_SasakiIdentity</li></servants>
   </MoonWorld.ServantSummonPoolDef>
   <MoonWorld.ServantSummonPoolDef>
     <defName>MW_CasterSummonPool</defName>
     <warClass>Caster</warClass>
+    <classDef>MW_Class_Caster</classDef>
     <servants><li>MW_GWW_MedeaIdentity</li></servants>
   </MoonWorld.ServantSummonPoolDef>
   <MoonWorld.ServantSummonPoolDef>
     <defName>MW_RiderSummonPool</defName>
     <warClass>Rider</warClass>
+    <classDef>MW_Class_Rider</classDef>
     <servants><li>MW_GWW_MedusaIdentity</li></servants>
   </MoonWorld.ServantSummonPoolDef>
   <MoonWorld.ServantSummonPoolDef>
     <defName>MW_BerserkerSummonPool</defName>
     <warClass>Berserker</warClass>
+    <classDef>MW_Class_Berserker</classDef>
     <servants><li>MW_GWW_HeraclesIdentity</li></servants>
   </MoonWorld.ServantSummonPoolDef>
 </Defs>

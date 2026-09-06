@@ -24,6 +24,21 @@ namespace MoonWorld
         public static void InspectEnemyRest()
         {
             HolyGrailWarEntry entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
+            if (entry != null && entry.Enemies.Count > 1)
+            {
+                var lines = new System.Text.StringBuilder("本届各阵营状态：");
+                foreach (var enemy in entry.Enemies)
+                {
+                    Pawn pawn = enemy.EnemyServant;
+                    Need_Prana mana = pawn?.needs?.TryGetNeed<Need_Prana>();
+                    lines.Append("\n\n").Append(enemy.Seat?.label).Append("：").Append(pawn?.LabelShortCap.ToString() ?? "无从者")
+                        .Append("\n").Append(enemy.EnemyEliminated ? "已淘汰" : pawn.Spawned ? "地图内" : "场外")
+                        .Append("；魔力 ").Append(mana?.CurLevel.ToString("F1") ?? "无")
+                        .Append("；休整剩余 ").Append((EnemyRestUtility.TicksRemaining(pawn) / 60000f).ToString("F2")).Append(" 天");
+                }
+                Find.WindowStack.Add(new Dialog_MessageBox(lines.ToString()));
+                return;
+            }
             Pawn servant = entry?.EnemyServant;
             if (servant == null)
             {
@@ -65,14 +80,13 @@ namespace MoonWorld
         public static void DeployEnemyWarParty()
         {
             string rejection;
-            if (!EnemyWarPartyService.TryDeploy(Find.CurrentMap, UI.MouseCell(), out rejection))
+            if (!EnemyWarPartyService.TryDeploy(Find.CurrentMap, UI.MouseCell(), out rejection, out Pawn servant))
             {
                 Messages.Message(rejection, MessageTypeDefOf.RejectInput, false);
                 return;
             }
-            HolyGrailWarEntry entry = Current.Game.GetComponent<GameComponent_MoonWorld>().CurrentWarEntry;
-            Messages.Message(entry.EnemyIdentity.warClass + " 从者独自进入战场，敌方御主留守场外。",
-                entry.EnemyServant, MessageTypeDefOf.ThreatBig, false);
+            Messages.Message(HolyGrailWarClassDef.For(ServantIdentityUtility.GetIdentity(servant))?.label
+                + " 从者独自进入战场，敌方御主留守场外。", servant, MessageTypeDefOf.ThreatBig, false);
         }
 
         [DebugAction("MoonWorld/敌方测试", "选中敌方从者：触发一次战败", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
@@ -86,7 +100,8 @@ namespace MoonWorld
         [DebugAction("MoonWorld/敌方测试", "本届场外敌方御主：模拟死亡", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
         public static void KillOffMapEnemyMaster()
         {
-            Pawn master = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.EnemyMaster;
+            Pawn master = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.Enemies
+                .Find(e => !e.EnemyEliminated && e.EnemyMaster != null && !e.EnemyMaster.Spawned)?.EnemyMaster;
             if (master != null && !master.Spawned && !master.Dead && !master.Destroyed)
                 master.Kill(null);
         }

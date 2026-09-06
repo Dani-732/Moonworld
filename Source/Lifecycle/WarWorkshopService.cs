@@ -11,13 +11,13 @@ namespace MoonWorld
     {
         internal static bool HasSurvivingOwner(Site_WarWorkshop site)
         {
-            HolyGrailWarEntry entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
+            EnemyWarParticipant entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.FindEnemy(site.OwnerMaster);
             return entry != null && entry.EnemyMaster == site.OwnerMaster && !entry.EnemyEliminated;
         }
 
         internal static bool TryPlaceDefenders(Site_WarWorkshop site)
         {
-            HolyGrailWarEntry entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
+            EnemyWarParticipant entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.FindEnemy(site.OwnerMaster);
             if (entry == null || site.OwnerMaster != entry.EnemyMaster) return true;
             Map map = site.Map;
             if (map == null) return false;
@@ -75,7 +75,7 @@ namespace MoonWorld
 
         internal static void ReturnDefendersToWorld(Site_WarWorkshop site)
         {
-            HolyGrailWarEntry entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
+            EnemyWarParticipant entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.FindEnemy(site.OwnerMaster);
             if (entry == null || site.OwnerMaster != entry.EnemyMaster) return;
             Return(entry.EnemyMaster, site.Map);
             Return(entry.EnemyServant, site.Map);

@@ -30,6 +30,13 @@ internal static class EnemyRetreatTests
     }
     public static void Main()
     {
+        Test("another faction defeat cannot force this lord to retreat", () => {
+            var own = Current.Game.Entry;
+            Current.Game.Entry = new HolyGrailWarEntry { EnemyMaster = new Pawn(), EnemyServant = new Pawn(),
+                EnemyDeployed = true, EnemyEliminated = true, Other = own };
+            party.LordJobTick(); Check(!party.Retreating, "other faction defeat triggered retreat");
+            servant.Spirit = true; party.LordJobTick(); Check(party.Retreating, "own defeat ignored");
+        });
         Test("far servant takes priority over nearby master", () => {
             Pawn human = Target(3, false), hero = Target(90);
             Check(party.GetPreferredTarget(servant) == hero && !party.ValidateAttackTarget(servant, human), "nearest human won");
@@ -234,7 +241,12 @@ namespace MoonWorld
 {
     public class Site_WarWorkshop { }
     public class GameComponent_MoonWorld { public HolyGrailWarEntry CurrentWarEntry => Current.Game.Entry; }
-    public class HolyGrailWarEntry { public Pawn EnemyMaster, EnemyServant; public bool EnemyDeployed, EnemyEliminated; }
+    public class HolyGrailWarEntry
+    {
+        public Pawn EnemyMaster, EnemyServant; public bool EnemyDeployed, EnemyEliminated;
+        public HolyGrailWarEntry Other;
+        public HolyGrailWarEntry FindEnemy(Pawn pawn) => pawn == EnemyMaster || pawn == EnemyServant ? this : Other?.FindEnemy(pawn);
+    }
     public static class EnemyContractUtility { public static bool HasEnemyContract(Pawn p) => p.Enemy && p.Master != null; }
     public class ServantQuery { public static ServantQuery Instance = new ServantQuery(); public Pawn GetMaster(Pawn p) => p.Master; public bool IsSpirit(Pawn p) => p.Spirit;
         public bool IsMaterialized(Pawn p) => p.Servant && !p.Spirit; }

@@ -11,6 +11,9 @@ try {
         (Join-Path $PSScriptRoot 'SummoningTests.cs') `
         (Join-Path $projectRoot 'Source\Core\HolyGrailWarEntry.cs') `
         (Join-Path $projectRoot 'Source\Core\HolyGrailWarClass.cs') `
+        (Join-Path $projectRoot 'Source\Core\HolyGrailWarClassDef.cs') `
+        (Join-Path $projectRoot 'Source\Core\EnemyWarParticipant.cs') `
+        (Join-Path $projectRoot 'Source\Lifecycle\WarRosterPreparation.cs') `
         (Join-Path $projectRoot 'Source\Core\ServantSummonPoolDef.cs') `
         (Join-Path $projectRoot 'Source\Core\WarState.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\WarOutcomeService.cs') `

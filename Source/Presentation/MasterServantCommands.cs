@@ -19,9 +19,10 @@ namespace MoonWorld
             HolyGrailWarEntry entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
             if (entry == null) return null;
             if (parent == entry.DesignatedMaster && entry.PlayerIdentity != null)
-                return "圣杯战争阵营：" + entry.PlayerIdentity.warClass + "\n敌对阵营：" + entry.EnemyIdentity?.warClass;
-            if (parent == entry.EnemyMaster && entry.EnemyIdentity != null)
-                return "圣杯战争阵营：" + entry.EnemyIdentity.warClass + "（敌对）";
+                return "圣杯战争阵营：" + HolyGrailWarClassDef.For(entry.PlayerIdentity)?.label
+                    + "\n剩余敌对阵营：" + entry.Enemies.FindAll(e => !e.EnemyEliminated).Count + "/" + entry.Enemies.Count;
+            var enemy = entry.FindEnemy(parent as Pawn);
+            if (enemy != null) return "圣杯战争阵营：" + enemy.Seat?.label + "（敌对）";
             return null;
         }
 

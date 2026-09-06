@@ -31,7 +31,8 @@ namespace MoonWorld
         public override void LordJobTick()
         {
             if (Retreating) return;
-            HolyGrailWarEntry entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
+            Pawn member = lord.ownedPawns.Count == 0 ? null : lord.ownedPawns[0];
+            var entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.FindEnemy(member);
             if (entry == null || (!entry.EnemyDeployed && !(lord.Map.Parent is Site_WarWorkshop))) return;
             if (entry.EnemyEliminated || entry.EnemyMaster.Downed || entry.EnemyMaster.IsPrisoner
                 || entry.EnemyServant.IsPrisoner || ServantQuery.Instance.IsSpirit(entry.EnemyServant))

@@ -9,7 +9,7 @@ namespace MoonWorld
         public static int TicksRemaining(Pawn servant)
         {
             int duration = Math.Max(0, MW_DefOf.MW_HolyGrailWarSettings.enemyRestDurationTicks);
-            HolyGrailWarEntry entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
+            EnemyWarParticipant entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.FindEnemy(servant);
             // A newly prepared servant has not retreated and has no recovery cooldown yet.
             if (entry != null && entry.EnemyPrepared && !entry.EnemyDeployed && entry.EnemyRestStartTickAbs < 0
                 && entry.EnemyServant == servant)

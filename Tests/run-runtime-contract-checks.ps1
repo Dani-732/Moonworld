@@ -126,13 +126,21 @@ try {
     }
     [xml]$mwIdentities = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_HolyGrailWarBridge.xml') -Raw
     [xml]$mwPools = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_SummonPools.xml') -Raw
+    [xml]$mwClasses = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_WarClasses.xml') -Raw
+    if ($mwClasses.SelectNodes('/Defs/MoonWorld.HolyGrailWarClassDef').Count -ne 7) { throw 'Expected seven default class definitions' }
     $mwSeats = [ordered]@{ Saber='Artoria'; Archer='Emiya'; Lancer='CuChulainn'; Assassin='Sasaki'; Caster='Medea'; Rider='Medusa'; Berserker='Heracles' }
     if ($mwPools.SelectNodes('/Defs/MoonWorld.ServantSummonPoolDef').Count -ne 7) { throw 'Expected seven class pool tables' }
     $mwTextures = Get-ChildItem (Join-Path $RimWorldPath 'Mods\HolyGrailWarTest\1.6\Textures') -File -Recurse
     foreach ($mwSeat in $mwSeats.Keys) {
+        $mwClass = $mwClasses.SelectSingleNode("/Defs/MoonWorld.HolyGrailWarClassDef[legacyClass='$mwSeat']")
+        if ($null -eq $mwClass -or $mwClass.oppositionFaction -ne "MW_WarOpposition_$mwSeat" -or
+            [string]::IsNullOrWhiteSpace($mwClass.label)) { throw "Class-to-faction mapping missing: $mwSeat" }
         $mwKindName = 'GWW_' + $mwSeats[$mwSeat]
         $mwIdentity = $mwIdentities.SelectSingleNode("/Defs/Def[servantKind='$mwKindName']")
         $mwPool = $mwPools.SelectNodes("/Defs/MoonWorld.ServantSummonPoolDef[warClass='$mwSeat']")
+        if ($mwIdentity.classDef -ne $mwClass.defName -or $mwPool[0].classDef -ne $mwClass.defName) {
+            throw "Identity/pool must reference the class definition: $mwSeat"
+        }
         if ($mwIdentity.warClass -ne $mwSeat -or $mwIdentity.summonable -ne 'true' -or $mwPool.Count -ne 1 -or
             $mwPool[0].servants.li -ne $mwIdentity.defName) { throw "Invalid class pool/identity: $mwSeat" }
         $mwKind = $mwDefs.SelectSingleNode("/Defs/PawnKindDef[defName='$mwKindName']")

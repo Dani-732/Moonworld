@@ -11,6 +11,7 @@ namespace MoonWorld
         public ServantAutonomyProfileDef autonomyProfile;
         public bool summonable;
         public HolyGrailWarClass warClass = HolyGrailWarClass.None;
+        public HolyGrailWarClassDef classDef;
         public string fixedName;
         public ThingDef requiredWeapon;
         public ThingDef requiredApparel;

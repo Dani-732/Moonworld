@@ -23,13 +23,6 @@ namespace MoonWorld
         public static QuestScriptDef MW_HolyGrailWarQuest;
         public static IncidentDef MW_HolyGrailWarEnemyServantRaid;
         public static FactionDef MW_WarOpposition;
-        public static FactionDef MW_WarOpposition_Saber;
-        public static FactionDef MW_WarOpposition_Archer;
-        public static FactionDef MW_WarOpposition_Lancer;
-        public static FactionDef MW_WarOpposition_Assassin;
-        public static FactionDef MW_WarOpposition_Caster;
-        public static FactionDef MW_WarOpposition_Rider;
-        public static FactionDef MW_WarOpposition_Berserker;
         public static PawnKindDef MW_EnemyMaster;
         public static WorldObjectDef MW_WarWorkshop;
         public static SitePartDef MW_WarWorkshopPart;

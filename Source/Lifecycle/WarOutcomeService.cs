@@ -20,11 +20,10 @@ namespace MoonWorld
             }
 
             if (!entry.HasEnemyParticipants) return;
-            if (entry.EnemyMaster == null || entry.EnemyMaster.Dead || entry.EnemyMaster.Destroyed || !HasEffectiveEnemyServant(entry.EnemyServant))
-            {
-                if (state.TrySetWarOutcome(WarOutcome.PlayerVictory))
-                    Messages.Message("圣杯战争胜利：敌方阵营已失去御主资格。", entry.EnemyMaster, MessageTypeDefOf.PositiveEvent, false);
-            }
+            foreach (var enemy in entry.Enemies)
+                if (!enemy.EnemyEliminated) return;
+            if (state.TrySetWarOutcome(WarOutcome.PlayerVictory))
+                Messages.Message("圣杯战争胜利：全部敌方阵营已失去御主资格。", entry.EnemyMaster, MessageTypeDefOf.PositiveEvent, false);
         }
 
         public static bool IsWarOngoing()
@@ -32,11 +31,5 @@ namespace MoonWorld
             return Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarOutcome == WarOutcome.Ongoing;
         }
 
-        private static bool HasEffectiveEnemyServant(Pawn servant)
-        {
-            if (servant == null || servant.Dead || servant.Destroyed) return false;
-            CompServantState state = servant.TryGetComp<CompServantState>();
-            return state != null && state.PresenceState != ServantPresenceState.Annihilated;
-        }
     }
 }

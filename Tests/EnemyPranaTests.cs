@@ -38,6 +38,21 @@ internal static class EnemyPranaTests
     }
     public static void Main()
     {
+        Test("all resting faction servants receive exactly one supply cycle", () => {
+            Rest(); var entry = Current.Game.State.CurrentWarEntry;
+            for (int i = 0; i < 5; i++)
+            {
+                var faction = new Faction { def = MW_DefOf.MW_WarOpposition };
+                var owner = new Pawn { Faction = faction, Spawned = false, Circuit = true };
+                var pawn = new Pawn { Faction = faction, Spawned = false, Servant = true };
+                pawn.State.Master = owner; pawn.State.PresenceState = ServantPresenceState.DefeatedSpirit;
+                pawn.needs.Prana.CurLevel = 50;
+                Find.WorldPawns.Pawns.Add(owner); Find.WorldPawns.Pawns.Add(pawn);
+                entry.Additional.Add(new EnemyWarParticipant { EnemyMaster = owner, EnemyServant = pawn, EnemyDeployed = true });
+            }
+            Cycle();
+            foreach (var enemy in entry.Enemies) Near(enemy.EnemyServant.needs.Prana.CurLevel, 50.99375f);
+        });
         Test("player caravan receives supply upkeep food and healing once", () => {
             master.Faction = servant.Faction = Faction.OfPlayer;
             servant.Spawned = false; servant.MapHeld = null;
@@ -235,6 +250,7 @@ namespace UnityEngine
 }
 namespace Verse
 {
+    public static class DefDatabase<T> { public static List<T> AllDefsListForReading = new List<T>(); }
     public class Def { }
     public class Pawn
     {
@@ -297,8 +313,15 @@ namespace RimWorld.Planet
 namespace MoonWorld
 {
     public class GameComponent_MoonWorld { public HolyGrailWarEntry CurrentWarEntry; }
-    public class HolyGrailWarEntry { public Pawn EnemyMaster, EnemyServant; public bool EnemyDeployed; public bool HasEnemyParticipants => EnemyDeployed; public int EnemyRestStartTickAbs = -1;
+    public class EnemyWarParticipant { public Pawn EnemyMaster, EnemyServant; public bool EnemyDeployed; public bool HasEnemyParticipants => EnemyDeployed; public int EnemyRestStartTickAbs = -1;
         public bool EnemyEliminated => EnemyMaster == null || EnemyMaster.Dead || EnemyMaster.Destroyed || EnemyServant == null || EnemyServant.Dead || EnemyServant.Destroyed; }
+    public class HolyGrailWarEntry : EnemyWarParticipant
+    {
+        public List<EnemyWarParticipant> Additional = new List<EnemyWarParticipant>();
+        public List<EnemyWarParticipant> Enemies { get { var list = new List<EnemyWarParticipant>(Additional); list.Add(this); return list; } }
+        public EnemyWarParticipant FindEnemy(Pawn pawn) => Enemies.Find(e => e.EnemyMaster == pawn || e.EnemyServant == pawn);
+    }
+    public class HolyGrailWarClassDef { public object oppositionFaction; }
     public class Need_Prana : Need { }
     public class Need_MasterPrana : Need_Prana { }
     public enum ServantPresenceState { Materialized, DefeatedSpirit, Annihilated }

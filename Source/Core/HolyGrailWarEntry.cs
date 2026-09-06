@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Verse;
 
 namespace MoonWorld
@@ -14,20 +15,39 @@ namespace MoonWorld
         private bool enemyDeployed;
         private bool enemyPrepared;
         private int enemyRestStartTickAbs = -1;
+        private List<EnemyWarParticipant> enemies;
+        public List<EnemyWarParticipant> Enemies
+        {
+            get
+            {
+                if (enemies == null)
+                {
+                    enemies = new List<EnemyWarParticipant>();
+                    if (enemyPrepared || enemyDeployed)
+                        enemies.Add(new EnemyWarParticipant(enemyIdentity, enemyMaster, enemyServant,
+                            enemyPrepared, enemyDeployed, enemyRestStartTickAbs));
+                }
+                return enemies;
+            }
+        }
+        public EnemyWarParticipant FindEnemy(Pawn pawn)
+        { return pawn == null ? null : Enemies.Find(e => e.EnemyMaster == pawn || e.EnemyServant == pawn); }
+        internal void SetEnemies(ServantIdentityDef player, List<EnemyWarParticipant> participants)
+        { playerIdentity = player; enemies = participants; }
+        private EnemyWarParticipant FirstEnemy => Enemies.Count == 0 ? null : Enemies[0];
 
         public Pawn DesignatedMaster => designatedMaster;
         public bool RegularSummonUsed => regularSummonUsed;
         public ServantIdentityDef PlayerIdentity => playerIdentity;
-        public ServantIdentityDef EnemyIdentity => enemyIdentity;
-        public Pawn EnemyMaster => enemyMaster;
-        public Pawn EnemyServant => enemyServant;
-        public bool EnemyDeployed => enemyDeployed;
-        public bool EnemyPrepared => enemyPrepared;
-        public bool HasEnemyParticipants => enemyPrepared || enemyDeployed;
-        public int EnemyRestStartTickAbs => enemyRestStartTickAbs;
-        public bool EnemyEliminated => HasEnemyParticipants &&
-            (enemyMaster == null || enemyMaster.Dead || enemyMaster.Destroyed
-             || enemyServant == null || enemyServant.Dead || enemyServant.Destroyed);
+        // Compatibility accessors for old integrations; runtime operations resolve a participant explicitly.
+        public ServantIdentityDef EnemyIdentity => FirstEnemy?.EnemyIdentity ?? enemyIdentity;
+        public Pawn EnemyMaster => FirstEnemy?.EnemyMaster ?? enemyMaster;
+        public Pawn EnemyServant => FirstEnemy?.EnemyServant ?? enemyServant;
+        public bool EnemyDeployed => FirstEnemy?.EnemyDeployed ?? enemyDeployed;
+        public bool EnemyPrepared => FirstEnemy?.EnemyPrepared ?? enemyPrepared;
+        public bool HasEnemyParticipants => Enemies.Count > 0 || enemyPrepared || enemyDeployed;
+        public int EnemyRestStartTickAbs => FirstEnemy?.EnemyRestStartTickAbs ?? enemyRestStartTickAbs;
+        public bool EnemyEliminated => FirstEnemy?.EnemyEliminated ?? false;
 
         public HolyGrailWarEntry() { }
 
@@ -54,6 +74,7 @@ namespace MoonWorld
             enemyServant = servant;
             enemyDeployed = true;
             enemyRestStartTickAbs = -1;
+            FindEnemy(servant)?.RecordEnemyDeployment(master, servant);
         }
 
         internal void RecordEnemyPreparation(Pawn master, Pawn servant)
@@ -61,12 +82,15 @@ namespace MoonWorld
             enemyMaster = master;
             enemyServant = servant;
             enemyPrepared = true;
+            if (Enemies.Count == 0) Enemies.Add(new EnemyWarParticipant(enemyIdentity, master, servant));
+            FindEnemy(servant)?.MarkPrepared();
         }
 
         internal void RecordEnemyDeparture(Pawn servant)
         {
             if (servant == enemyServant && enemyRestStartTickAbs < 0)
                 enemyRestStartTickAbs = GenTicks.TicksAbs;
+            FindEnemy(servant)?.RecordEnemyDeparture(servant);
         }
 
         public void ExposeData()
@@ -80,6 +104,7 @@ namespace MoonWorld
             Scribe_Values.Look(ref enemyDeployed, "enemyDeployed", false);
             Scribe_Values.Look(ref enemyPrepared, "enemyPrepared", false);
             Scribe_Values.Look(ref enemyRestStartTickAbs, "enemyRestStartTickAbs", -1);
+            Scribe_Collections.Look(ref enemies, "enemies", LookMode.Deep);
         }
     }
 }

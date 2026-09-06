@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <MoonWorld.HolyGrailWarClassDef><defName>MW_Class_Saber</defName><label>Saber</label><legacyClass>Saber</legacyClass><oppositionFaction>MW_WarOpposition_Saber</oppositionFaction></MoonWorld.HolyGrailWarClassDef>
+  <MoonWorld.HolyGrailWarClassDef><defName>MW_Class_Archer</defName><label>Archer</label><legacyClass>Archer</legacyClass><oppositionFaction>MW_WarOpposition_Archer</oppositionFaction></MoonWorld.HolyGrailWarClassDef>
+  <MoonWorld.HolyGrailWarClassDef><defName>MW_Class_Lancer</defName><label>Lancer</label><legacyClass>Lancer</legacyClass><oppositionFaction>MW_WarOpposition_Lancer</oppositionFaction></MoonWorld.HolyGrailWarClassDef>
+  <MoonWorld.HolyGrailWarClassDef><defName>MW_Class_Assassin</defName><label>Assassin</label><legacyClass>Assassin</legacyClass><oppositionFaction>MW_WarOpposition_Assassin</oppositionFaction></MoonWorld.HolyGrailWarClassDef>
+  <MoonWorld.HolyGrailWarClassDef><defName>MW_Class_Caster</defName><label>Caster</label><legacyClass>Caster</legacyClass><oppositionFaction>MW_WarOpposition_Caster</oppositionFaction></MoonWorld.HolyGrailWarClassDef>
+  <MoonWorld.HolyGrailWarClassDef><defName>MW_Class_Rider</defName><label>Rider</label><legacyClass>Rider</legacyClass><oppositionFaction>MW_WarOpposition_Rider</oppositionFaction></MoonWorld.HolyGrailWarClassDef>
+  <MoonWorld.HolyGrailWarClassDef><defName>MW_Class_Berserker</defName><label>Berserker</label><legacyClass>Berserker</legacyClass><oppositionFaction>MW_WarOpposition_Berserker</oppositionFaction></MoonWorld.HolyGrailWarClassDef>
+</Defs>

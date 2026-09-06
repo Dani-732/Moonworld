@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using RimWorld;
 using RimWorld.Planet;
 using Verse;
@@ -25,24 +26,38 @@ namespace MoonWorld
                 || playerMaster.Map != map || playerMaster.Faction != Faction.OfPlayer
                 || playerMaster.IsPrisoner || playerMaster.IsSlave)
                 return "本届玩家御主必须存活、自由且位于该基地。";
-            if (entry.EnemyEliminated) return "本届敌对阵营已淘汰，不会再袭或重新生成。";
-            return entry.HasEnemyParticipants ? EnemyRestUtility.ReadinessRejection(entry.EnemyServant) : "本届敌方尚未准备完成，请读取已更新的存档或重新召唤测试。";
+            foreach (var enemy in entry.Enemies)
+                if (!enemy.EnemyEliminated && EnemyRestUtility.ReadinessRejection(enemy.EnemyServant) == null) return null;
+            return "当前没有可出战的敌方阵营：可能正在出击、休整或已经淘汰。";
         }
 
         public static bool TryDeploy(Map map, IntVec3 cell, out string rejection)
+        { return TryDeploy(map, cell, out rejection, out _); }
+
+        public static bool TryDeploy(Map map, IntVec3 cell, out string rejection, out Pawn deployedServant)
         {
+            deployedServant = null;
             rejection = ValidateRaid(map);
             if (rejection != null) return false;
             if (!cell.InBounds(map) || !cell.Standable(map) || cell.Fogged(map)
                 || cell.GetFirstPawn(map) != null)
             { rejection = "请选择已探索且未被角色占用的可站立格。"; return false; }
             HolyGrailWarEntry entry = Current.Game.GetComponent<GameComponent_MoonWorld>().CurrentWarEntry;
+            var ready = new List<EnemyWarParticipant>();
+            foreach (var enemy in entry.Enemies)
+                if (!enemy.EnemyEliminated && EnemyRestUtility.ReadinessRejection(enemy.EnemyServant) == null) ready.Add(enemy);
+            EnemyWarParticipant selected = ready.RandomElement();
             generating = true;
-            try { return TryRedeployExisting(entry, map, cell, out rejection); }
+            try
+            {
+                if (!TryRedeployExisting(selected, map, cell, out rejection)) return false;
+                deployedServant = selected.EnemyServant;
+                return true;
+            }
             finally { generating = false; }
         }
 
-        private static bool TryRedeployExisting(HolyGrailWarEntry entry, Map map, IntVec3 cell, out string rejection)
+        private static bool TryRedeployExisting(EnemyWarParticipant entry, Map map, IntVec3 cell, out string rejection)
         {
             rejection = null;
             Pawn servant = entry.EnemyServant;
@@ -84,7 +99,7 @@ namespace MoonWorld
 
         public static void RetainDepartedPawn(Pawn pawn)
         {
-            HolyGrailWarEntry entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
+            EnemyWarParticipant entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.FindEnemy(pawn);
             if (entry == null || (pawn != entry.EnemyMaster && pawn != entry.EnemyServant)
                 || pawn.Spawned || pawn.Dead || pawn.Destroyed || !EnemyContractUtility.IsWarPawn(pawn)) return;
             // Pawn.ExitMap has already transferred it to WorldPawns and written its native timestamp.

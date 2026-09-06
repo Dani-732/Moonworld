@@ -13,9 +13,12 @@ namespace MoonWorld
         private Site_WarWorkshop workshop;
         private bool ownsPawns;
         private bool committed;
+        private ServantIdentityDef identity;
+        private Faction createdFaction;
 
         internal void Prepare(Map origin, ServantIdentityDef identity, HolyGrailWarEntry existing = null)
         {
+            this.identity = identity;
             if (origin == null || !TileFinder.TryFindNewSiteTile(out PlanetTile tile, origin.Tile,
                 selectLandmarkChance: 0f, layer: origin.Tile.Layer))
                 throw new InvalidOperationException("附近没有可建立敌方魔术工坊的世界地块。");
@@ -31,18 +34,23 @@ namespace MoonWorld
             else
             {
                 ownsPawns = true;
-                FactionDef oppositionDef = OppositionDef(identity.warClass);
+                FactionDef oppositionDef = HolyGrailWarClassDef.For(identity)?.oppositionFaction;
+                if (oppositionDef == null) throw new InvalidOperationException("敌方职阶派系定义缺失。");
                 Faction faction = Find.FactionManager.FirstFactionOfDef(oppositionDef);
                 if (faction == null)
                 {
                     faction = FactionGenerator.NewGeneratedFaction(new FactionGeneratorParms(oppositionDef, hidden: true));
                     Find.FactionManager.Add(faction);
+                    createdFaction = faction;
                 }
                 // Repair a faction retained by a failed summon under the old broken XML inheritance.
                 if (!faction.HostileTo(Faction.OfPlayer))
                     faction.SetRelationDirect(Faction.OfPlayer, FactionRelationKind.Hostile, false);
                 if (!faction.HostileTo(Faction.OfPlayer))
                     throw new InvalidOperationException("敌方派系必须与玩家敌对。");
+                foreach (Faction other in Find.FactionManager.AllFactionsListForReading)
+                    if (other != faction && IsOpposition(other) && !faction.HostileTo(other))
+                        faction.SetRelationDirect(other, FactionRelationKind.Hostile, false);
                 Master = PawnGenerator.GeneratePawn(new PawnGenerationRequest(MW_DefOf.MW_EnemyMaster, faction,
                     PawnGenerationContext.NonPlayer, forceGenerateNewPawn: true, canGeneratePawnRelations: false,
                     validatorPreGear: pawn => { Master = pawn; return true; }));
@@ -87,21 +95,26 @@ namespace MoonWorld
                 throw new InvalidOperationException("工坊建立期间敌方主从或契约发生变化。");
         }
 
-        private static FactionDef OppositionDef(HolyGrailWarClass seat)
+        private static bool IsOpposition(Faction faction)
         {
-            FactionDef selected = null;
-            switch (seat)
-            {
-                case HolyGrailWarClass.Saber: selected = MW_DefOf.MW_WarOpposition_Saber; break;
-                case HolyGrailWarClass.Archer: selected = MW_DefOf.MW_WarOpposition_Archer; break;
-                case HolyGrailWarClass.Lancer: selected = MW_DefOf.MW_WarOpposition_Lancer; break;
-                case HolyGrailWarClass.Assassin: selected = MW_DefOf.MW_WarOpposition_Assassin; break;
-                case HolyGrailWarClass.Caster: selected = MW_DefOf.MW_WarOpposition_Caster; break;
-                case HolyGrailWarClass.Rider: selected = MW_DefOf.MW_WarOpposition_Rider; break;
-                case HolyGrailWarClass.Berserker: selected = MW_DefOf.MW_WarOpposition_Berserker; break;
-            }
-            if (selected == null) throw new InvalidOperationException("敌方职阶派系定义缺失：" + seat);
-            return selected;
+            if (faction.def == MW_DefOf.MW_WarOpposition) return true;
+            foreach (var seat in DefDatabase<HolyGrailWarClassDef>.AllDefsListForReading)
+                if (seat.oppositionFaction == faction.def) return true;
+            return false;
+        }
+
+        internal EnemyWarParticipant Participant => new EnemyWarParticipant(identity, Master, Servant);
+        internal void Commit() { committed = true; }
+        internal void ValidatePrepared()
+        {
+            if (Master == null || Servant == null || Master.Dead || Master.Destroyed || Servant.Dead || Servant.Destroyed
+                || Master.IsPrisoner || Master.IsSlave || Servant.IsPrisoner || Servant.IsSlave
+                || Servant.TryGetComp<CompServantState>()?.PresenceState == ServantPresenceState.Annihilated
+                || Master.Spawned || Servant.Spawned || !Find.WorldPawns.Contains(Master) || !Find.WorldPawns.Contains(Servant)
+                || !EnemyContractUtility.HasEnemyContract(Servant) || ServantQuery.Instance.GetMaster(Servant) != Master
+                || workshop == null || !workshop.Spawned || workshop.Destroyed || workshop.OwnerMaster != Master
+                || workshop.Faction != Master.Faction)
+                throw new InvalidOperationException("多阵营准备期间已有参与者或工坊失效。");
         }
 
         internal void Commit(HolyGrailWarEntry entry)
@@ -116,10 +129,21 @@ namespace MoonWorld
             try { if (workshop != null && !workshop.Destroyed) workshop.Destroy(); }
             finally
             {
-                if (ownsPawns)
+                try
                 {
-                    try { ServantSummoningService.Rollback(Servant); }
-                    finally { ServantSummoningService.Rollback(Master); }
+                    if (ownsPawns)
+                    {
+                        try { ServantSummoningService.Rollback(Servant); }
+                        finally { ServantSummoningService.Rollback(Master); }
+                    }
+                }
+                finally
+                {
+                    if (createdFaction != null)
+                    {
+                        createdFaction.RemoveAllRelations();
+                        Find.FactionManager.AllFactionsListForReading.Remove(createdFaction);
+                    }
                 }
             }
         }
@@ -136,7 +160,7 @@ namespace MoonWorld
                 if (master?.Faction != Faction.OfPlayer
                     || (entry.DesignatedMaster != null && master != entry.DesignatedMaster)) continue;
                 ServantIdentityDef identity = ServantIdentityUtility.GetIdentity(pawn);
-                if (!HolyGrailWarClassUtility.IsWarClass(identity?.warClass ?? HolyGrailWarClass.None)) continue;
+                if (HolyGrailWarClassDef.For(identity) == null) continue;
                 if (found != null && found != identity)
                 { rejection = "旧档存在不同职阶契约，无法确定本届首骑；请用新开局测试敌方。"; return false; }
                 found = identity;

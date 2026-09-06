@@ -4,6 +4,7 @@
     <defName>MW_GWW_ArtoriaIdentity</defName>
     <servantKind>GWW_Artoria</servantKind>
     <warClass>Saber</warClass>
+    <classDef>MW_Class_Saber</classDef>
     <resourceProfile>MW_TestServantResources</resourceProfile>
     <autonomyProfile>MW_QuestLodgerAutonomy</autonomyProfile>
     <summonable>true</summonable>
@@ -12,6 +13,7 @@
     <defName>MW_GWW_EmiyaIdentity</defName>
     <servantKind>GWW_Emiya</servantKind>
     <warClass>Archer</warClass>
+    <classDef>MW_Class_Archer</classDef>
     <resourceProfile>MW_TestServantResources</resourceProfile>
     <autonomyProfile>MW_QuestLodgerAutonomy</autonomyProfile>
     <summonable>true</summonable>
@@ -20,6 +22,7 @@
     <defName>MW_GWW_CuChulainnIdentity</defName>
     <servantKind>GWW_CuChulainn</servantKind>
     <warClass>Lancer</warClass>
+    <classDef>MW_Class_Lancer</classDef>
     <resourceProfile>MW_TestServantResources</resourceProfile>
     <autonomyProfile>MW_QuestLodgerAutonomy</autonomyProfile>
     <summonable>true</summonable>
@@ -28,6 +31,7 @@
     <defName>MW_GWW_MedusaIdentity</defName>
     <servantKind>GWW_Medusa</servantKind>
     <warClass>Rider</warClass>
+    <classDef>MW_Class_Rider</classDef>
     <resourceProfile>MW_TestServantResources</resourceProfile>
     <autonomyProfile>MW_QuestLodgerAutonomy</autonomyProfile>
     <summonable>true</summonable>
@@ -36,6 +40,7 @@
     <defName>MW_GWW_MedeaIdentity</defName>
     <servantKind>GWW_Medea</servantKind>
     <warClass>Caster</warClass>
+    <classDef>MW_Class_Caster</classDef>
     <resourceProfile>MW_TestServantResources</resourceProfile>
     <autonomyProfile>MW_QuestLodgerAutonomy</autonomyProfile>
     <summonable>true</summonable>
@@ -44,6 +49,7 @@
     <defName>MW_GWW_SasakiIdentity</defName>
     <servantKind>GWW_Sasaki</servantKind>
     <warClass>Assassin</warClass>
+    <classDef>MW_Class_Assassin</classDef>
     <resourceProfile>MW_TestServantResources</resourceProfile>
     <autonomyProfile>MW_QuestLodgerAutonomy</autonomyProfile>
     <summonable>true</summonable>
@@ -52,6 +58,7 @@
     <defName>MW_GWW_HeraclesIdentity</defName>
     <servantKind>GWW_Heracles</servantKind>
     <warClass>Berserker</warClass>
+    <classDef>MW_Class_Berserker</classDef>
     <resourceProfile>MW_TestServantResources</resourceProfile>
     <autonomyProfile>MW_QuestLodgerAutonomy</autonomyProfile>
     <summonable>true</summonable>

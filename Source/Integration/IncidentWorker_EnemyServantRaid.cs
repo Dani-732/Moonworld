@@ -19,12 +19,11 @@ namespace MoonWorld
                 c => c.InBounds(map) && c.Standable(map) && !c.Fogged(map) && c.GetFirstPawn(map) == null, map, 0f, out cell))
                 return false;
             string rejection;
-            if (!EnemyWarPartyService.TryDeploy(map, cell, out rejection))
+            if (!EnemyWarPartyService.TryDeploy(map, cell, out rejection, out Pawn servant))
             {
                 Log.Warning("[MoonWorld] 敌方突袭事件未能部署：" + rejection);
                 return false;
             }
-            Pawn servant = Current.Game.GetComponent<GameComponent_MoonWorld>().CurrentWarEntry.EnemyServant;
             Messages.Message("敌方从者已从边缘突袭，御主仍留守场外。", servant, MessageTypeDefOf.ThreatBig, false);
             return true;
         }

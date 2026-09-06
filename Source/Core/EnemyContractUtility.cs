@@ -8,14 +8,11 @@ namespace MoonWorld
         public static bool IsWarPawn(Pawn pawn)
         {
             var def = pawn?.Faction?.def;
-            return def != null && (def == MW_DefOf.MW_WarOpposition
-                || def == MW_DefOf.MW_WarOpposition_Saber
-                || def == MW_DefOf.MW_WarOpposition_Archer
-                || def == MW_DefOf.MW_WarOpposition_Lancer
-                || def == MW_DefOf.MW_WarOpposition_Assassin
-                || def == MW_DefOf.MW_WarOpposition_Caster
-                || def == MW_DefOf.MW_WarOpposition_Rider
-                || def == MW_DefOf.MW_WarOpposition_Berserker);
+            if (def == null) return false;
+            if (def == MW_DefOf.MW_WarOpposition) return true;
+            foreach (var seat in DefDatabase<HolyGrailWarClassDef>.AllDefsListForReading)
+                if (seat.oppositionFaction == def) return true;
+            return false;
         }
 
         public static bool HasEnemyContract(Pawn servant)
@@ -36,7 +33,7 @@ namespace MoonWorld
 
         public static bool IsResting(Pawn servant)
         {
-            HolyGrailWarEntry entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
+            EnemyWarParticipant entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.FindEnemy(servant);
             return entry != null && entry.HasEnemyParticipants && !entry.EnemyEliminated
                 && servant == entry.EnemyServant && HasEnemyContract(servant)
                 && ServantQuery.Instance.GetMaster(servant) == entry.EnemyMaster

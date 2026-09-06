@@ -38,6 +38,15 @@ internal static class SummoningTests
     }
     private static void SetPools()
     {
+        var definitions = new[] { MW_DefOf.MW_WarOpposition_Saber, MW_DefOf.MW_WarOpposition_Archer,
+            MW_DefOf.MW_WarOpposition_Lancer, MW_DefOf.MW_WarOpposition_Assassin,
+            MW_DefOf.MW_WarOpposition_Caster, MW_DefOf.MW_WarOpposition_Rider, MW_DefOf.MW_WarOpposition_Berserker };
+        DefDatabase<HolyGrailWarClassDef>.AllDefsListForReading = new List<HolyGrailWarClassDef>();
+        foreach (var identity in DefDatabase<ServantIdentityDef>.AllDefsListForReading)
+            if (HolyGrailWarClassDef.Resolve(identity.warClass) == null)
+                DefDatabase<HolyGrailWarClassDef>.AllDefsListForReading.Add(new HolyGrailWarClassDef {
+                    defName = identity.warClass.ToString(), label = identity.warClass.ToString(), legacyClass = identity.warClass,
+                    oppositionFaction = definitions[(int)identity.warClass - 1] });
         DefDatabase<ServantSummonPoolDef>.AllDefsListForReading = new List<ServantSummonPoolDef>();
         foreach (ServantIdentityDef identity in DefDatabase<ServantIdentityDef>.AllDefsListForReading)
             DefDatabase<ServantSummonPoolDef>.AllDefsListForReading.Add(new ServantSummonPoolDef {
@@ -111,9 +120,115 @@ internal static class SummoningTests
     }
     public static void Main()
     {
+        Test("seven faction war only ends after all six opponents lose qualification", () => {
+            SevenClasses(); PrepareEnemy(); var enemies = State.CurrentWarEntry.Enemies;
+            Check(enemies.Count == 6 && State.warQuest.GetFirstPartOfType<QuestPart_HolyGrailWar>().Factions.Count == 7, "roster incomplete");
+            var factions = new HashSet<Faction>();
+            for (int i = 0; i < 6; i++)
+            {
+                factions.Add(enemies[i].EnemyMaster.Faction);
+                Check(enemies[i].EnemyMaster.Faction == enemies[i].EnemyServant.Faction, "mismatched faction");
+                if (i % 2 == 0) enemies[i].EnemyMaster.Dead = true;
+                else enemies[i].EnemyServant.State.PresenceState = ServantPresenceState.Annihilated;
+                WarOutcomeService.Tick(State);
+                Check(State.CurrentWarOutcome == (i == 5 ? WarOutcome.PlayerVictory : WarOutcome.Ongoing), "premature/absent victory");
+            }
+            Check(factions.Count == 6 && State.warQuest.EndCalls == 1, "factions shared or repeated outcome");
+        });
+        Test("six independent raids preserve separate rest deadlines and workshop owners", () => {
+            SevenClasses(); PrepareEnemy(); var enemies = State.CurrentWarEntry.Enemies;
+            for (int i = 0; i < 6; i++) Check(Deploy(), "eligible faction cannot raid");
+            Check(!Deploy() && PawnGenerator.Created.Count == 13, "duplicate raid spawned pawn");
+            Pawn first = enemies[0].EnemyServant; first.Spawned = false;
+            Find.WorldPawns.PassToWorld(first, PawnDiscardDecideMode.KeepForever); EnemyWarPartyService.RetainDepartedPawn(first);
+            int tick = enemies[0].EnemyRestStartTickAbs;
+            Find.TickManager.TicksGame += 100;
+            Pawn second = enemies[1].EnemyServant; second.Spawned = false;
+            Find.WorldPawns.PassToWorld(second, PawnDiscardDecideMode.KeepForever); EnemyWarPartyService.RetainDepartedPawn(second);
+            Check(enemies[0].EnemyRestStartTickAbs == tick && enemies[1].EnemyRestStartTickAbs == tick + 100
+                && enemies[2].EnemyRestStartTickAbs == -1, "rest clocks shared");
+            var site = (Site_WarWorkshop)Find.WorldObjects.All[1]; site.Map = new Map(); site.PostMapGenerate();
+            Check(second.Map == site.Map && enemies[1].EnemyMaster.Map == site.Map
+                && !first.Spawned && enemies[0].EnemyMaster.Map != site.Map, "wrong workshop defenders");
+            site.Notify_MyMapAboutToBeRemoved();
+            Check(enemies[1].EnemyRestStartTickAbs == tick + 100 && EnemyContractUtility.IsResting(second), "workshop reset rest");
+        });
+        for (int pawnIndex = 4; pawnIndex <= 13; pawnIndex++)
+        {
+            int failureAt = pawnIndex;
+            Test("later faction generation failure rolls back roster at pawn " + pawnIndex, () => {
+                SevenClasses(); Accept(); PawnGenerator.FailAt = failureAt; PawnGenerator.FailAfterValidation = true;
+                RejectUnspent(); Check(Find.FactionManager.AllFactionsListForReading.Count == 0, "orphan factions retained");
+            });
+        }
+        Test("late site callback invalidating an earlier participant aborts whole war", () => {
+            SevenClasses(); Accept(); Find.WorldObjects.Callback = () => {
+                if (Find.WorldObjects.All.Count == 6) PawnGenerator.Created[2].State.Bind(null);
+            };
+            RejectUnspent(); Check(Find.FactionManager.AllFactionsListForReading.Count == 0, "late rollback orphan factions");
+        });
+        Test("extra XML-style class needs no enum value to summon and create opposing factions", () => {
+            SevenClasses(); var extra = new HolyGrailWarClassDef { defName = "Example_Avenger", label = "复仇者", oppositionFaction = new FactionDef() };
+            var identity = new ServantIdentityDef { classDef = extra };
+            DefDatabase<HolyGrailWarClassDef>.AllDefsListForReading.Add(extra);
+            DefDatabase<ServantIdentityDef>.AllDefsListForReading.Add(identity);
+            DefDatabase<ServantSummonPoolDef>.AllDefsListForReading.Add(new ServantSummonPoolDef {
+                classDef = extra, servants = new List<ServantIdentityDef> { identity } });
+            GenCollection.Draws.Enqueue(7); Accept(); Check(Summon(), "extra player class failed");
+            Check(State.CurrentWarEntry.PlayerIdentity == identity && State.CurrentWarEntry.Enemies.Count == 7, "extra class ignored");
+            // Save preserves the selected Def rather than an enum ordinal or a new roll.
+            State.ExposeData(); Scribe.Loading = true; Current.Game = new Game(); State.ExposeData(); State.LoadedGame();
+            Check(State.CurrentWarEntry.PlayerIdentity == identity && State.CurrentWarEntry.Enemies.Count == 7, "extra class lost on load");
+        });
+        Test("extra enemy class uses its own configured faction and supply", () => {
+            var extra = new HolyGrailWarClassDef { defName = "Extra", oppositionFaction = new FactionDef() };
+            var identity = new ServantIdentityDef { classDef = extra };
+            DefDatabase<HolyGrailWarClassDef>.AllDefsListForReading.Add(extra);
+            DefDatabase<ServantIdentityDef>.AllDefsListForReading.Add(identity);
+            DefDatabase<ServantSummonPoolDef>.AllDefsListForReading.Add(new ServantSummonPoolDef {
+                classDef = extra, servants = new List<ServantIdentityDef> { identity } });
+            PrepareEnemy(); var participant = State.CurrentWarEntry.Enemies.Find(e => e.Seat == extra);
+            Check(participant != null && participant.EnemyServant.Faction.def == extra.oppositionFaction
+                && EnemyContractUtility.CanReceiveSupply(participant.EnemyServant), "extra enemy did not join lifecycle");
+        });
+        Test("old two faction war does not expand when new class defs become available", () => {
+            PrepareEnemy(); var pawn = State.CurrentWarEntry.EnemyServant; SevenClasses(); State.LoadedGame();
+            Check(State.CurrentWarEntry.Enemies.Count == 1 && State.CurrentWarEntry.EnemyServant == pawn
+                && Find.WorldObjects.All.Count == 1, "load expanded existing war");
+        });
         Test("invitation does not create enemies or site", () => {
             Accept(); Check(Find.WorldObjects.All.Count == 0 && Find.WorldPawns.Pawns.Count == 0
                 && !State.CurrentWarEntry.HasEnemyParticipants, "invitation started enemy war");
+        });
+        Test("participant save fields retain different original pawns and rest clocks", () => {
+            SevenClasses(); PrepareEnemy(); var enemies = State.CurrentWarEntry.Enemies;
+            for (int i = 0; i < enemies.Count; i++)
+            {
+                Scribe.Loading = false; Scribe.Data.Clear(); Find.TickManager.TicksGame += 100;
+                enemies[i].RecordEnemyDeparture(enemies[i].EnemyServant); enemies[i].ExposeData();
+                var loaded = new EnemyWarParticipant(); Scribe.Loading = true; loaded.ExposeData();
+                Check(loaded.Seat == enemies[i].Seat && loaded.EnemyMaster == enemies[i].EnemyMaster
+                    && loaded.EnemyServant == enemies[i].EnemyServant && loaded.EnemyPrepared
+                    && loaded.EnemyRestStartTickAbs == enemies[i].EnemyRestStartTickAbs, "participant fields lost");
+            }
+        });
+        Test("unfinished class content refuses war without orphan pawns or factions", () => {
+            SevenClasses(); DefDatabase<ServantSummonPoolDef>.AllDefsListForReading[6].servants.Clear();
+            Accept(); RejectUnspent(); Check(Find.FactionManager.AllFactionsListForReading.Count == 0, "incomplete content leaked factions");
+        });
+        Test("duplicate configured faction refuses war before enemies are generated", () => {
+            SevenClasses(); var seats = DefDatabase<HolyGrailWarClassDef>.AllDefsListForReading;
+            seats[6].oppositionFaction = seats[0].oppositionFaction;
+            Accept(); RejectUnspent(); Check(PawnGenerator.Created.Count == 1, "duplicate faction accepted");
+        });
+        Test("quest status updates each faction and keeps completed history frozen", () => {
+            SevenClasses(); PrepareEnemy(); var part = State.warQuest.GetFirstPartOfType<QuestPart_HolyGrailWar>();
+            State.CurrentWarEntry.Enemies[0].EnemyServant.Dead = true;
+            string description = part.DescriptionPart;
+            Check(!part.Factions[1].Qualified && part.Factions[2].Qualified && part.Factions.Count == 7, "live status stale");
+            for (int i = 1; i < 6; i++) State.CurrentWarEntry.Enemies[i].EnemyServant.Dead = true;
+            WarOutcomeService.Tick(State); master.Dead = true; description = part.DescriptionPart;
+            Check(part.Factions[0].Qualified && State.warQuest.Historical, "history changed after completion");
         });
         Test("summon prepares site and full opposing pair before first raid", () => {
             PrepareEnemy(); var entry = State.CurrentWarEntry;
@@ -168,8 +283,13 @@ internal static class SummoningTests
         Test("legacy resting pair gains site without healing replacing or restarting rest", () => {
             Pawn enemy = RestEnemy(false); enemy.needs.Prana.CurLevel = 17;
             int since = State.CurrentWarEntry.EnemyRestStartTickAbs;
-            State.ExposeData(); Scribe.Data.Remove("enemyPrepared"); Find.WorldObjects.All.Clear();
-            Scribe.Loading = true; Current.Game = new Game(); State.ExposeData(); State.LoadedGame();
+            State.ExposeData(); Scribe.Data.Remove("enemies");
+            Scribe.Data["enemyIdentity"] = State.CurrentWarEntry.EnemyIdentity;
+            Scribe.Data["enemyMaster"] = State.CurrentWarEntry.EnemyMaster;
+            Scribe.Data["enemyServant"] = enemy; Scribe.Data["enemyDeployed"] = true;
+            Scribe.Data["enemyRestStartTickAbs"] = since;
+            Scribe.Data.Remove("enemyPrepared"); Find.WorldObjects.All.Clear();
+            Scribe.Loading = true; Current.Game = new Game(); State.ExposeData(); State.LoadedGame(); State.LoadedGame();
             Check(State.CurrentWarEntry.EnemyServant == enemy && enemy.needs.Prana.CurLevel == 17
                 && State.CurrentWarEntry.EnemyRestStartTickAbs == since && Find.WorldObjects.All.Count == 1
                 && PawnGenerator.Created.Count == 3 && !Deploy(), "legacy pair reset");
@@ -315,14 +435,14 @@ internal static class SummoningTests
             int selected = i;
             Test("each class summons and reserves a different enemy: " + (HolyGrailWarClass)(i + 1), () => {
                 SevenClasses(); GenCollection.Draws.Enqueue(selected); GenCollection.Draws.Enqueue(0);
-                GenCollection.Draws.Enqueue(selected % 6); Accept(); Check(Summon(), "class summon failed");
+                Accept(); Check(Summon(), "class summon failed");
                 Check(State.CurrentWarEntry.PlayerIdentity.warClass == (HolyGrailWarClass)(selected + 1)
                     && State.CurrentWarEntry.EnemyIdentity.warClass != State.CurrentWarEntry.PlayerIdentity.warClass,
                     "wrong player or enemy class");
                 Check(GenCollection.Sizes[0] == 7 && GenCollection.Sizes[1] == 1
-                    && GenCollection.Sizes[2] == 6 && GenCollection.Sizes[3] == 1, "not class-first draws");
+                    && GenCollection.Sizes.Count == 8 && GenCollection.Sizes[2] == 1, "not class-first draws");
                 Check(State.CurrentWarEntry.EnemyServant.State.Master == State.CurrentWarEntry.EnemyMaster
-                    && Find.WorldObjects.All.Count == 1, "enemy contract/site missing");
+                    && Find.WorldObjects.All.Count == 6 && State.CurrentWarEntry.Enemies.Count == 6, "enemy contract/site missing");
                 var expectedDefs = new[] { MW_DefOf.MW_WarOpposition_Saber, MW_DefOf.MW_WarOpposition_Archer,
                     MW_DefOf.MW_WarOpposition_Lancer, MW_DefOf.MW_WarOpposition_Assassin,
                     MW_DefOf.MW_WarOpposition_Caster, MW_DefOf.MW_WarOpposition_Rider, MW_DefOf.MW_WarOpposition_Berserker };
@@ -333,7 +453,7 @@ internal static class SummoningTests
                 var player = State.CurrentWarEntry.PlayerIdentity; var enemy = State.CurrentWarEntry.EnemyIdentity;
                 State.LoadedGame();
                 Check(State.CurrentWarEntry.PlayerIdentity == player && State.CurrentWarEntry.EnemyIdentity == enemy
-                    && State.warStartTick == 1234 && GenCollection.Sizes.Count == 4, "reload rerolled participants");
+                    && State.warStartTick == 1234 && GenCollection.Sizes.Count == 8, "reload rerolled participants");
                 Check(Deploy(), "class faction cannot raid");
             });
         }
@@ -633,9 +753,9 @@ namespace Verse
     public static class Find { public static TickManager TickManager = new TickManager(); public static WorldPawns WorldPawns = new WorldPawns(); public static FactionManager FactionManager = new FactionManager(); public static WorldObjectsHolder WorldObjects = new WorldObjectsHolder(); public static RimWorld.QuestManager QuestManager = new RimWorld.QuestManager(); }
     public class FactionManager
     {
-        private Faction faction;
-        public Faction FirstFactionOfDef(FactionDef def) => faction?.def == def ? faction : null;
-        public void Add(Faction f) { faction = f; }
+        public List<Faction> AllFactionsListForReading = new List<Faction>();
+        public Faction FirstFactionOfDef(FactionDef def) => AllFactionsListForReading.Find(f => f.def == def);
+        public void Add(Faction f) { AllFactionsListForReading.Add(f); }
     }
     public class TickManager { public int TicksGame; }
     public static class GenTicks { public static int TicksAbs => Find.TickManager.TicksGame + 3600000; }
@@ -693,7 +813,7 @@ namespace Verse
     public static class Log { public static void Error(string s) { } public static void Warning(string s) { } }
     public static class Messages { public static void Message(string s, Pawn p, object kind, bool historical) { } }
     public static class DefDatabase<T> { public static List<T> AllDefsListForReading; }
-    public class Def { public virtual IEnumerable<string> ConfigErrors() { yield break; } }
+    public class Def { public string defName, label; public virtual IEnumerable<string> ConfigErrors() { yield break; } }
     public static class GenCollection
     {
         public static Queue<int> Draws = new Queue<int>();
@@ -779,9 +899,10 @@ namespace RimWorld
         public FactionDef def; public bool Neutral;
         public bool HostileTo(Faction other) => def != null && def.permanentEnemy && !Neutral && other != this;
         public void SetRelationDirect(Faction other, FactionRelationKind kind, bool letter) { Neutral = false; }
+        public void RemoveAllRelations() { }
         public static Faction OfPlayer = new Faction();
     }
-    public class FactionDef { public bool permanentEnemy = true; }
+    public class FactionDef { public bool permanentEnemy = true, hidden = true, raidsForbidden = true; }
     public struct FactionGeneratorParms { public FactionDef Def; public FactionGeneratorParms(FactionDef def, bool hidden) { Def = def; } }
     public static class FactionGenerator { public static Faction NewGeneratedFaction(FactionGeneratorParms p) => new Faction { def = p.Def }; }
     public static class PawnsFinder { public static List<Pawn> AllMapsAndWorld_Alive => PawnGenerator.Created; }
@@ -822,7 +943,7 @@ namespace MoonWorld
     public static class ServantSustainPolicy { public static float Threshold(Pawn p, ServantPresenceState state) => 60; }
     public static class ServantHealingPolicy { public static Hediff FindWorstCurableCondition(Pawn p) => null; }
     public class LordJob_EnemyWarParty { }
-    public class ServantIdentityDef { public bool summonable = true; public HolyGrailWarClass warClass; public PawnKindDef servantKind = new PawnKindDef(); }
+    public class ServantIdentityDef { public HolyGrailWarClassDef classDef; public bool summonable = true; public HolyGrailWarClass warClass; public PawnKindDef servantKind = new PawnKindDef(); }
     public class ServantLifecycleService
     {
         public static ServantLifecycleService Instance = new ServantLifecycleService();
