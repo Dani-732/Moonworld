@@ -31,10 +31,11 @@ namespace MoonWorld
             else
             {
                 ownsPawns = true;
-                Faction faction = Find.FactionManager.FirstFactionOfDef(MW_DefOf.MW_WarOpposition);
+                FactionDef oppositionDef = OppositionDef(identity.warClass);
+                Faction faction = Find.FactionManager.FirstFactionOfDef(oppositionDef);
                 if (faction == null)
                 {
-                    faction = FactionGenerator.NewGeneratedFaction(new FactionGeneratorParms(MW_DefOf.MW_WarOpposition, hidden: true));
+                    faction = FactionGenerator.NewGeneratedFaction(new FactionGeneratorParms(oppositionDef, hidden: true));
                     Find.FactionManager.Add(faction);
                 }
                 if (!faction.HostileTo(Faction.OfPlayer))
@@ -81,6 +82,22 @@ namespace MoonWorld
                 || (ownsPawns && (Master.Spawned || Servant.Spawned
                     || !Find.WorldPawns.Contains(Master) || !Find.WorldPawns.Contains(Servant))))
                 throw new InvalidOperationException("工坊建立期间敌方主从或契约发生变化。");
+        }
+
+        private static FactionDef OppositionDef(HolyGrailWarClass seat)
+        {
+            FactionDef selected = null;
+            switch (seat)
+            {
+                case HolyGrailWarClass.Saber: selected = MW_DefOf.MW_WarOpposition_Saber; break;
+                case HolyGrailWarClass.Archer: selected = MW_DefOf.MW_WarOpposition_Archer; break;
+                case HolyGrailWarClass.Lancer: selected = MW_DefOf.MW_WarOpposition_Lancer; break;
+                case HolyGrailWarClass.Assassin: selected = MW_DefOf.MW_WarOpposition_Assassin; break;
+                case HolyGrailWarClass.Caster: selected = MW_DefOf.MW_WarOpposition_Caster; break;
+                case HolyGrailWarClass.Rider: selected = MW_DefOf.MW_WarOpposition_Rider; break;
+                case HolyGrailWarClass.Berserker: selected = MW_DefOf.MW_WarOpposition_Berserker; break;
+            }
+            return selected ?? MW_DefOf.MW_WarOpposition;
         }
 
         internal void Commit(HolyGrailWarEntry entry)

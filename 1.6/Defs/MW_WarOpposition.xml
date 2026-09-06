@@ -37,6 +37,13 @@
     <raidsForbidden>true</raidsForbidden>
     <backstoryFilters><li><categories><li>Outlander</li></categories></li></backstoryFilters>
   </FactionDef>
+  <FactionDef ParentName="MW_WarOpposition"><defName>MW_WarOpposition_Saber</defName><label>圣杯战争 Saber 阵营</label><fixedName>圣杯战争 Saber 阵营</fixedName></FactionDef>
+  <FactionDef ParentName="MW_WarOpposition"><defName>MW_WarOpposition_Archer</defName><label>圣杯战争 Archer 阵营</label><fixedName>圣杯战争 Archer 阵营</fixedName></FactionDef>
+  <FactionDef ParentName="MW_WarOpposition"><defName>MW_WarOpposition_Lancer</defName><label>圣杯战争 Lancer 阵营</label><fixedName>圣杯战争 Lancer 阵营</fixedName></FactionDef>
+  <FactionDef ParentName="MW_WarOpposition"><defName>MW_WarOpposition_Assassin</defName><label>圣杯战争 Assassin 阵营</label><fixedName>圣杯战争 Assassin 阵营</fixedName></FactionDef>
+  <FactionDef ParentName="MW_WarOpposition"><defName>MW_WarOpposition_Caster</defName><label>圣杯战争 Caster 阵营</label><fixedName>圣杯战争 Caster 阵营</fixedName></FactionDef>
+  <FactionDef ParentName="MW_WarOpposition"><defName>MW_WarOpposition_Rider</defName><label>圣杯战争 Rider 阵营</label><fixedName>圣杯战争 Rider 阵营</fixedName></FactionDef>
+  <FactionDef ParentName="MW_WarOpposition"><defName>MW_WarOpposition_Berserker</defName><label>圣杯战争 Berserker 阵营</label><fixedName>圣杯战争 Berserker 阵营</fixedName></FactionDef>
   <PawnKindDef ParentName="BasePlayerPawnKind">
     <defName>MW_EnemyMaster</defName>
     <label>敌方御主</label>

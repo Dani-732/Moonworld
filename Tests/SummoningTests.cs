@@ -767,6 +767,8 @@ namespace MoonWorld
         public static TraitDef MW_CommandSpell = new TraitDef(), MW_MagusCircuit_Basic = new TraitDef(), MW_MageRank_Apprentice = new TraitDef();
         public static Settings MW_HolyGrailWarSettings = new Settings();
         public static FactionDef MW_WarOpposition = new FactionDef();
+        public static FactionDef MW_WarOpposition_Saber, MW_WarOpposition_Archer, MW_WarOpposition_Lancer,
+            MW_WarOpposition_Assassin, MW_WarOpposition_Caster, MW_WarOpposition_Rider, MW_WarOpposition_Berserker;
         public static PawnKindDef MW_EnemyMaster = new PawnKindDef(); public static object MW_Prana = new object(); public static WorldObjectDef MW_WarWorkshop = new WorldObjectDef(); public static SitePartDef MW_WarWorkshopPart = new SitePartDef();
     }
     public class Settings { public int pranaUpdateIntervalTicks = 250, enemyRestDurationTicks = 180000; public float enemyRaidPranaFraction = .8f; }
