@@ -699,6 +699,7 @@ namespace MoonWorld
     public class ServantQuery { public static ServantQuery Instance = new ServantQuery(); public bool IsServant(Pawn p) => p.Servant; public bool IsSpirit(Pawn p) => p?.State.PresenceState == ServantPresenceState.DefeatedSpirit; public Pawn GetMaster(Pawn p) => p?.State.Master; }
     public static class ServantIdentityUtility { public static ServantIdentityDef GetIdentity(Pawn p) => p?.Identity; public static ServantResourceProfileDef GetProfile(Pawn p) => new ServantResourceProfileDef(); }
     public class ServantResourceProfileDef { public float materializedSustainThreshold = 30; }
+    public static class ServantSustainPolicy { public static float Threshold(Pawn p, ServantPresenceState state) => 60; }
     public static class ServantHealingPolicy { public static Hediff FindWorstCurableCondition(Pawn p) => null; }
     public class LordJob_EnemyWarParty { }
     public class ServantIdentityDef { public bool summonable = true; public HolyGrailWarClass warClass; public PawnKindDef servantKind = new PawnKindDef(); }

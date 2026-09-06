@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <StatDef>
+    <defName>MW_SeparatedSustainMultiplier</defName>
+    <label>主从分离维持阈值倍率</label>
+    <description>与御主分离时，最低魔力维持阈值采用的倍率。同地图、同一远行队或同组旅行运输工具时不应用此倍率。此项不影响每日耗魔，可由特殊能力、装备或状态修正。</description>
+    <defaultBaseValue>2</defaultBaseValue>
+    <minValue>0</minValue>
+    <toStringStyle>FloatTwo</toStringStyle>
+    <alwaysHidden>true</alwaysHidden>
+  </StatDef>
+</Defs>

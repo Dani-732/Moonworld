@@ -212,9 +212,7 @@ namespace MoonWorld
 
                 float multiplier = state.PresenceState == ServantPresenceState.Materialized ? 1f : profile.spiritUpkeepMultiplier;
                 ledger.Add(prana, -profile.materializedUpkeepPerDay * multiplier * intervalTicks / 60000f);
-                float threshold = state.PresenceState == ServantPresenceState.Materialized
-                    ? profile.materializedSustainThreshold
-                    : profile.spiritSustainThreshold;
+                float threshold = ServantSustainPolicy.Threshold(servant, state.PresenceState);
                 UpdateShortageState(servant, ledger.LevelAfterPending(prana) < threshold, profile);
             }
         }
@@ -253,9 +251,7 @@ namespace MoonWorld
                 {
                     continue;
                 }
-                float sustainThreshold = state.PresenceState == ServantPresenceState.Materialized
-                    ? profile.materializedSustainThreshold
-                    : profile.spiritSustainThreshold;
+                float sustainThreshold = ServantSustainPolicy.Threshold(servant, state.PresenceState);
                 if (ledger.LevelAfterPending(prana) <= sustainThreshold)
                 {
                     continue;

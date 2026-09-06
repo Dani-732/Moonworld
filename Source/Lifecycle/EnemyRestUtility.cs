@@ -42,7 +42,8 @@ namespace MoonWorld
             ServantResourceProfileDef profile = ServantIdentityUtility.GetProfile(servant);
             float fraction = Mathf.Clamp01(MW_DefOf.MW_HolyGrailWarSettings.enemyRaidPranaFraction);
             if (prana == null || profile == null || prana.MaxLevel <= 0f
-                || prana.CurLevel < Mathf.Max(prana.MaxLevel * fraction, profile.materializedSustainThreshold))
+                || prana.CurLevel < Mathf.Max(prana.MaxLevel * fraction,
+                    ServantSustainPolicy.Threshold(servant, ServantPresenceState.Materialized)))
                 return "敌方从者尚未恢复出战所需的魔力。";
             return null;
         }

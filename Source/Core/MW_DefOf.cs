@@ -9,6 +9,7 @@ namespace MoonWorld
     {
         public static NeedDef MW_Prana;
         public static NeedDef MW_MasterPrana;
+        public static StatDef MW_SeparatedSustainMultiplier;
         public static HediffDef MW_PranaShortage;
         public static HediffDef MW_SpiritDamage;
         public static HediffDef MW_SpiritForm;

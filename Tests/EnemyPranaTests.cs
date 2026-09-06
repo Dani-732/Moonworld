@@ -14,8 +14,9 @@ internal static class EnemyPranaTests
         Current.Game = new Game(); Find.WorldPawns.Pawns.Clear();
         Find.Maps.Clear(); Map map = new Map(); Find.Maps.Add(map);
         Faction faction = new Faction { def = MW_DefOf.MW_WarOpposition };
-        master = new Pawn { Faction = faction, Circuit = true };
-        servant = new Pawn { Faction = faction, Servant = true };
+        master = new Pawn { Faction = faction, Circuit = true, MapHeld = map };
+        servant = new Pawn { Faction = faction, Servant = true, MapHeld = map };
+        Find.WorldObjects.TravellingTransporters.Clear();
         servant.State.Master = master;
         map.mapPawns.AllPawnsSpawned.Add(master); map.mapPawns.AllPawnsSpawned.Add(servant);
         master.needs.Master.CurLevel = 100; servant.needs.Prana.CurLevel = 50;
@@ -29,12 +30,57 @@ internal static class EnemyPranaTests
     {
         Find.Maps[0].mapPawns.AllPawnsSpawned.Clear();
         master.Spawned = servant.Spawned = false;
+        master.MapHeld = servant.MapHeld = null;
         Find.WorldPawns.Pawns.Add(master); Find.WorldPawns.Pawns.Add(servant);
         Current.Game.State.CurrentWarEntry = new HolyGrailWarEntry { EnemyMaster = master, EnemyServant = servant, EnemyDeployed = true };
         servant.State.PresenceState = ServantPresenceState.DefeatedSpirit;
     }
     public static void Main()
     {
+        Test("same map thresholds remain 30 and 10", () => {
+            Near(ServantSustainPolicy.Threshold(servant), 30);
+            servant.State.PresenceState = ServantPresenceState.DefeatedSpirit;
+            Near(ServantSustainPolicy.Threshold(servant), 10);
+        });
+        Test("different maps double both thresholds without changing upkeep", () => {
+            master.MapHeld = new Map(); Near(ServantSustainPolicy.Threshold(servant), 60);
+            servant.State.PresenceState = ServantPresenceState.DefeatedSpirit;
+            Near(ServantSustainPolicy.Threshold(servant), 20);
+            Cycle(); Near(servant.needs.Prana.CurLevel, 50.99375f);
+        });
+        Test("two null maps never count as together", () => {
+            master.MapHeld = servant.MapHeld = null; Near(ServantSustainPolicy.Threshold(servant), 60);
+        });
+        Test("same caravan together separate caravans separated", () => {
+            master.MapHeld = servant.MapHeld = null;
+            master.Caravan = servant.Caravan = new RimWorld.Planet.Caravan();
+            Near(ServantSustainPolicy.Threshold(servant), 30);
+            master.Caravan = new RimWorld.Planet.Caravan(); Near(ServantSustainPolicy.Threshold(servant), 60);
+        });
+        Test("same transporter group together different groups separated", () => {
+            master.MapHeld = servant.MapHeld = null;
+            var transport = new RimWorld.Planet.TravellingTransporters();
+            Find.WorldObjects.TravellingTransporters.Add(transport);
+            transport.Pawns.Add(master); transport.Pawns.Add(servant);
+            Near(ServantSustainPolicy.Threshold(servant), 30);
+            transport.Pawns.Remove(master); Near(ServantSustainPolicy.Threshold(servant), 60);
+        });
+        Test("vanilla stat modifier changes only separated threshold", () => {
+            servant.SeparationStat = 1.25f; Near(ServantSustainPolicy.Threshold(servant), 30);
+            master.MapHeld = null; Near(ServantSustainPolicy.Threshold(servant), 37.5f);
+            servant.SeparationStat = float.NaN; Near(ServantSustainPolicy.Threshold(servant), 60);
+            servant.SeparationStat = -1; Near(ServantSustainPolicy.Threshold(servant), 0);
+        });
+        Test("separated healing cannot spend below effective threshold", () => {
+            master.MapHeld = null; servant.needs.Prana.CurLevel = 60;
+            var injury = new Hediff_Injury { Severity = 10 }; servant.health.hediffSet.hediffs.Add(injury);
+            Cycle(); Near(servant.needs.Prana.CurLevel, 60); Near(injury.Severity, 10 - .975f / 4);
+        });
+        Test("between thresholds shortage starts apart and clears together", () => {
+            Map map = master.MapHeld; master.MapHeld = null;
+            Cycle(); Check(servant.health.hediffSet.GetFirstHediffOfDef(MW_DefOf.MW_PranaShortage) != null, "missing shortage");
+            master.MapHeld = map; Cycle(); Check(servant.health.hediffSet.GetFirstHediffOfDef(MW_DefOf.MW_PranaShortage) == null, "stale shortage");
+        });
         Test("current resting opponent receives one fixed supply cycle", () => {
             Rest(); Cycle(); Near(servant.needs.Prana.CurLevel, 50.99375f); Near(master.needs.Master.CurLevel, 100);
         });
@@ -76,7 +122,7 @@ internal static class EnemyPranaTests
         });
         Test("enemy supply works without a master need", () => { master.needs.Master = null; Cycle(); Near(servant.needs.Prana.CurLevel, 50.975f); });
         Test("off-map master supplies lone raiding servant", () => {
-            master.Spawned = false; Find.Maps[0].mapPawns.AllPawnsSpawned.Remove(master); master.needs.Master = null;
+            master.Spawned = false; master.MapHeld = null; Find.Maps[0].mapPawns.AllPawnsSpawned.Remove(master); master.needs.Master = null;
             Cycle(); Near(servant.needs.Prana.CurLevel, 50.975f);
         });
         Test("spirit receives fixed supply with spirit upkeep", () => {
@@ -136,6 +182,9 @@ namespace Verse
     {
         public bool Dead, Destroyed, IsPrisoner, IsSlave, Circuit, Servant;
         public bool Spawned = true;
+        public Map MapHeld;
+        public RimWorld.Planet.Caravan Caravan;
+        public float SeparationStat = 2;
         public object ParentHolder;
         public int thingIDNumber, Defeats;
         public Faction Faction;
@@ -150,7 +199,8 @@ namespace Verse
     }
     public class Map { public MapPawns mapPawns = new MapPawns(); }
     public class MapPawns { public List<Pawn> AllPawnsSpawned = new List<Pawn>(); }
-    public static class Find { public static List<Map> Maps = new List<Map>(); public static WorldPawns WorldPawns = new WorldPawns(); }
+    public static class Find { public static List<Map> Maps = new List<Map>(); public static WorldPawns WorldPawns = new WorldPawns(); public static WorldObjects WorldObjects = new WorldObjects(); }
+    public class WorldObjects { public List<RimWorld.Planet.TravellingTransporters> TravellingTransporters = new List<RimWorld.Planet.TravellingTransporters>(); }
     public class WorldPawns { public HashSet<Pawn> Pawns = new HashSet<Pawn>(); public bool Contains(Pawn p) => Pawns.Contains(p); }
     public static class Current { public static Game Game; }
     public class Game { public GameComponent_MoonWorld State = new GameComponent_MoonWorld(); public T GetComponent<T>() where T : class => State as T; }
@@ -166,10 +216,17 @@ namespace Verse
 }
 namespace RimWorld
 {
+    public static class StatExtension { public static float GetStatValue(this Pawn p, object def, bool applyPostProcess = true, int cacheStaleAfterTicks = -1) => p.SeparationStat; }
     public class Faction { public object def; public static Faction OfPlayer = new Faction(); public bool HostileTo(Faction f) => def == MW_DefOf.MW_WarOpposition; }
     public class Need { public float CurLevel, MaxLevel = 100; public float CurLevelPercentage => CurLevel / MaxLevel; }
     public class Need_Food : Need { }
     public static class HealthUtility { public static void Cure(Hediff h) { } }
+}
+namespace RimWorld.Planet
+{
+    public class Caravan { }
+    public class TravellingTransporters { public List<Pawn> Pawns = new List<Pawn>(); }
+    public static class CaravanUtility { public static Caravan GetCaravan(this Pawn pawn) => pawn.Caravan; }
 }
 namespace MoonWorld
 {
@@ -184,6 +241,7 @@ namespace MoonWorld
     public static class MW_DefOf
     {
         public static object MW_WarOpposition = new object(), MW_PranaShortage = new object();
+        public static object MW_SeparatedSustainMultiplier = new object();
         public static MoonWorldSettingsDef MW_HolyGrailWarSettings = new MoonWorldSettingsDef();
     }
     public class MasterCircuitDef { public float naturalRegenPerDay = 240; }

@@ -92,6 +92,13 @@ namespace MoonWorld
             if (master != null)
             {
                 result += "\n契约御主：" + master.LabelShort;
+                if (presenceState != ServantPresenceState.Annihilated)
+                {
+                    Pawn pawn = parent as Pawn;
+                    result += "\n最低维持魔力：" + ServantSustainPolicy.Threshold(pawn).ToString("0.##")
+                        + (ServantSustainPolicy.IsTogether(pawn) ? "（主从同行）" : "（主从分离 ×"
+                            + ServantSustainPolicy.SeparationMultiplier(pawn).ToString("0.##") + "）");
+                }
             }
             return result;
         }

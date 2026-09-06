@@ -7,6 +7,7 @@ try {
         (Join-Path $PSScriptRoot 'EnemyPranaTests.cs') `
         (Join-Path $projectRoot 'Source\Core\EnemyContractUtility.cs') `
         (Join-Path $projectRoot 'Source\Prana\PranaCycle.cs') `
+        (Join-Path $projectRoot 'Source\Prana\ServantSustainPolicy.cs') `
         (Join-Path $projectRoot 'Source\Prana\PranaLedger.cs')
     if ($LASTEXITCODE -ne 0) { throw 'Enemy prana tests did not compile' }
     & $testOutput

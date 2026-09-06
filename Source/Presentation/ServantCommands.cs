@@ -67,7 +67,7 @@ namespace MoonWorld
                 Text.Font = GameFont.Small;
                 Text.Anchor = TextAnchor.UpperLeft;
                 GUI.color = Color.white;
-                Widgets.Label(new Rect(inner.x, inner.y, inner.width, 24f), "从者魔力");
+                Widgets.Label(new Rect(inner.x, inner.y, inner.width, 24f), "魔力 / 维持线 " + ServantSustainPolicy.Threshold(servant).ToString("0.##"));
                 Rect bar = new Rect(inner.x, inner.y + 27f, inner.width, 34f);
                 Widgets.FillableBar(bar, prana?.CurLevelPercentage ?? 0f, Filled, Empty, false);
                 Text.Anchor = TextAnchor.MiddleCenter;
