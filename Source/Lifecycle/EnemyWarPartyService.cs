@@ -14,6 +14,8 @@ namespace MoonWorld
         {
             GameComponent_MoonWorld war = Current.Game?.GetComponent<GameComponent_MoonWorld>();
             HolyGrailWarEntry entry = war?.CurrentWarEntry;
+            if (war?.CurrentWarOutcome != WarOutcome.Ongoing)
+                return "本届圣杯战争已经结束，不能继续发动敌方突袭。";
             if (generating || war == null || war.warStartTick < 0 || entry == null || !entry.RegularSummonUsed)
                 return "请先完成本届玩家召唤，并等待当前部署结束。";
             if (map == null || !map.IsPlayerHome || !map.CanEverExit)

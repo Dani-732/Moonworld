@@ -18,6 +18,7 @@ namespace MoonWorld
         ExplicitKill
     }
 
+
     public struct ServantSnapshot
     {
         public Pawn servant;

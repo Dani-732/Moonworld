@@ -3,12 +3,21 @@ using Verse;
 
 namespace MoonWorld
 {
+    public enum WarOutcome
+    {
+        Ongoing,
+        PlayerVictory,
+        PlayerDefeat
+    }
+
     public sealed class GameComponent_MoonWorld : GameComponent
     {
         public int warStartTick = -1;
         private HolyGrailWarEntry currentWarEntry;
+        private WarOutcome warOutcome = WarOutcome.Ongoing;
 
         public HolyGrailWarEntry CurrentWarEntry => currentWarEntry;
+        public WarOutcome CurrentWarOutcome => warOutcome;
         public bool CanAcceptInvitation => currentWarEntry == null && warStartTick < 0;
 
         public GameComponent_MoonWorld(Game game) { }
@@ -23,6 +32,8 @@ namespace MoonWorld
 
         public override void GameComponentTick()
         {
+            WarOutcomeService.Tick(this);
+            if (warOutcome != WarOutcome.Ongoing) return;
             int interval = Mathf.Max(1, MW_DefOf.MW_HolyGrailWarSettings.pranaUpdateIntervalTicks);
             if (Find.TickManager.TicksGame % interval == 0)
             {
@@ -57,6 +68,14 @@ namespace MoonWorld
         {
             Scribe_Values.Look(ref warStartTick, "warStartTick", -1);
             Scribe_Deep.Look(ref currentWarEntry, "currentWarEntry");
+            Scribe_Values.Look(ref warOutcome, "warOutcome", WarOutcome.Ongoing);
+        }
+
+        internal bool TrySetWarOutcome(WarOutcome outcome)
+        {
+            if (warOutcome != WarOutcome.Ongoing || outcome == WarOutcome.Ongoing) return false;
+            warOutcome = outcome;
+            return true;
         }
     }
 }

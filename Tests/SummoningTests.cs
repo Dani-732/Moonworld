@@ -277,6 +277,22 @@ internal static class SummoningTests
             Accept(); Check(Summon(), "first failed"); State.ExposeData(); Scribe.Loading = true; Current.Game = new Game(); State.ExposeData(); State.LoadedGame();
             Check(State.CurrentWarEntry.RegularSummonUsed && State.warStartTick == 1234 && !Summon(), "spent save state lost");
         });
+        Test("enemy departure does not end war", () => {
+            PrepareEnemy(); Check(Deploy(), "deployment failed"); Pawn enemy = State.CurrentWarEntry.EnemyServant;
+            enemy.Spawned = false; Find.WorldPawns.PassToWorld(enemy, RimWorld.Planet.PawnDiscardDecideMode.Decide);
+            EnemyWarPartyService.RetainDepartedPawn(enemy); WarOutcomeService.Tick(State);
+            Check(State.CurrentWarOutcome == WarOutcome.Ongoing, "departed enemy ended war");
+        });
+        Test("enemy elimination ends war exactly once", () => {
+            PrepareEnemy(); Check(Deploy(), "deployment failed");
+            State.CurrentWarEntry.EnemyServant.Destroyed = true; WarOutcomeService.Tick(State);
+            Check(State.CurrentWarOutcome == WarOutcome.PlayerVictory, "enemy elimination did not win war");
+            WarOutcomeService.Tick(State); Check(State.CurrentWarOutcome == WarOutcome.PlayerVictory, "war outcome changed on second tick");
+        });
+        Test("player master death ends war as defeat", () => {
+            PrepareEnemy(); Check(Deploy(), "deployment failed"); master.Dead = true; WarOutcomeService.Tick(State);
+            Check(State.CurrentWarOutcome == WarOutcome.PlayerDefeat, "master death did not lose war");
+        });
         Console.WriteLine(passed + " entry and summoning scenarios passed. Native UI, XML loading and real save/load require in-game testing.");
     }
 }
@@ -410,7 +426,7 @@ namespace RimWorld
 {
     public class IncidentParms { public object target; }
     public class IncidentWorker { protected virtual bool CanFireNowSub(IncidentParms p) => true; protected virtual bool TryExecuteWorker(IncidentParms p) => false; public bool TryExecute(IncidentParms p) => TryExecuteWorker(p); }
-    public static class MessageTypeDefOf { public static object ThreatBig = new object(); }
+    public static class MessageTypeDefOf { public static object ThreatBig = new object(), NegativeEvent = new object(), PositiveEvent = new object(); }
     public class Faction { public FactionDef def; public bool HostileTo(Faction other) => def == MW_DefOf.MW_WarOpposition; public static Faction OfPlayer = new Faction(); }
     public class FactionDef { }
     public struct FactionGeneratorParms { public FactionDef Def; public FactionGeneratorParms(FactionDef def, bool hidden) { Def = def; } }
