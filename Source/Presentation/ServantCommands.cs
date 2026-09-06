@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using RimWorld;
 using UnityEngine;
 using Verse;
+using Verse.AI;
 
 namespace MoonWorld
 {
@@ -20,6 +21,25 @@ namespace MoonWorld
             Command_Action presence = CompMasterServantCommands.CreatePresenceCommand(
                 ServantQuery.Instance.GetMaster(servant), servant);
             if (presence != null) yield return presence;
+            if (ServantQuery.Instance.IsSpirit(servant) && ServantTravelAutonomy.CanExitAsPlayer(servant))
+            {
+                yield return new Command_Action
+                {
+                    defaultLabel = "撤离地图",
+                    defaultDesc = "灵体自行前往原版地图出口，加入附近可汇合的远行队或建立远行队。无需御主同行。",
+                    icon = RimWorld.Planet.FormCaravanComp.FormCaravanCommand,
+                    action = () =>
+                    {
+                        Job exit = ServantTravelAutonomy.GetPlayerExitJob(servant);
+                        if (exit == null)
+                        {
+                            Messages.Message("没有可用的撤离出口。", servant, MessageTypeDefOf.RejectInput, false);
+                            return;
+                        }
+                        servant.jobs.StartJob(exit, JobCondition.InterruptForced);
+                    }
+                };
+            }
         }
     }
 

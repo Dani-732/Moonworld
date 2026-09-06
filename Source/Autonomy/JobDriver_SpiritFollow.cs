@@ -60,11 +60,7 @@ namespace MoonWorld
         private bool CanContinueFollowing(Pawn master)
         {
             return ServantQuery.Instance.IsSpirit(pawn)
-                && master != null
-                && !master.Dead
-                && pawn.Spawned
-                && master.Spawned
-                && pawn.Map == master.Map;
+                && SpiritFollowJobPolicy.CanFollow(pawn, master);
         }
 
         private void TeleportNear(Pawn master, int radius)

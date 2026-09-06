@@ -178,7 +178,7 @@ namespace Verse
         public override bool Equals(object o) => o is LocalTargetInfo && this == (LocalTargetInfo)o;
         public override int GetHashCode() => 0;
     }
-    public class Map { public MapPawns mapPawns = new MapPawns(); }
+    public class Map { public object Parent; public MapPawns mapPawns = new MapPawns(); }
     public class MapPawns { public List<Pawn> AllPawnsSpawned = new List<Pawn>(); }
     public class Game { public HolyGrailWarEntry Entry; public T GetComponent<T>() where T : new() => new T(); }
     public static class Current { public static Game Game = new Game(); }
@@ -215,7 +215,7 @@ namespace Verse.AI
 }
 namespace Verse.AI.Group
 {
-    public class Lord { public LordJob LordJob; public LordToil CurLordToil; public List<Pawn> ownedPawns = new List<Pawn>(); public void ReceiveMemo(string s) { CurLordToil = new LordToil_ExitMap(); } }
+    public class Lord { public Map Map; public LordJob LordJob; public LordToil CurLordToil; public List<Pawn> ownedPawns = new List<Pawn>(); public void ReceiveMemo(string s) { CurLordToil = new LordToil_ExitMap(); } }
     public static class LordExtensions { public static Lord GetLord(this Pawn p) => p.Lord; }
     public abstract class LordJob
     {
@@ -232,6 +232,7 @@ namespace Verse.AI.Group
 }
 namespace MoonWorld
 {
+    public class Site_WarWorkshop { }
     public class GameComponent_MoonWorld { public HolyGrailWarEntry CurrentWarEntry => Current.Game.Entry; }
     public class HolyGrailWarEntry { public Pawn EnemyMaster, EnemyServant; public bool EnemyDeployed, EnemyEliminated; }
     public static class EnemyContractUtility { public static bool HasEnemyContract(Pawn p) => p.Enemy && p.Master != null; }
@@ -242,6 +243,12 @@ namespace MoonWorld
     public class Ability_NoblePhantasm { public bool CanCast; public int Casts; public LocalTargetInfo LastTarget;
         public Verb verb = new Verb(); public void QueueCastingJob(LocalTargetInfo t, LocalTargetInfo d) { Casts++; LastTarget = t; } }
     public class Verb { public bool ValidateTarget(LocalTargetInfo t, bool m) => Math.Abs(t.Cell.X) <= 30; }
-    public static class ServantTravelAutonomy { public static Job GetSpiritBoardingJob(Pawn p) => null; }
+    public static class ServantTravelAutonomy
+    {
+        public static Job GetSpiritBoardingJob(Pawn p) => null;
+        public static Job GetSpiritTravelJob(Pawn p) => null;
+        public static bool IsSpiritTravelJobAllowed(Pawn p, Job j) => false;
+        public static bool HasTravelAssignment(Pawn p) => false;
+    }
     public static class MW_DefOf { public static object MW_SpiritFollow = new object(); public static DutyDef MW_EnemyServantAssault = new DutyDef(); }
 }

@@ -12,6 +12,8 @@ namespace MoonWorld
             if (retreat != null) return retreat;
             Job boarding = ServantTravelAutonomy.GetSpiritBoardingJob(servant);
             if (boarding != null) return boarding;
+            Job travel = ServantTravelAutonomy.GetSpiritTravelJob(servant);
+            if (travel != null) return travel;
             Pawn master = ServantQuery.Instance.GetMaster(servant);
             if (CanFollow(servant, master))
             {
@@ -32,6 +34,7 @@ namespace MoonWorld
             if (EnemyRetreatUtility.ShouldExit(servant) && job.def == JobDefOf.Goto
                 && job.exitMapOnArrival && job.targetA.Cell.InBounds(servant.Map)
                 && job.targetA.Cell.OnEdge(servant.Map)) return true;
+            if (ServantTravelAutonomy.IsSpiritTravelJobAllowed(servant, job)) return true;
             if (job.def == JobDefOf.EnterTransporter)
             {
                 Job boarding = ServantTravelAutonomy.GetSpiritBoardingJob(servant);
@@ -50,15 +53,18 @@ namespace MoonWorld
             return CanFollow(servant, master) && job.targetA.Thing == master;
         }
 
-        private static bool CanFollow(Pawn servant, Pawn master)
+        public static bool CanFollow(Pawn servant, Pawn master)
         {
             return servant != null
                 && master != null
                 && !servant.Dead
                 && !master.Dead
+                && !servant.Destroyed
+                && !master.Destroyed
                 && servant.Spawned
                 && master.Spawned
-                && servant.Map == master.Map;
+                && servant.Map == master.Map
+                && !ServantTravelAutonomy.HasTravelAssignment(servant);
         }
     }
 }

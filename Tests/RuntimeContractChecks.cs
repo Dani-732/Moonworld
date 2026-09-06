@@ -111,8 +111,15 @@ internal static class RuntimeContractChecks
             throw new Exception("Holy Grail War quest service entry point missing");
         foreach (string removed in new[] { "Harmony_ServantDeparture_Selectable", "Harmony_ServantDeparture_NoCapture",
             "Harmony_ServantTravelAutonomy", "Harmony_ServantTravelBoardingDuty", "Harmony_ServantTravelSection",
-            "Harmony_ServantTravel_NoHaulingStandingGuest", "Command_NoblePhantasm" })
+            "Harmony_ServantTravel_NoHaulingStandingGuest", "Command_NoblePhantasm",
+            "Harmony_ServantDeparture_FormCheck", "Harmony_ServantDeparture_LoadCheck",
+            "Harmony_ServantDeparture_DebugCaravan", "Harmony_ServantDeparture_DebugTransporters",
+            "Harmony_ServantDeparture_SendCheck", "Harmony_ServantDeparture_ExitCaravan",
+            "Harmony_ServantDeparture_LaunchCheck" })
             if (mod.GetType("MoonWorld." + removed) != null) throw new Exception("Obsolete adapter remains: " + removed);
+        Type exitPatch = mod.GetType("MoonWorld.Harmony_ServantDeparture_ExitPawn", true);
+        if (exitPatch.GetMethod("Prefix") != null || exitPatch.GetMethod("Postfix") == null)
+            throw new Exception("Pawn exit must keep enemy retention only, without a travel veto");
         Assembly content = Assembly.LoadFrom(Path.Combine(directories[3], "HolyGrailWarTest.dll"));
         Type identityUtility = content.GetType("HolyGrailWar.ServantIdentityUtility", true);
         Type pawnType = game.GetType("Verse.Pawn", true);
