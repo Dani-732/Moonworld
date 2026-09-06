@@ -174,7 +174,7 @@ namespace RimWorld
 namespace MoonWorld
 {
     public class GameComponent_MoonWorld { public HolyGrailWarEntry CurrentWarEntry; }
-    public class HolyGrailWarEntry { public Pawn EnemyMaster, EnemyServant; public bool EnemyDeployed; public int EnemyRestStartTickAbs = -1;
+    public class HolyGrailWarEntry { public Pawn EnemyMaster, EnemyServant; public bool EnemyDeployed; public bool HasEnemyParticipants => EnemyDeployed; public int EnemyRestStartTickAbs = -1;
         public bool EnemyEliminated => EnemyMaster == null || EnemyMaster.Dead || EnemyMaster.Destroyed || EnemyServant == null || EnemyServant.Dead || EnemyServant.Destroyed; }
     public class Need_Prana : Need { }
     public class Need_MasterPrana : Need_Prana { }

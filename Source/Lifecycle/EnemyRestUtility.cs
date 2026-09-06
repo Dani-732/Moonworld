@@ -10,6 +10,9 @@ namespace MoonWorld
         {
             int duration = Math.Max(0, MW_DefOf.MW_HolyGrailWarSettings.enemyRestDurationTicks);
             HolyGrailWarEntry entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
+            // A newly prepared servant has not retreated and has no recovery cooldown yet.
+            if (entry != null && entry.EnemyPrepared && !entry.EnemyDeployed && entry.EnemyServant == servant)
+                return 0;
             int startedAt = entry != null && entry.EnemyServant == servant
                 ? entry.EnemyRestStartTickAbs
                 : -1;

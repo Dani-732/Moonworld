@@ -4,6 +4,9 @@ $compiler = 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBu
 $testOutput = Join-Path ([IO.Path]::GetTempPath()) ('MoonWorldSummoning-' + [Guid]::NewGuid().ToString('N') + '.exe')
 try {
     & $compiler /nologo /target:exe /out:$testOutput `
+        (Join-Path $PSScriptRoot 'WarStartupHost.cs') `
+        (Join-Path $projectRoot 'Source\Lifecycle\EnemyWarPreparation.cs') `
+        (Join-Path $projectRoot 'Source\Integration\Site_WarWorkshop.cs') `
         (Join-Path $PSScriptRoot 'SummoningTests.cs') `
         (Join-Path $projectRoot 'Source\Core\HolyGrailWarEntry.cs') `
         (Join-Path $projectRoot 'Source\Core\HolyGrailWarClass.cs') `

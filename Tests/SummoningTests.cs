@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using MoonWorld;
 using RimWorld;
 using Verse;
+using RimWorld.Planet;
 
 // Production entry, war state and summoning service; Unity generation and Scribe use host doubles.
 internal static class SummoningTests
@@ -12,7 +13,7 @@ internal static class SummoningTests
     private static IntVec3 cell;
     private static int passed;
     private static GameComponent_MoonWorld State => Current.Game.State;
-    private static void Check(bool result, string reason) { if (!result) throw new Exception(reason); }
+    private static void Check(bool result, string reason) { if (!result) { Console.WriteLine("FAIL " + reason); throw new Exception(reason); } }
     private static void Setup()
     {
         Current.Game = new Game();
@@ -21,10 +22,11 @@ internal static class SummoningTests
         Find.WorldPawns.Pawns.Clear();
         PawnGenerator.Created.Clear(); Find.FactionManager = new FactionManager();
         CellFinder.Fail = Verse.AI.Group.LordMaker.Fail = Pawn.EdgeBlocked = false;
-        Find.WorldPawns.FailPass = false;
+        Find.WorldPawns.FailPass = false; Find.WorldObjects = new WorldObjectsHolder(); TileFinder.Fail = false; HolyGrailWarContentBridge.Fail = false;
         MW_DefOf.MW_HolyGrailWarSettings.enemyRestDurationTicks = 180000;
         MW_DefOf.MW_HolyGrailWarSettings.enemyRaidPranaFraction = .8f;
         PawnGenerator.Last = null; PawnGenerator.Fail = 0; PawnGenerator.Callback = null;
+        PawnGenerator.FailAt = 0; PawnGenerator.FailAfterValidation = false;
         GenSpawn.Fail = ServantLifecycleService.Fail = false;
         GenSpawn.Callback = null; ServantLifecycleService.Callback = null;
         DefDatabase<ServantIdentityDef>.AllDefsListForReading = new List<ServantIdentityDef> {
@@ -48,12 +50,14 @@ internal static class SummoningTests
         Check(!Summon(), "unexpected summon");
         Check(!State.CurrentWarEntry.RegularSummonUsed && State.warStartTick == -1, "failed summon spent qualification or started war");
         Check(Find.WorldPawns.Pawns.Count == 0, "failed summon retained world pawn");
-        if (PawnGenerator.Last != null)
-            Check(PawnGenerator.Last.Destroyed && PawnGenerator.Last.State.Master == null, "failed summon retained pawn or contract");
+        foreach (Pawn p in PawnGenerator.Created)
+            Check(p.Destroyed && p.State.Master == null, "failed summon retained pawn or contract");
+        Check(Find.WorldObjects.All.Count == 0 && !State.CurrentWarEntry.HasEnemyParticipants,
+            "failed summon retained site or participants");
     }
     private static void PrepareEnemy()
     {
-        Accept(); Check(Summon(), "player summon failed"); PawnGenerator.Created.Clear();
+        Accept(); Check(Summon(), "player summon failed");
     }
     private static bool Deploy()
     {
@@ -64,8 +68,10 @@ internal static class SummoningTests
         Check(!Deploy(), "enemy failure accepted");
         Check(!State.CurrentWarEntry.EnemyDeployed && State.warStartTick == 1234
             && State.CurrentWarEntry.RegularSummonUsed, "enemy failure changed player settlement");
-        foreach (Pawn p in PawnGenerator.Created)
-            Check(p.Destroyed && p.State.Master == null && !Find.WorldPawns.Contains(p), "enemy rollback leaked pawn/contract");
+        Check(State.CurrentWarEntry.EnemyPrepared && !State.CurrentWarEntry.EnemyServant.Spawned
+            && Find.WorldPawns.Contains(State.CurrentWarEntry.EnemyServant)
+            && State.CurrentWarEntry.EnemyServant.State.Master == State.CurrentWarEntry.EnemyMaster,
+            "failed deployment lost prepared pair");
     }
     private static Pawn RestEnemy(bool ready = true)
     {
@@ -84,11 +90,88 @@ internal static class SummoningTests
         Check(!enemy.Destroyed && State.CurrentWarEntry.EnemyRestStartTickAbs == since
             && enemy.State.PresenceState == ServantPresenceState.DefeatedSpirit,
             "failed raid reset rest deadline or presence");
-        Check(enemy.State.Master == State.CurrentWarEntry.EnemyMaster && PawnGenerator.Created.Count == 2
+        Check(enemy.State.Master == State.CurrentWarEntry.EnemyMaster && PawnGenerator.Created.Count == 3
             && State.warStartTick == 1234 && State.CurrentWarEntry.RegularSummonUsed, "failed raid changed pair or player settlement");
     }
     public static void Main()
     {
+        Test("invitation does not create enemies or site", () => {
+            Accept(); Check(Find.WorldObjects.All.Count == 0 && Find.WorldPawns.Pawns.Count == 0
+                && !State.CurrentWarEntry.HasEnemyParticipants, "invitation started enemy war");
+        });
+        Test("summon prepares site and full opposing pair before first raid", () => {
+            PrepareEnemy(); var entry = State.CurrentWarEntry;
+            Check(entry.EnemyPrepared && !entry.EnemyDeployed && Find.WorldPawns.Pawns.Count == 2
+                && !entry.EnemyServant.Spawned && !entry.EnemyMaster.Spawned
+                && entry.EnemyServant.needs.Prana.CurLevel == 100, "incomplete off-map enemy");
+            Check(Find.WorldObjects.All.Count == 1 && ((Site_WarWorkshop)Find.WorldObjects.All[0]).OwnerMaster == entry.EnemyMaster,
+                "site owner missing");
+            Check(EnemyRestUtility.TicksRemaining(entry.EnemyServant) == 0 && Deploy(), "first raid incorrectly cooling down");
+            Check(GenSpawn.LastRespawning && PawnGenerator.Created.Count == 3, "raid regenerated content or pawn");
+        });
+        Test("no world site tile rolls back entire summon", () => { Accept(); TileFinder.Fail = true; RejectUnspent(); });
+        Test("partial site registration rolls back entire summon and can retry", () => {
+            Accept(); Find.WorldObjects.FailAdd = true; RejectUnspent();
+            Find.WorldObjects.FailAdd = false; Check(Summon() && Find.WorldObjects.All.Count == 1, "startup retry failed");
+        });
+        Test("enemy generation fails before pawn capture", () => { Accept(); PawnGenerator.FailAt = 2; RejectUnspent(); });
+        Test("enemy master gear failure rolls back captured pawn", () => { Accept(); PawnGenerator.FailAt = 2; PawnGenerator.FailAfterValidation = true; RejectUnspent(); });
+        Test("enemy servant gear failure rolls back all three pawns", () => { Accept(); PawnGenerator.FailAt = 3; PawnGenerator.FailAfterValidation = true; RejectUnspent(); });
+        Test("site hook invalidating player qualification rolls back startup", () => {
+            Accept(); Find.WorldObjects.Callback = () => master.Dead = true; RejectUnspent();
+        });
+        Test("site hook invalidating enemy contract rolls back startup", () => {
+            Accept(); Find.WorldObjects.Callback = () => PawnGenerator.Last.State.Bind(null); RejectUnspent();
+        });
+        Test("site hook removing enemy world retention rolls back startup", () => {
+            Accept(); Find.WorldObjects.Callback = () => Find.WorldPawns.RemovePawn(PawnGenerator.Last); RejectUnspent();
+        });
+        Test("site creation cannot trigger a reentrant raid or summon", () => {
+            Accept(); Find.WorldObjects.Callback = () => Check(!Deploy() && !Summon(), "uncommitted war exposed");
+            Check(Summon(), "outer summon failed");
+        });
+        Test("startup reload keeps original participants site and ready first raid", () => {
+            PrepareEnemy(); Pawn enemy = State.CurrentWarEntry.EnemyServant;
+            var site = (Site_WarWorkshop)Find.WorldObjects.All[0];
+            State.ExposeData(); site.ExposeData(); Scribe.Loading = true; Current.Game = new Game();
+            State.ExposeData(); State.LoadedGame(); var loadedSite = new Site_WarWorkshop(); loadedSite.ExposeData();
+            Check(State.CurrentWarEntry.EnemyServant == enemy && loadedSite.OwnerMaster == State.CurrentWarEntry.EnemyMaster
+                && Find.WorldObjects.All.Count == 1 && PawnGenerator.Created.Count == 3 && Deploy(), "reload recreated or delayed enemy");
+        });
+        Test("site destruction neither eliminates nor regenerates participants", () => {
+            PrepareEnemy(); Find.WorldObjects.All[0].Destroy(); State.LoadedGame(); WarOutcomeService.Tick(State);
+            Check(State.CurrentWarOutcome == WarOutcome.Ongoing && Find.WorldObjects.All.Count == 0
+                && PawnGenerator.Created.Count == 3 && Deploy(), "destroyed site changed qualification");
+        });
+        Test("legacy war with no enemy gets startup once without resetting tick", () => {
+            Accept(); State.CommitRegularSummon(); var identities = DefDatabase<ServantIdentityDef>.AllDefsListForReading;
+            State.CurrentWarEntry.SetParticipants(identities[0], identities[1]); State.LoadedGame(); State.LoadedGame();
+            Check(State.CurrentWarEntry.EnemyPrepared && PawnGenerator.Created.Count == 2
+                && Find.WorldObjects.All.Count == 1 && State.warStartTick == 1234 && Deploy(), "legacy initialization failed");
+        });
+        Test("legacy resting pair gains site without healing replacing or restarting rest", () => {
+            Pawn enemy = RestEnemy(false); enemy.needs.Prana.CurLevel = 17;
+            int since = State.CurrentWarEntry.EnemyRestStartTickAbs;
+            State.ExposeData(); Scribe.Data.Remove("enemyPrepared"); Find.WorldObjects.All.Clear();
+            Scribe.Loading = true; Current.Game = new Game(); State.ExposeData(); State.LoadedGame();
+            Check(State.CurrentWarEntry.EnemyServant == enemy && enemy.needs.Prana.CurLevel == 17
+                && State.CurrentWarEntry.EnemyRestStartTickAbs == since && Find.WorldObjects.All.Count == 1
+                && PawnGenerator.Created.Count == 3 && !Deploy(), "legacy pair reset");
+        });
+        Test("eliminated legacy enemy is not resurrected on load", () => {
+            PrepareEnemy(); Check(Deploy(), "raid failed"); State.CurrentWarEntry.EnemyMaster.Dead = true;
+            State.ExposeData(); Scribe.Data.Remove("enemyPrepared"); Find.WorldObjects.All.Clear();
+            Scribe.Loading = true; Current.Game = new Game(); State.ExposeData(); State.LoadedGame();
+            Check(Find.WorldObjects.All.Count == 0 && PawnGenerator.Created.Count == 3 && !Deploy(), "legacy enemy resurrected");
+        });
+        Test("enemy death before any raid still ends war", () => {
+            PrepareEnemy(); State.CurrentWarEntry.EnemyServant.Dead = true; WarOutcomeService.Tick(State);
+            Check(State.CurrentWarOutcome == WarOutcome.PlayerVictory && !Deploy(), "unraided death ignored");
+        });
+        Test("war end does not stop ongoing prana cycles", () => {
+            PrepareEnemy(); State.TrySetWarOutcome(WarOutcome.PlayerVictory); PranaCycleService.Calls = 0;
+            Find.TickManager.TicksGame = 1500; State.GameComponentTick(); Check(PranaCycleService.Calls == 1, "postwar prana frozen");
+        });
         Test("rest deadline blocks manual and incident entry until boundary", () => {
             Pawn enemy = RestEnemy(false);
             var worker = new IncidentWorker_EnemyServantRaid(); var parms = new IncidentParms { target = map };
@@ -102,7 +185,7 @@ internal static class SummoningTests
             Pawn enemy = RestEnemy(); enemy.needs.Prana.CurLevel = 80;
             Check(Deploy(), "redeploy failed");
             Check(enemy == State.CurrentWarEntry.EnemyServant && enemy.needs.Prana.CurLevel == 80
-                && PawnGenerator.Created.Count == 2 && enemy.State.Master == State.CurrentWarEntry.EnemyMaster
+                && PawnGenerator.Created.Count == 3 && enemy.State.Master == State.CurrentWarEntry.EnemyMaster
                 && !State.CurrentWarEntry.EnemyMaster.Spawned && State.warStartTick == 1234, "replaced or reset participants");
             Check(!Deploy(), "duplicate active raid");
         });
@@ -150,11 +233,11 @@ internal static class SummoningTests
         });
         Test("reentrant redeploy cannot create another lord or pawn", () => {
             RestEnemy(); bool nested = true; GenSpawn.Callback = () => nested = Deploy();
-            Check(Deploy() && !nested && PawnGenerator.Created.Count == 2, "nested raid accepted");
+            Check(Deploy() && !nested && PawnGenerator.Created.Count == 3, "nested raid accepted");
         });
         Test("circuit alone cannot summon", () => Check(!Summon(), "free qualification"));
         Test("enemy deployment before war rejected", () => Check(!Deploy(), "premature enemy"));
-        Test("enemy deployment produces one bound opposing pair", () => {
+        Test("enemy deployment uses prepared opposing pair", () => {
             PrepareEnemy(); Check(Deploy(), "deployment failed");
             Check(EnemyContractUtility.HasEnemyContract(State.CurrentWarEntry.EnemyServant)
                 && State.CurrentWarEntry.EnemyMaster.Faction != Faction.OfPlayer
@@ -165,12 +248,12 @@ internal static class SummoningTests
                 && Verse.AI.Group.LordMaker.LastPawns[0] == State.CurrentWarEntry.EnemyServant, "raid contains master");
             Check(!Deploy() && State.warStartTick == 1234, "repeat deployed or changed time");
         });
-        Test("enemy generation failure preserves player settlement", () => { PrepareEnemy(); PawnGenerator.Fail = 1; FailedDeployment(); });
-        Test("enemy gear failure cleans captured pawn", () => { PrepareEnemy(); PawnGenerator.Fail = 2; FailedDeployment(); });
-        Test("enemy spawn failure cleans both generated pawns", () => { PrepareEnemy(); GenSpawn.Fail = true; FailedDeployment(); });
-        Test("enemy partial binding failure cleans both pawns", () => { PrepareEnemy(); ServantLifecycleService.Fail = true; FailedDeployment(); });
-        Test("enemy lord failure rolls back pair", () => { PrepareEnemy(); Verse.AI.Group.LordMaker.Fail = true; FailedDeployment(); });
-        Test("world master retention failure rolls back pair", () => { PrepareEnemy(); Find.WorldPawns.FailPass = true; FailedDeployment(); });
+        Test("raid never calls pawn generation", () => { PrepareEnemy(); PawnGenerator.Fail = 1; Check(Deploy(), "raid tried to generate pawn"); });
+        Test("dependency initialization failure rolls back startup", () => { Accept(); HolyGrailWarContentBridge.Fail = true; RejectUnspent(); });
+        Test("first raid spawn failure retains prepared pair", () => { PrepareEnemy(); GenSpawn.Fail = true; FailedDeployment(); });
+        Test("first raid materialization failure retains prepared pair", () => { PrepareEnemy(); ServantLifecycleService.Fail = true; FailedDeployment(); });
+        Test("first raid lord failure retains prepared pair", () => { PrepareEnemy(); Verse.AI.Group.LordMaker.Fail = true; FailedDeployment(); });
+        Test("world retention failure rolls back startup", () => { Accept(); Find.WorldPawns.FailPass = true; RejectUnspent(); });
         Test("enemy placement failure permits retry", () => {
             PrepareEnemy(); Pawn.EdgeBlocked = true; FailedDeployment(); Pawn.EdgeBlocked = false; Check(Deploy(), "retry failed");
         });
@@ -190,7 +273,7 @@ internal static class SummoningTests
             Find.WorldPawns.PassToWorld(enemy, RimWorld.Planet.PawnDiscardDecideMode.Decide);
             EnemyWarPartyService.RetainDepartedPawn(enemy); Check(Find.WorldPawns.Contains(enemy), "lost departed enemy");
         });
-        Test("Saber reserves Archer opponent without spawning", () => {
+        Test("Saber prepares Archer opponent without map deployment", () => {
             Accept(); Check(Summon(), "failed");
             Check(State.CurrentWarEntry.PlayerIdentity.warClass == HolyGrailWarClass.Saber
                 && State.CurrentWarEntry.EnemyIdentity.warClass == HolyGrailWarClass.Archer
@@ -235,7 +318,7 @@ internal static class SummoningTests
         Test("first successful summon consumes one qualification but no seals", () => {
             Accept(); Check(Summon(), "summon failed");
             Check(State.CurrentWarEntry.RegularSummonUsed && State.warStartTick == 1234 && master.Spells.Charges == 3, "wrong settlement");
-            Check(PawnGenerator.Last.State.Master == master && PawnGenerator.Last.Map == map, "wrong contract");
+            Check(PawnGenerator.Created[0].State.Master == master && PawnGenerator.Created[0].Map == map, "wrong contract");
             Check(PawnGenerator.Request.ForceNew && !PawnGenerator.Request.Relations, "generation reused a world pawn or created relations");
         });
         Test("second summon cannot overwrite first tick", () => { Accept(); Check(Summon(), "first failed"); Find.TickManager.TicksGame = 9999; Check(!Summon() && State.warStartTick == 1234, "repeat succeeded"); });
@@ -244,7 +327,7 @@ internal static class SummoningTests
             Find.WorldPawns.Pawns.Add(existing); Accept(); Check(Summon(), "existing servant blocked event qualification");
             Check(existing.State.Master == master && !existing.Destroyed, "existing contract changed");
         });
-        Test("annihilation does not restore qualification", () => { Accept(); Check(Summon(), "first failed"); PawnGenerator.Last.Destroy(); Check(!Summon(), "replacement granted"); });
+        Test("annihilation does not restore qualification", () => { Accept(); Check(Summon(), "first failed"); PawnGenerator.Created[0].Destroy(); Check(!Summon(), "replacement granted"); });
         Test("master loss does not reopen event", () => { Accept(); master.Dead = true; string reason; Check(!HolyGrailWarEntryService.TryAccept(new Pawn { Map = map }, out reason), "replacement master granted"); });
         Test("dead designated master cannot summon", () => { Accept(); master.Dead = true; RejectUnspent(); });
         Test("captured designated master cannot summon", () => { Accept(); master.IsPrisoner = true; RejectUnspent(); });
@@ -304,7 +387,7 @@ namespace Verse
     public class GameComponent { public virtual void LoadedGame() { } public virtual void GameComponentTick() { } public virtual void ExposeData() { } }
     public class Game { public GameComponent_MoonWorld State; public Game() { State = new GameComponent_MoonWorld(this); } public T GetComponent<T>() where T : class => State as T; }
     public static class Current { public static Game Game; }
-    public static class Find { public static TickManager TickManager = new TickManager(); public static WorldPawns WorldPawns = new WorldPawns(); public static FactionManager FactionManager = new FactionManager(); }
+    public static class Find { public static TickManager TickManager = new TickManager(); public static WorldPawns WorldPawns = new WorldPawns(); public static FactionManager FactionManager = new FactionManager(); public static WorldObjectsHolder WorldObjects = new WorldObjectsHolder(); }
     public class FactionManager
     {
         private Faction faction;
@@ -324,7 +407,7 @@ namespace Verse
         public void PassToWorld(Pawn p, RimWorld.Planet.PawnDiscardDecideMode mode)
         { if (!Pawns.Add(p)) throw new Exception("duplicate world pawn"); p.becameWorldPawnTickAbs = GenTicks.TicksAbs; if (FailPass) throw new Exception("world retention"); }
     }
-    public class Map { public bool IsPlayerHome = true, CanEverExit = true; public Verse.AI.Group.LordManager lordManager = new Verse.AI.Group.LordManager(); }
+    public class Map { public PlanetTile Tile = new PlanetTile(); public bool IsPlayerHome = true, CanEverExit = true; public Verse.AI.Group.LordManager lordManager = new Verse.AI.Group.LordManager(); }
     public struct IntVec3 { public bool Valid, Fog, Occupied; public int Id; public bool InBounds(Map m) => Valid; public bool Standable(Map m) => Valid; public bool Fogged(Map m) => Fog;
         public Pawn GetFirstPawn(Map m) => Occupied ? new Pawn() : null;
         public static bool operator ==(IntVec3 a, IntVec3 b) => a.Id == b.Id; public static bool operator !=(IntVec3 a, IntVec3 b) => a.Id != b.Id;
@@ -337,7 +420,7 @@ namespace Verse
     {
         public bool Dead, Destroyed, IsPrisoner, IsSlave, Lodger, Servant, Downed, InMentalState;
         public object ParentHolder; public int becameWorldPawnTickAbs = -1;
-        public Health health = new Health(); public Verse.AI.Group.Lord Lord;
+        public string LabelShortCap => "测试御主"; public object Rotation; public Health health = new Health(); public Verse.AI.Group.Lord Lord;
         public void DeSpawn() { Spawned = false; Map = null; if (Lord != null) { Lord.Pawn = null; Lord = null; } }
         public bool Spawned = true, IsColonistPlayerControlled = true, Circuit = true;
         public Faction Faction = Faction.OfPlayer;
@@ -378,23 +461,25 @@ namespace Verse
     public static class PawnGenerator
     {
         public static int Fail;
+        public static int FailAt; public static bool FailAfterValidation;
         public static Pawn Last;
         public static List<Pawn> Created = new List<Pawn>();
         public static Action Callback;
         public static PawnGenerationRequest Request;
         public static Pawn GeneratePawn(PawnGenerationRequest request)
         {
-            Request = request; if (Fail == 1) throw new Exception("generation");
+            Request = request; if (Fail == 1 || (FailAt == Created.Count + 1 && !FailAfterValidation)) throw new Exception("generation");
             Last = new Pawn { Servant = request.Kind != MW_DefOf.MW_EnemyMaster, Spawned = false, Faction = request.Faction,
                 Identity = DefDatabase<ServantIdentityDef>.AllDefsListForReading.Find(i => i.servantKind == request.Kind) };
             Created.Add(Last);
-            request.Validator(Last); if (Fail == 2) throw new Exception("gear");
+            request.Validator(Last); if (Fail == 2 || (FailAt == Created.Count && FailAfterValidation)) throw new Exception("gear");
             Callback?.Invoke(); return Last;
         }
     }
     public static class GenSpawn
     {
         public static bool Fail; public static Action Callback;
+        public static bool LastRespawning; public static void Spawn(Pawn p, IntVec3 c, Map m, object rotation, WipeMode mode, bool respawningAfterLoad) { LastRespawning = respawningAfterLoad; Spawn(p, c, m, mode); }
         public static void Spawn(Pawn p, IntVec3 c, Map m, WipeMode mode)
         { p.Spawned = true; p.Map = m; Callback?.Invoke(); if (Fail) throw new Exception("spawn"); }
     }
@@ -444,10 +529,10 @@ namespace MoonWorld
         public static TraitDef MW_CommandSpell = new TraitDef(), MW_MagusCircuit_Basic = new TraitDef(), MW_MageRank_Apprentice = new TraitDef();
         public static Settings MW_HolyGrailWarSettings = new Settings();
         public static FactionDef MW_WarOpposition = new FactionDef();
-        public static PawnKindDef MW_EnemyMaster = new PawnKindDef();
+        public static PawnKindDef MW_EnemyMaster = new PawnKindDef(); public static object MW_Prana = new object(); public static WorldObjectDef MW_WarWorkshop = new WorldObjectDef(); public static SitePartDef MW_WarWorkshopPart = new SitePartDef();
     }
     public class Settings { public int pranaUpdateIntervalTicks = 250, enemyRestDurationTicks = 180000; public float enemyRaidPranaFraction = .8f; }
-    public static class PranaCycleService { public static void Execute(int ticks) { } }
+    public static class PranaCycleService { public static int Calls; public static void Execute(int ticks) { Calls++; } }
     public static class ServantColonyMembership { public static void ReconcileLoadedGame() { } }
     public static class MasterCircuitUtility { public static bool HasCircuit(Pawn p) => p != null && p.Circuit; public static void EnsureMasterPranaNeed(Pawn p) { } }
     public class CompMasterCommandSpells

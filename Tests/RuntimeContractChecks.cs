@@ -78,6 +78,7 @@ internal static class RuntimeContractChecks
             new[] { "MoonWorld.IncidentWorker_EnemyServantRaid", "RimWorld.IncidentWorker" },
             new[] { "MoonWorld.ChoiceLetter_HolyGrailWar", "Verse.ChoiceLetter" },
             new[] { "MoonWorld.HolyGrailWarEntry", "Verse.IExposable" },
+            new[] { "MoonWorld.Site_WarWorkshop", "RimWorld.Planet.Site" },
             new[] { "MoonWorld.LordJob_EnemyWarParty", "Verse.AI.Group.LordJob" },
             new[] { "MoonWorld.LordToil_EnemyServantAssault", "Verse.AI.Group.LordToil" },
             new[] { "MoonWorld.JobGiver_EnemyServantAssault", "RimWorld.JobGiver_AIFightEnemies" } })
@@ -92,7 +93,14 @@ internal static class RuntimeContractChecks
             "Harmony_ServantTravelAutonomy", "Harmony_ServantTravelBoardingDuty", "Harmony_ServantTravelSection",
             "Harmony_ServantTravel_NoHaulingStandingGuest", "Command_NoblePhantasm" })
             if (mod.GetType("MoonWorld." + removed) != null) throw new Exception("Obsolete adapter remains: " + removed);
+        Assembly content = Assembly.LoadFrom(Path.Combine(directories[3], "HolyGrailWarTest.dll"));
+        Type identityUtility = content.GetType("HolyGrailWar.ServantIdentityUtility", true);
+        Type pawnType = game.GetType("Verse.Pawn", true);
+        MethodInfo getIdentity = identityUtility.GetMethod("GetIdentity", new[] { pawnType });
+        if (getIdentity == null || identityUtility.GetMethod("Enforce",
+            new[] { pawnType, getIdentity.ReturnType, typeof(bool) }) == null)
+            throw new Exception("Installed Holy Grail War content initialization API incompatible");
         Console.WriteLine(patches + " Harmony targets and injected parameter types resolved against installed RimWorld 1.6.");
-        Console.WriteLine("Legacy types, removed adapters and seven scenario/incident/letter/save/lord/AI types checked. This does not execute patches or start Unity.");
+        Console.WriteLine("Legacy types, XML/Scribe entry types, Site and installed content initialization API checked. This does not execute patches or start Unity.");
     }
 }

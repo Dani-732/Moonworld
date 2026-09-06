@@ -12,6 +12,7 @@ namespace MoonWorld
         private Pawn enemyMaster;
         private Pawn enemyServant;
         private bool enemyDeployed;
+        private bool enemyPrepared;
         private int enemyRestStartTickAbs = -1;
 
         public Pawn DesignatedMaster => designatedMaster;
@@ -21,8 +22,10 @@ namespace MoonWorld
         public Pawn EnemyMaster => enemyMaster;
         public Pawn EnemyServant => enemyServant;
         public bool EnemyDeployed => enemyDeployed;
+        public bool EnemyPrepared => enemyPrepared;
+        public bool HasEnemyParticipants => enemyPrepared || enemyDeployed;
         public int EnemyRestStartTickAbs => enemyRestStartTickAbs;
-        public bool EnemyEliminated => enemyDeployed &&
+        public bool EnemyEliminated => HasEnemyParticipants &&
             (enemyMaster == null || enemyMaster.Dead || enemyMaster.Destroyed
              || enemyServant == null || enemyServant.Dead || enemyServant.Destroyed);
 
@@ -53,15 +56,17 @@ namespace MoonWorld
             enemyRestStartTickAbs = -1;
         }
 
+        internal void RecordEnemyPreparation(Pawn master, Pawn servant)
+        {
+            enemyMaster = master;
+            enemyServant = servant;
+            enemyPrepared = true;
+        }
+
         internal void RecordEnemyDeparture(Pawn servant)
         {
             if (servant == enemyServant && enemyRestStartTickAbs < 0)
                 enemyRestStartTickAbs = GenTicks.TicksAbs;
-        }
-
-        internal void ClearEnemyRestStart()
-        {
-            enemyRestStartTickAbs = -1;
         }
 
         public void ExposeData()
@@ -73,6 +78,7 @@ namespace MoonWorld
             Scribe_References.Look(ref enemyMaster, "enemyMaster");
             Scribe_References.Look(ref enemyServant, "enemyServant");
             Scribe_Values.Look(ref enemyDeployed, "enemyDeployed", false);
+            Scribe_Values.Look(ref enemyPrepared, "enemyPrepared", false);
             Scribe_Values.Look(ref enemyRestStartTickAbs, "enemyRestStartTickAbs", -1);
         }
     }

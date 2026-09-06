@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <WorldObjectDef ParentName="StaticWorldObjectBase">
+    <defName>MW_WarWorkshop</defName>
+    <label>敌方魔术工坊</label>
+    <description>敌方御主设立的魔术工坊。御主在场外留守，从者可独自出击。当前仅显示据点位置，暂不开放工坊地图。</description>
+    <worldObjectClass>MoonWorld.Site_WarWorkshop</worldObjectClass>
+    <canHaveMap>false</canHaveMap>
+    <expandingIcon>true</expandingIcon>
+    <expandingIconPriority>70</expandingIconPriority>
+  </WorldObjectDef>
+  <SitePartDef>
+    <defName>MW_WarWorkshopPart</defName>
+    <label>魔术工坊</label>
+    <description>圣杯战争中的敌方据点。摧毁据点本身不代表敌方失去参战资格。</description>
+    <workerClass>SitePartWorker</workerClass>
+    <siteTexture>World/WorldObjects/Sites/Outpost</siteTexture>
+    <expandingIconTexture>World/WorldObjects/Expanding/Sites/Outpost</expandingIconTexture>
+    <applyFactionColorToSiteTexture>true</applyFactionColorToSiteTexture>
+    <showFactionInInspectString>true</showFactionInInspectString>
+    <requiresFaction>true</requiresFaction>
+  </SitePartDef>
+</Defs>

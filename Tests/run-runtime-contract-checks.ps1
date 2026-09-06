@@ -8,11 +8,22 @@ $testOutput = Join-Path ([IO.Path]::GetTempPath()) ('MoonWorldContracts-' + [Gui
 try {
     & $compiler /nologo /target:exe /out:$testOutput /reference:"$harmonyDir\0Harmony.dll" (Join-Path $PSScriptRoot 'RuntimeContractChecks.cs')
     if ($LASTEXITCODE -ne 0) { throw 'Runtime contract check compilation failed' }
-    & $testOutput (Join-Path $projectRoot '1.6\Assemblies') $managed $harmonyDir
+    & $testOutput (Join-Path $projectRoot '1.6\Assemblies') $managed $harmonyDir (Join-Path $RimWorldPath 'Mods\HolyGrailWarTest\1.6\Assemblies')
     if ($LASTEXITCODE -ne 0) { throw 'Runtime contract checks failed' }
 
     $mwXmlFiles = Get-ChildItem (Join-Path $projectRoot '1.6') -Filter '*.xml' -Recurse
     foreach ($mwXmlFile in $mwXmlFiles) { [xml](Get-Content -LiteralPath $mwXmlFile.FullName -Raw) | Out-Null }
+    [xml]$mwWorkshop = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_WarWorkshop.xml') -Raw
+    $mwSite = $mwWorkshop.SelectSingleNode('/Defs/WorldObjectDef[defName="MW_WarWorkshop"]')
+    $mwPart = $mwWorkshop.SelectSingleNode('/Defs/SitePartDef[defName="MW_WarWorkshopPart"]')
+    if ($mwSite.ParentName -ne 'StaticWorldObjectBase' -or $mwSite.canHaveMap -ne 'false' -or
+        $mwSite.worldObjectClass -ne 'MoonWorld.Site_WarWorkshop' -or $mwPart.workerClass -ne 'SitePartWorker' -or
+        $mwSite.comps -or $mwPart.extraGenStepDefs) { throw 'Workshop must remain a persistent non-enterable Site without raid-generation parts' }
+    [xml]$mwOutpost = Get-Content (Join-Path $RimWorldPath 'Data\Core\Defs\Sites\Parts\Outpost.xml') -Raw
+    $mwNativePart = $mwOutpost.SelectSingleNode('/Defs/SitePartDef[defName="Outpost"]')
+    if ($mwPart.siteTexture -ne $mwNativePart.siteTexture -or $mwPart.expandingIconTexture -ne $mwNativePart.expandingIconTexture) {
+        throw 'Workshop texture does not match verified native Outpost assets'
+    }
     [xml]$mwAbility = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_NoblePhantasms.xml') -Raw
     $mwBurst = $mwAbility.SelectSingleNode('/Defs/AbilityDef[defName="MW_TestPranaBurst"]')
     if ($mwBurst.gizmoClass -or $mwBurst.displayGizmoWhileUndrafted -ne 'true' -or $mwBurst.disableGizmoWhileUndrafted -ne 'false') {

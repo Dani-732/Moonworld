@@ -6,6 +6,8 @@
 
 ## 1. 已冻结的 MVP 规则
 
+当前开战增量的数据归属优先于历史小节：`HolyGrailWarEntry.enemyPrepared` 只记录本届初始敌方主从与工坊是否已整体准备成功；原键 `enemyDeployed` 保留，表达是否实际出击过，供首次出击与撤退休整区分。旧档已部署但未准备标记只补工坊，不重建 Pawn；新档工坊后来被删除，也不清除此标记或自动再造。主从仍引用原 Pawn，契约唯一存在于 `CompServantState`。每个 `Site_WarWorkshop` 通过 `ownerMaster` 引用所属御主，可供未来多个 Site 分别归属同一阵营，不预建集合或反向注册表。`GameComponent_MoonWorld`、`warStartTick` 和已有 `warOutcome` 保存兼容；未来 Quest 归属不等同于已经实现。游戏验收进度只见 PROJECT_STATUS。
+
 1. 己方契约从者以 `Faction.OfPlayer` 和空 `HostFaction` 接入原版工作、征召、顶部栏及自身 Ability；灵体限制由 `presenceState` 派生。不创建真实任务、不新增成员状态字段、不依赖 Anomaly DLC；旧 Guest 转换按 [Servant_Colony_Migration.md](Servant_Colony_Migration.md) 执行。
 2. 圣杯战争唯一自定义全局进度为开战时刻；战争天数由当前游戏 Tick 派生。
 3. 主动灵体化只能由契约御主解除。

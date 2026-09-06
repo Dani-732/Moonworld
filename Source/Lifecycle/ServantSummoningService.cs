@@ -22,39 +22,44 @@ namespace MoonWorld
             Pawn generated = null;
             try
             {
-                candidates.Clear();
-                foreach (ServantIdentityDef identity in DefDatabase<ServantIdentityDef>.AllDefsListForReading)
+                using (var enemyPreparation = new EnemyWarPreparation())
                 {
-                    if (identity.summonable && identity.servantKind != null && identity.servantKind.race != null)
-                        candidates.Add(identity);
-                }
-                if (candidates.Count == 0) { rejection = "当前没有可召唤的从者。"; return false; }
+                    candidates.Clear();
+                    foreach (ServantIdentityDef identity in DefDatabase<ServantIdentityDef>.AllDefsListForReading)
+                    {
+                        if (identity.summonable && identity.servantKind != null && identity.servantKind.race != null)
+                            candidates.Add(identity);
+                    }
+                    if (candidates.Count == 0) { rejection = "当前没有可召唤的从者。"; return false; }
 
-                ServantIdentityDef selected = candidates.RandomElement();
-                ServantIdentityDef opponent = HolyGrailWarClassUtility.PickOpponent(selected);
-                if (opponent == null)
-                {
-                    rejection = "当前召唤职阶缺少对应的敌方英灵配置。";
-                    return false;
+                    ServantIdentityDef selected = candidates.RandomElement();
+                    ServantIdentityDef opponent = HolyGrailWarClassUtility.PickOpponent(selected);
+                    if (opponent == null)
+                    {
+                        rejection = "当前召唤职阶缺少对应的敌方英灵配置。";
+                        return false;
+                    }
+                    generated = PawnGenerator.GeneratePawn(new PawnGenerationRequest(selected.servantKind,
+                        Faction.OfPlayer, PawnGenerationContext.NonPlayer, forceGenerateNewPawn: true,
+                        canGeneratePawnRelations: false, validatorPreGear: pawn => { generated = pawn; return true; }));
+                    if (generated == null) throw new SummoningFailureException("从者生成未返回有效角色。");
+                    GenSpawn.Spawn(generated, cell, map, WipeMode.Vanish);
+                    // The source mod's PostSpawnSetup owns appearance, loadout and body visibility.
+                    if (!ServantLifecycleService.Instance.TryBind(master, generated, out rejection))
+                        throw new SummoningFailureException(rejection);
+                    enemyPreparation.Prepare(map, opponent);
+                    rejection = HolyGrailWarEntryService.RegularSummonRejection(master);
+                    if (rejection != null || !master.Spawned || master.Map != map
+                        || !generated.Spawned || generated.Map != map || generated.Dead || generated.Destroyed
+                        || generated.TryGetComp<CompServantState>()?.Master != master)
+                        throw new SummoningFailureException(rejection ?? "召唤完成前契约或落点状态发生变化。");
+                    GameComponent_MoonWorld state = Current.Game.GetComponent<GameComponent_MoonWorld>();
+                    state.CommitRegularSummon();
+                    state.CurrentWarEntry.SetParticipants(selected, opponent);
+                    enemyPreparation.Commit(state.CurrentWarEntry);
+                    servant = generated;
+                    return true;
                 }
-                generated = PawnGenerator.GeneratePawn(new PawnGenerationRequest(selected.servantKind,
-                    Faction.OfPlayer, PawnGenerationContext.NonPlayer, forceGenerateNewPawn: true,
-                    canGeneratePawnRelations: false, validatorPreGear: pawn => { generated = pawn; return true; }));
-                if (generated == null) throw new SummoningFailureException("从者生成未返回有效角色。");
-                GenSpawn.Spawn(generated, cell, map, WipeMode.Vanish);
-                // The source mod's PostSpawnSetup owns appearance, loadout and body visibility.
-                if (!ServantLifecycleService.Instance.TryBind(master, generated, out rejection))
-                    throw new SummoningFailureException(rejection);
-                rejection = HolyGrailWarEntryService.RegularSummonRejection(master);
-                if (rejection != null || !master.Spawned || master.Map != map
-                    || !generated.Spawned || generated.Map != map || generated.Dead || generated.Destroyed
-                    || generated.TryGetComp<CompServantState>()?.Master != master)
-                    throw new SummoningFailureException(rejection ?? "召唤完成前契约或落点状态发生变化。");
-                GameComponent_MoonWorld state = Current.Game.GetComponent<GameComponent_MoonWorld>();
-                state.CommitRegularSummon();
-                state.CurrentWarEntry.SetParticipants(selected, opponent);
-                servant = generated;
-                return true;
             }
             catch (SummoningFailureException ex)
             {

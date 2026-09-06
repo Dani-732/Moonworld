@@ -19,8 +19,8 @@ namespace MoonWorld
                 return;
             }
 
-            if (!entry.EnemyDeployed || entry.EnemyMaster == null) return;
-            if (entry.EnemyMaster.Dead || entry.EnemyMaster.Destroyed || !HasEffectiveEnemyServant(entry.EnemyServant))
+            if (!entry.HasEnemyParticipants) return;
+            if (entry.EnemyMaster == null || entry.EnemyMaster.Dead || entry.EnemyMaster.Destroyed || !HasEffectiveEnemyServant(entry.EnemyServant))
             {
                 if (state.TrySetWarOutcome(WarOutcome.PlayerVictory))
                     Messages.Message("圣杯战争胜利：敌方阵营已失去御主资格。", entry.EnemyMaster, MessageTypeDefOf.PositiveEvent, false);

@@ -1,0 +1,68 @@
+using System;
+using System.Collections.Generic;
+using MoonWorld;
+using RimWorld;
+using RimWorld.Planet;
+using Verse;
+
+// Host boundaries only: generation, world placement and dependency content are injected doubles.
+namespace Verse
+{
+    public class WorldObjectDef { }
+    public class Gizmo { }
+    public class FloatMenuOption { }
+    public interface IThingHolder { }
+    public struct AcceptanceReport { public static implicit operator AcceptanceReport(string text) => new AcceptanceReport(); }
+}
+namespace RimWorld
+{
+    public class SitePartDef { }
+    public class SitePartParams { }
+}
+namespace RimWorld.Planet
+{
+    public struct PlanetTile { public object Layer => null; }
+    public class Caravan { }
+    public class TransportersArrivalAction { }
+    public class SitePart { public SitePart(Site site, SitePartDef def, SitePartParams parms) { } }
+    public class Site
+    {
+        public PlanetTile Tile; public bool Destroyed; public Faction Faction;
+        public bool Spawned => Find.WorldObjects.All.Contains(this);
+        public void SetFaction(Faction faction) { Faction = faction; }
+        public void AddPart(SitePart part) { }
+        public void Destroy() { Destroyed = true; Find.WorldObjects.All.Remove(this); }
+        public virtual void ExposeData() { }
+        public virtual string GetInspectString() => "工坊";
+        public virtual AcceptanceReport CanBeSettled => "不可定居";
+        public virtual bool GravShipCanLandOn => true;
+        public virtual IEnumerable<Gizmo> GetGizmos() { yield break; }
+        public virtual IEnumerable<FloatMenuOption> GetFloatMenuOptions(Caravan caravan) { yield break; }
+        public virtual IEnumerable<FloatMenuOption> GetTransportersFloatMenuOptions(IEnumerable<IThingHolder> pods,
+            Action<PlanetTile, TransportersArrivalAction> launchAction) { yield break; }
+        public virtual IEnumerable<FloatMenuOption> GetShuttleFloatMenuOptions(IEnumerable<IThingHolder> pods,
+            Action<PlanetTile, TransportersArrivalAction> launchAction) { yield break; }
+    }
+    public class WorldObjectsHolder
+    {
+        public List<Site> All = new List<Site>(); public bool FailAdd; public Action Callback;
+        public void Add(Site site) { All.Add(site); Callback?.Invoke(); if (FailAdd) throw new Exception("partial site add"); }
+    }
+    public static class WorldObjectMaker { public static Site MakeWorldObject(WorldObjectDef def) => new Site_WarWorkshop(); }
+    public static class TileFinder
+    {
+        public static bool Fail;
+        public static bool TryFindNewSiteTile(out PlanetTile tile, PlanetTile origin, float selectLandmarkChance, object layer)
+        { tile = new PlanetTile(); return !Fail; }
+    }
+}
+namespace MoonWorld
+{
+    internal static class HolyGrailWarContentBridge
+    {
+        internal static bool Fail;
+        internal static void InitializeWorldServant(Pawn pawn) { if (Fail) throw new Exception("dependency init"); }
+    }
+    internal static class PawnNeedAccess { internal static void EnsureNeed(Pawn pawn, object def) { } }
+    public static class NoblePhantasmService { public static void EnsureAbilities(Pawn pawn) { } }
+}

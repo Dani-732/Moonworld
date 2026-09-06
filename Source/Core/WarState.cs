@@ -28,12 +28,12 @@ namespace MoonWorld
             // Old saves have no invitation record. A started war must not grant another summon.
             if (currentWarEntry == null && warStartTick >= 0)
                 currentWarEntry = new HolyGrailWarEntry(null, alreadySummoned: true);
+            EnemyWarPreparation.ReconcileLoadedWar(this);
         }
 
         public override void GameComponentTick()
         {
             WarOutcomeService.Tick(this);
-            if (warOutcome != WarOutcome.Ongoing) return;
             int interval = Mathf.Max(1, MW_DefOf.MW_HolyGrailWarSettings.pranaUpdateIntervalTicks);
             if (Find.TickManager.TicksGame % interval == 0)
             {

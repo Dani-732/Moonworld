@@ -29,7 +29,7 @@ namespace MoonWorld
         public static bool IsResting(Pawn servant)
         {
             HolyGrailWarEntry entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
-            return entry != null && entry.EnemyDeployed && !entry.EnemyEliminated
+            return entry != null && entry.HasEnemyParticipants && !entry.EnemyEliminated
                 && servant == entry.EnemyServant && HasEnemyContract(servant)
                 && ServantQuery.Instance.GetMaster(servant) == entry.EnemyMaster
                 && IsFreeWorldPawn(servant) && IsFreeWorldPawn(entry.EnemyMaster)
