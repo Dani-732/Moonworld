@@ -7,6 +7,19 @@ namespace MoonWorld
 {
     public static class MoonWorldDebugActions
     {
+        [DebugAction("MoonWorld", "选中从者：切换独立维持测试能力", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
+        public static void ToggleIndependentSustainTest()
+        {
+            Pawn servant;
+            if (!TryGetSelectedServant(out servant)) return;
+            Hediff existing = servant.health.hediffSet.GetFirstHediffOfDef(MW_DefOf.MW_TestIndependentSustain);
+            if (existing == null) servant.health.AddHediff(MW_DefOf.MW_TestIndependentSustain);
+            else servant.health.RemoveHediff(existing);
+            Messages.Message("独立维持测试能力已" + (existing == null ? "添加" : "移除")
+                + "；当前最低维持魔力：" + ServantSustainPolicy.Threshold(servant).ToString("0.##"),
+                servant, MessageTypeDefOf.NeutralEvent, false);
+        }
+
         [DebugAction("MoonWorld", "查看敌方休整状态", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
         public static void InspectEnemyRest()
         {

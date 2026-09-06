@@ -44,34 +44,33 @@ namespace MoonWorld
             masters.Clear();
             HashSet<Pawn> seenServants = new HashSet<Pawn>();
             HashSet<Pawn> seenMasters = new HashSet<Pawn>();
-            foreach (Map map in Find.Maps)
+            foreach (Pawn pawn in PawnsFinder.AllMapsCaravansAndTravellingTransporters_Alive)
             {
-                foreach (Pawn pawn in map.mapPawns.AllPawnsSpawned)
+                if (!IsActive(pawn) || (!pawn.Spawned && !IsFreePlayer(pawn))) continue;
+                if (MasterCircuitUtility.HasCircuit(pawn) && seenMasters.Add(pawn))
                 {
-                    if (MasterCircuitUtility.HasCircuit(pawn) && seenMasters.Add(pawn))
-                    {
-                        masters.Add(pawn);
-                    }
-
-                    ServantSnapshot snapshot;
-                    if (!ServantQuery.Instance.TryGetSnapshot(pawn, out snapshot) || snapshot.master == null)
-                    {
-                        continue;
-                    }
-                    if (seenServants.Add(pawn))
-                    {
-                        servants.Add(pawn);
-                    }
-                    if (seenMasters.Add(snapshot.master))
-                    {
-                        masters.Add(snapshot.master);
-                    }
+                    masters.Add(pawn);
                 }
+                ServantSnapshot snapshot;
+                if (!ServantQuery.Instance.TryGetSnapshot(pawn, out snapshot) || snapshot.master == null) continue;
+                if (seenServants.Add(pawn)) servants.Add(pawn);
+                if (IsActive(snapshot.master) && seenMasters.Add(snapshot.master)) masters.Add(snapshot.master);
             }
             // Only the current, freely resting opponent joins off-map settlement, not all world pawns.
             Pawn resting = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.EnemyServant;
-            if (EnemyContractUtility.IsResting(resting) && seenServants.Add(resting))
+            if (IsActive(resting) && EnemyContractUtility.IsResting(resting) && seenServants.Add(resting))
                 servants.Add(resting);
+        }
+
+        private static bool IsActive(Pawn pawn)
+        {
+            return pawn != null && !pawn.Dead && !pawn.Destroyed && !pawn.Suspended;
+        }
+
+        private static bool IsFreePlayer(Pawn pawn)
+        {
+            return IsActive(pawn) && pawn.Faction == Faction.OfPlayer && pawn.HostFaction == null
+                && !pawn.IsPrisoner && !pawn.IsSlave;
         }
 
         private static void ApplyMasterNaturalRegen(PranaLedger ledger, int intervalTicks)
@@ -132,7 +131,7 @@ namespace MoonWorld
         {
             foreach (Pawn master in masters)
             {
-                if (EnemyContractUtility.IsWarPawn(master)) continue;
+                if (!IsFreePlayer(master) || EnemyContractUtility.IsWarPawn(master)) continue;
                 Need_MasterPrana masterPrana = master.needs.TryGetNeed<Need_MasterPrana>();
                 MasterCircuitDef circuit = MasterCircuitUtility.GetCircuit(master);
                 if (masterPrana == null || circuit == null)
@@ -141,7 +140,9 @@ namespace MoonWorld
                 }
 
                 masterServants.Clear();
-                ServantQuery.Instance.GetBoundServants(master, masterServants);
+                // Only recipients participating in this cycle can receive its supply.
+                foreach (Pawn servant in servants)
+                    if (ServantQuery.Instance.GetMaster(servant) == master) masterServants.Add(servant);
                 masterServants.Sort((left, right) => left.thingIDNumber.CompareTo(right.thingIDNumber));
                 float threshold = MasterSupplyThresholdService.GetThreshold(master, masterPrana);
                 float available = Mathf.Max(0f, ledger.LevelAfterPending(masterPrana) - threshold);
@@ -189,7 +190,7 @@ namespace MoonWorld
 
         private static bool CanReceiveMasterSupply(Pawn servant, Need_Prana prana)
         {
-            if (servant == null || !servant.Spawned) return false;
+            if (!IsFreePlayer(servant)) return false;
             CompServantState state = servant?.TryGetComp<CompServantState>();
             return prana != null
                 && servant != null

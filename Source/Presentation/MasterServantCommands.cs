@@ -95,7 +95,7 @@ namespace MoonWorld
             {
                 defaultLabel = (materialized ? "灵体化：" : "实体化：") + servant.LabelShort,
                 defaultDesc = materialized
-                    ? "命令契约从者进入半透明灵体状态。灵体只跟随御主，不可攻击、工作或进食，仍可查看状态。"
+                    ? "命令契约从者进入半透明灵体状态。同图时跟随御主，分离时可独立旅行，不可攻击、工作或进食。"
                     : "命令契约从者解除灵体状态，恢复工作与战斗控制。",
                 icon = materialized ? TexButton.Suspend : TexButton.Reveal,
                 action = delegate
@@ -117,9 +117,9 @@ namespace MoonWorld
                 Order = -97f
             };
 
-            if (!master.Spawned || !servant.Spawned || master.Map != servant.Map)
+            if (!ServantLifecycleService.CanChangePresence(master, servant))
             {
-                command.Disable("御主与从者必须处于同一张地图。");
+                command.Disable("需要有效的存活主从契约，且从者位于地图上。");
             }
             return command;
         }

@@ -84,9 +84,9 @@ namespace MoonWorld
                 rejection = "该从者未与当前御主订立契约。";
                 return false;
             }
-            if (!AreAliveAndOnSameMap(master, servant))
+            if (!CanChangePresence(master, servant))
             {
-                rejection = "御主与从者必须存活并处于同一张地图。";
+                rejection = "需要有效的存活主从契约，且从者位于地图上。";
                 return false;
             }
             if (servant.Downed)
@@ -120,9 +120,9 @@ namespace MoonWorld
                 rejection = "该从者未与当前御主订立契约。";
                 return false;
             }
-            if (!AreAliveAndOnSameMap(master, servant))
+            if (!CanChangePresence(master, servant))
             {
-                rejection = "御主与从者必须存活并处于同一张地图。";
+                rejection = "需要有效的存活主从契约，且从者位于地图上。";
                 return false;
             }
             if (state.PresenceState != ServantPresenceState.VoluntarySpirit
@@ -276,15 +276,22 @@ namespace MoonWorld
             servant.Kill(null);
         }
 
-        private static bool AreAliveAndOnSameMap(Pawn master, Pawn servant)
+        public static bool CanChangePresence(Pawn master, Pawn servant)
         {
             return master != null
                 && servant != null
                 && !master.Dead
                 && !servant.Dead
-                && master.Spawned
+                && !master.Destroyed && !servant.Destroyed
+                && !master.IsPrisoner && !master.IsSlave
+                && !servant.IsPrisoner && !servant.IsSlave
+                && MasterCircuitUtility.HasCircuit(master)
+                && GetBoundState(master, servant) != null
+                && ((master.Faction == Faction.OfPlayer && servant.Faction == Faction.OfPlayer
+                        && master.HostFaction == null && servant.HostFaction == null)
+                    || EnemyContractUtility.HasEnemyContract(servant))
                 && servant.Spawned
-                && master.Map == servant.Map;
+                && servant.Map != null;
         }
 
         private static CompServantState GetBoundState(Pawn master, Pawn servant)

@@ -7,6 +7,16 @@
     <defaultBaseValue>2</defaultBaseValue>
     <minValue>0</minValue>
     <toStringStyle>FloatTwo</toStringStyle>
-    <alwaysHidden>true</alwaysHidden>
+    <alwaysHide>true</alwaysHide>
   </StatDef>
+  <!-- Only added explicitly through the MoonWorld debug command; never granted to a servant by default. -->
+  <HediffDef>
+    <defName>MW_TestIndependentSustain</defName>
+    <label>测试能力：独立维持</label>
+    <description>测试原版属性扩展：主从分离维持阈值倍率乘以 0.5，默认从 2 倍降至 1 倍。只影响分离时的维持线，不影响每日耗魔。测试后请通过同一调试命令移除。</description>
+    <hediffClass>Verse.HediffWithComps</hediffClass>
+    <isBad>false</isBad>
+    <duplicationAllowed>false</duplicationAllowed>
+    <stages><li><statFactors><MW_SeparatedSustainMultiplier>0.5</MW_SeparatedSustainMultiplier></statFactors></li></stages>
+  </HediffDef>
 </Defs>

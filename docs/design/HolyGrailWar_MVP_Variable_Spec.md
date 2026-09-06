@@ -4,6 +4,8 @@
 >
 > 本文定义已确认的 MVP 及首个敌方切片的数据归属，不等于游戏验收。信赖、敌方据点、完整七队生成及战争胜负仍属后续系统。
 
+> 扩展规则优先级：本文件保留早期 MVP 截面的字段表，工坊、战争胜负及 Quest 已有后续实现，进度以 PROJECT_STATUS 为准。主从强制同队离图已取消；本轮独立行动规则见 [HolyGrailWar_Expansion_Plan.md](HolyGrailWar_Expansion_Plan.md)。`ServantSustainPolicy` 统一计算有效维持线，断供、自愈及界面共用；不同图且不在同一远行队/旅行运输组时应用原版 Stat `MW_SeparatedSustainMultiplier`（默认 2），不新增持久的分离状态。地图内主从形态切换与从者自身宝具不再要求御主同图，世界旅行中的从者不施法或实体化。玩家地图、远行队与普通运输过程由既有低频魔力周期统一结算，Hediff 年龄仍交给原版推进。此段是本轮实现规则，不代表游戏已验收。
+
 ## 1. 已冻结的 MVP 规则
 
 当前开战增量的数据归属优先于历史小节：`HolyGrailWarEntry.enemyPrepared` 只记录本届初始敌方主从与工坊是否已整体准备成功；原键 `enemyDeployed` 保留，表达是否实际出击过，供首次出击与撤退休整区分。旧档已部署但未准备标记只补工坊，不重建 Pawn；新档工坊后来被删除，也不清除此标记或自动再造。主从仍引用原 Pawn，契约唯一存在于 `CompServantState`。每个 `Site_WarWorkshop` 通过 `ownerMaster` 引用所属御主，可供未来多个 Site 分别归属同一阵营，不预建集合或反向注册表。`GameComponent_MoonWorld`、`warStartTick` 和已有 `warOutcome` 保存兼容；未来 Quest 归属不等同于已经实现。游戏验收进度只见 PROJECT_STATUS。
@@ -11,7 +13,7 @@
 1. 己方契约从者以 `Faction.OfPlayer` 和空 `HostFaction` 接入原版工作、征召、顶部栏及自身 Ability；灵体限制由 `presenceState` 派生。不创建真实任务、不新增成员状态字段、不依赖 Anomaly DLC；旧 Guest 转换按 [Servant_Colony_Migration.md](Servant_Colony_Migration.md) 执行。
 2. 圣杯战争唯一自定义全局进度为开战时刻；战争天数由当前游戏 Tick 派生。
 3. 主动灵体化只能由契约御主解除。
-4. 御主离开地图时，未湮灭的契约从者必须与御主一起离开；若从者未加入同一离图队伍，则阻止御主离图并给出原因，不传送或强制移动从者。
+4. 主从可以分别离图；灵体仅同图跟随/闪现，旅行安排优先，不跨图传送。最低维持阈值按上述同行/分离规则修正，每日维持耗魔不因此翻倍。
 5. 普通伤害将从者推入原版倒地或死亡时，进入战败灵体化；直接调用 `Pawn.Kill` 进入原版死亡流程，不触发战败。
 6. 战败时只修复使 Pawn 无法维持有效生命状态的致命部位损伤；普通伤口和非致命缺失肢体保留。
 7. 从者不会患病，且不受寿命、衰老和老年死亡影响。

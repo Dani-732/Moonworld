@@ -23,16 +23,13 @@ namespace MoonWorld
 
         private static string ValidateContract(Pawn master, Pawn servant)
         {
-            if (master == null || master.Dead || master.Destroyed
+            if (master == null || master.Dead || master.Destroyed || master.IsPrisoner || master.IsSlave
                 || (master.Faction != Faction.OfPlayer && !EnemyContractUtility.HasEnemyContract(servant))
                 || !MasterCircuitUtility.HasCircuit(master)) return "需要存活的有效御主。";
             if (servant == null || servant.Dead || servant.Destroyed
                 || ServantQuery.Instance.GetMaster(servant) != master
                 || servant.TryGetComp<CompServantState>()?.PresenceState == ServantPresenceState.Annihilated)
                 return "目标不是有效的契约从者。";
-            if (!EnemyContractUtility.CanReceiveSupply(servant)
-                && (!master.Spawned || !servant.Spawned || master.Map != servant.Map))
-                return "御主与从者必须处于同一张地图。";
             return null;
         }
 
@@ -41,6 +38,7 @@ namespace MoonWorld
             Pawn servant = ability.pawn;
             string rejection = ValidateContract(ServantQuery.Instance.GetMaster(servant), servant);
             if (rejection != null) return rejection;
+            if (!servant.Spawned || servant.Map == null) return "从者必须位于地图上才能释放宝具。";
             if ((servant.Faction != Faction.OfPlayer && !EnemyContractUtility.CanReceiveSupply(servant))
                 || servant.HostFaction != null || servant.IsPrisoner || servant.IsSlave)
                 return "从者当前不属于有效参战方。";
@@ -67,6 +65,8 @@ namespace MoonWorld
             if (master?.Faction != Faction.OfPlayer) return "只有玩家御主可以使用令咒过载。";
             string rejection = ValidateContract(master, servant);
             if (rejection != null) return rejection;
+            if (!master.Spawned || !servant.Spawned || master.Map != servant.Map)
+                return "御主与从者必须处于同一张地图才能施加令咒过载。";
             var defs = ServantIdentityUtility.GetIdentity(servant)?.noblePhantasms;
             if (defs == null || defs.Count == 0)
                 return "该从者没有可用宝具。";

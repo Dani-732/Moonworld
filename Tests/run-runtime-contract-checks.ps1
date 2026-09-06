@@ -12,6 +12,11 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Runtime contract checks failed' }
 
     $mwXmlFiles = Get-ChildItem (Join-Path $projectRoot '1.6') -Filter '*.xml' -Recurse
+    [xml]$mwTravel = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_TravelPrana.xml') -Raw
+    if ($mwTravel.SelectSingleNode('/Defs/StatDef[defName="MW_SeparatedSustainMultiplier"]/defaultBaseValue').InnerText -ne '2' -or
+        $mwTravel.SelectSingleNode('/Defs/HediffDef[defName="MW_TestIndependentSustain"]/stages/li/statFactors/MW_SeparatedSustainMultiplier').InnerText -ne '0.5') {
+        throw 'Separated threshold must default to 2 with a debug-only native stat modifier fixture'
+    }
     foreach ($mwXmlFile in $mwXmlFiles) { [xml](Get-Content -LiteralPath $mwXmlFile.FullName -Raw) | Out-Null }
     [xml]$mwQuestXml = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_HolyGrailWarQuest.xml') -Raw
     $mwQuestDef = $mwQuestXml.SelectSingleNode('/Defs/QuestScriptDef[defName="MW_HolyGrailWarQuest"]')

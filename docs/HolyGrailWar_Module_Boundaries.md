@@ -127,3 +127,5 @@ Pawn_HealthTracker.CheckForStateChange（普通伤害及其延迟健康后果）
 顶部小人栏灵体灰显、LordJob 三阶索敌、令咒、宝具迁移及完整跨地图机制继续保持独立边界。实际进度与未验收状态仍以 PROJECT_STATUS 为准。
 
 当前进度、已验收提交、结构债务和下一开发切片统一记录在 [PROJECT_STATUS.md](PROJECT_STATUS.md)。
+
+独立行动扩展：`Prana/ServantSustainPolicy` 读取当前 MapHeld、原版 Caravan 或 TravellingTransporters 归属，计算有效维持阈值。分离倍率通过 `MW_SeparatedSustainMultiplier` 原版 Stat 提供给特殊能力修正，实际消费者为断供、自愈、敌方出战检查及表现层。`PranaCycleService` 使用原版地图与旅行 Pawn 枚举、按引用去重并在同一账本中结算，供魔只分配给本轮有效对象；不新增世界旅行定时器或独立魔力库存。`ServantLifecycleService` 负责形态变更的契约、存活、控制资格与从者地图落点校验；`NoblePhantasmService` 区分自身施法与令咒过载权限，前者允许御主异图，后者保留同图条件。完整规则和后续开发顺序见 `design/HolyGrailWar_Expansion_Plan.md`。

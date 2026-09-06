@@ -17,6 +17,7 @@ internal static class EnemyPranaTests
         master = new Pawn { Faction = faction, Circuit = true, MapHeld = map };
         servant = new Pawn { Faction = faction, Servant = true, MapHeld = map };
         Find.WorldObjects.TravellingTransporters.Clear();
+        PawnsFinder.Travel.Clear();
         servant.State.Master = master;
         map.mapPawns.AllPawnsSpawned.Add(master); map.mapPawns.AllPawnsSpawned.Add(servant);
         master.needs.Master.CurLevel = 100; servant.needs.Prana.CurLevel = 50;
@@ -37,6 +38,63 @@ internal static class EnemyPranaTests
     }
     public static void Main()
     {
+        Test("player caravan receives supply upkeep food and healing once", () => {
+            master.Faction = servant.Faction = Faction.OfPlayer;
+            servant.Spawned = false; servant.MapHeld = null;
+            Find.Maps[0].mapPawns.AllPawnsSpawned.Remove(servant); PawnsFinder.Travel.Add(servant);
+            servant.needs.food.CurLevel = .2f;
+            servant.health.hediffSet.hediffs.Add(new Hediff_Injury { Severity = 10 });
+            Cycle(); Near(master.needs.Master.CurLevel, 80); Near(servant.needs.Prana.CurLevel, 65.975f);
+            Near(servant.health.hediffSet.hediffs[0].Severity, 9);
+        });
+        Test("master and servant same caravan get base threshold and one regen", () => {
+            master.Faction = servant.Faction = Faction.OfPlayer;
+            master.Spawned = servant.Spawned = false; master.MapHeld = servant.MapHeld = null;
+            master.Caravan = servant.Caravan = new RimWorld.Planet.Caravan();
+            Find.Maps[0].mapPawns.AllPawnsSpawned.Clear(); PawnsFinder.Travel.Add(master); PawnsFinder.Travel.Add(servant);
+            master.needs.Master.CurLevel = 0; servant.needs.food.CurLevel = .2f;
+            Cycle(); Near(master.needs.Master.CurLevel, 1); Near(servant.needs.Prana.CurLevel, 49.975f);
+            Near(ServantSustainPolicy.Threshold(servant), 30);
+        });
+        Test("map and travel overlap never doubles resource cycle", () => {
+            PawnsFinder.Travel.Add(servant); PawnsFinder.Travel.Add(master);
+            Cycle(); Near(servant.needs.Prana.CurLevel, 50.975f);
+        });
+        Test("suspended player held pawn is neither debited nor supplied", () => {
+            master.Faction = servant.Faction = Faction.OfPlayer; servant.Suspended = true;
+            Cycle(); Near(servant.needs.Prana.CurLevel, 50); Near(master.needs.Master.CurLevel, 100);
+        });
+        Test("captured player master cannot distribute mana", () => {
+            master.Faction = servant.Faction = Faction.OfPlayer; master.IsPrisoner = true;
+            servant.needs.food.CurLevel = .2f; Cycle(); Near(servant.needs.Prana.CurLevel, 49.975f);
+        });
+        Test("captured travel servant is outside active player simulation", () => {
+            master.Faction = servant.Faction = Faction.OfPlayer;
+            servant.Spawned = false; servant.MapHeld = null; servant.IsPrisoner = true;
+            Find.Maps[0].mapPawns.AllPawnsSpawned.Remove(servant); PawnsFinder.Travel.Add(servant);
+            Cycle(); Near(servant.needs.Prana.CurLevel, 50);
+        });
+        Test("master captured during player travel stops supply but retains upkeep", () => {
+            master.Faction = servant.Faction = Faction.OfPlayer; master.IsPrisoner = true;
+            servant.Spawned = false; servant.MapHeld = null; servant.needs.food.CurLevel = .2f;
+            Find.Maps[0].mapPawns.AllPawnsSpawned.Remove(servant); PawnsFinder.Travel.Add(servant);
+            Cycle(); Near(servant.needs.Prana.CurLevel, 49.975f);
+        });
+        Test("travel shortage resolves using existing hediff age without advancing twice", () => {
+            master.Faction = servant.Faction = Faction.OfPlayer; master.needs.Master.CurLevel = 0;
+            servant.Spawned = false; servant.MapHeld = null; servant.needs.Prana.CurLevel = 0; servant.needs.food.CurLevel = .2f;
+            Find.Maps[0].mapPawns.AllPawnsSpawned.Remove(servant); PawnsFinder.Travel.Add(servant);
+            Hediff shortage = new Hediff { def = MW_DefOf.MW_PranaShortage, ageTicks = 60000 };
+            servant.health.hediffSet.hediffs.Add(shortage); Cycle();
+            Check(servant.Defeats == 1 && shortage.ageTicks == 60000, "shortage not resolved or double aged");
+        });
+        Test("mixed map and caravan recipients split surplus once", () => {
+            master.Faction = servant.Faction = Faction.OfPlayer; servant.needs.food.CurLevel = .2f;
+            var other = new Pawn { Servant = true, Faction = Faction.OfPlayer, Spawned = false };
+            other.State.Master = master; other.needs.Prana.CurLevel = 50; other.needs.food.CurLevel = .2f;
+            PawnsFinder.Travel.Add(other); Cycle();
+            Near(master.needs.Master.CurLevel, 80); Near(servant.needs.Prana.CurLevel, 59.975f); Near(other.needs.Prana.CurLevel, 59.975f);
+        });
         Test("same map thresholds remain 30 and 10", () => {
             Near(ServantSustainPolicy.Threshold(servant), 30);
             servant.State.PresenceState = ServantPresenceState.DefeatedSpirit;
@@ -180,14 +238,14 @@ namespace Verse
     public class Def { }
     public class Pawn
     {
-        public bool Dead, Destroyed, IsPrisoner, IsSlave, Circuit, Servant;
+        public bool Dead, Destroyed, IsPrisoner, IsSlave, Circuit, Servant, Suspended;
         public bool Spawned = true;
         public Map MapHeld;
         public RimWorld.Planet.Caravan Caravan;
         public float SeparationStat = 2;
         public object ParentHolder;
         public int thingIDNumber, Defeats;
-        public Faction Faction;
+        public Faction Faction, HostFaction;
         public CompServantState State = new CompServantState();
         public Needs needs = new Needs(); public Health health = new Health();
         public T TryGetComp<T>() where T : class => State as T;
@@ -216,6 +274,14 @@ namespace Verse
 }
 namespace RimWorld
 {
+    public static class PawnsFinder
+    {
+        public static List<Pawn> Travel = new List<Pawn>();
+        public static List<Pawn> AllMapsCaravansAndTravellingTransporters_Alive
+        {
+            get { var result = new List<Pawn>(Travel); foreach (Map map in Find.Maps) result.AddRange(map.mapPawns.AllPawnsSpawned); return result; }
+        }
+    }
     public static class StatExtension { public static float GetStatValue(this Pawn p, object def, bool applyPostProcess = true, int cacheStaleAfterTicks = -1) => p.SeparationStat; }
     public class Faction { public object def; public static Faction OfPlayer = new Faction(); public bool HostileTo(Faction f) => def == MW_DefOf.MW_WarOpposition; }
     public class Need { public float CurLevel, MaxLevel = 100; public float CurLevelPercentage => CurLevel / MaxLevel; }

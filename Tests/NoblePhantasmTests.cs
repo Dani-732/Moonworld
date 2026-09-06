@@ -58,7 +58,18 @@ internal static class NoblePhantasmTests
             master.Faction = servant.Faction = new Faction { Enemy = true }; master.Spawned = false; master.Map = null;
             Check(Cast() && servant.needs.Prana.CurLevel == 60, "remote enemy contract cannot cast");
         });
-        Test("player still cannot cast with off-map master", () => { master.Spawned = false; master.Map = null; Reject(); });
+        Test("player casts with off-map master and pays normal cost", () => {
+            master.Spawned = false; master.Map = null;
+            Check(Cast() && servant.needs.Prana.CurLevel == 60, "independent cast failed");
+        });
+        Test("off-map caster cannot cast", () => { servant.Spawned = false; servant.Map = null; Reject(); });
+        Test("remote overcharge stays rejected and does not spend seal", () => {
+            master.Map = new Map(); string reason;
+            Check(!NoblePhantasmService.TryOvercharge(master, servant, out reason) && master.Spells.Charges == 3, "remote seal granted");
+        });
+        Test("captured or enslaved master cannot authorize cast", () => {
+            master.IsPrisoner = true; Reject(); master.IsPrisoner = false; master.IsSlave = true; Reject();
+        });
         Test("enemy cannot use command seal overcharge", () => {
             master.Faction = servant.Faction = new Faction { Enemy = true }; string reason;
             Check(!NoblePhantasmService.TryOvercharge(master, servant, out reason) && master.Spells.Charges == 3, "enemy seal used");
@@ -89,7 +100,7 @@ internal static class NoblePhantasmTests
         Test("annihilated servant rejected", () => { servant.State.PresenceState = ServantPresenceState.Annihilated; Reject(); });
         Test("dead master rejected", () => { master.Dead = true; Reject(); });
         Test("missing contract rejected", () => { servant.State.Master = null; Reject(); });
-        Test("different map rejected", () => { master.Map = new Map(); Reject(); });
+        Test("different master map does not block own ability", () => { master.Map = new Map(); Check(Cast(), "cross map contract rejected"); });
         Test("downed caster rejected", () => { servant.Downed = true; Reject(); });
         Test("incapable of violence rejected", () => { servant.NoViolence = true; Reject(); });
         Test("unowned ability rejected", () => { servant.Identity.noblePhantasms.Clear(); Reject(); });

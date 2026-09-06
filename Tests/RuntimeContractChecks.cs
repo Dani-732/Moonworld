@@ -91,6 +91,12 @@ internal static class RuntimeContractChecks
                 throw new Exception("Invalid XML/Scribe entry type: " + pair[0]);
         }
         Type stateType = mod.GetType("MoonWorld.GameComponent_MoonWorld", true);
+        Type statType = game.GetType("RimWorld.StatDef", true);
+        foreach (string field in new[] { "defaultBaseValue", "minValue", "toStringStyle", "alwaysHide" })
+            if (statType.GetField(field) == null) throw new Exception("Native stat field missing: " + field);
+        if (game.GetType("RimWorld.PawnsFinder", true).GetProperty("AllMapsCaravansAndTravellingTransporters_Alive") == null
+            || game.GetType("RimWorld.Planet.TravellingTransporters", true).GetProperty("Pawns") == null)
+            throw new Exception("Native travelling pawn enumeration missing");
         Type outpostType = game.GetType("RimWorld.GenStep_Outpost", true);
         foreach (string field in new[] { "size", "settlementDontGeneratePawns", "allowGeneratingThronerooms", "allowGeneratingFarms", "generateLoot" })
             if (outpostType.GetField(field) == null) throw new Exception("Native Outpost setting missing: " + field);
