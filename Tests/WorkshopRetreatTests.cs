@@ -59,6 +59,47 @@ internal static partial class SummoningTests
 
     private static void RunWorkshopTests()
     {
+        Test("debug rebuild bypasses clocks but preserves original pawns and resources", () => {
+            var enemy = AbandonWorkshop(); int rest = enemy.EnemyRestStartTickAbs;
+            int now = GenTicks.TicksAbs; enemy.EnemyServant.needs.Prana.CurLevel = 85;
+            Check(!WorkshopRebuildService.TryRebuild(State, enemy, out string reason) && reason.Contains("等待"), "normal timer bypassed");
+            Check(WorkshopRebuildService.TryRebuild(State, enemy, out reason, ignoreTime: true)
+                && GenTicks.TicksAbs == now && enemy.EnemyRestStartTickAbs == rest
+                && enemy.EnemyServant.needs.Prana.CurLevel == 85 && PawnGenerator.Created.Count == 3,
+                "debug reset resources, clocks or generated pawns");
+        });
+        Test("debug rebuild reports blockers and never fabricates escape", () => {
+            var site = EnterWorkshop(); var enemy = State.CurrentWarEntry.FindEnemy(site.OwnerMaster);
+            Check(!WorkshopRebuildService.TryRebuild(State, enemy, out string reason, ignoreTime: true)
+                && reason.Contains("旧工坊"), "existing site bypassed");
+            site.Map = null; site.Destroy();
+            Check(!WorkshopRebuildService.TryRebuild(State, enemy, out reason, ignoreTime: true)
+                && reason.Contains("没有待重建记录"), "escape invented");
+        });
+        Test("debug rebuild still requires freedom health mana and active war", () => {
+            var enemy = AbandonWorkshop(); int deadline = enemy.WorkshopRebuildAtTickAbs;
+            enemy.EnemyMaster.IsPrisoner = true;
+            Check(!WorkshopRebuildService.TryRebuild(State, enemy, out string reason, ignoreTime: true)
+                && reason.Contains("御主"), "prisoner released");
+            enemy.EnemyMaster.IsPrisoner = false; enemy.EnemyServant.needs.Prana.CurLevel = 0;
+            Check(!WorkshopRebuildService.TryRebuild(State, enemy, out reason, ignoreTime: true)
+                && reason.Contains("魔力"), "mana filled");
+            enemy.EnemyServant.needs.Prana.CurLevel = 90;
+            enemy.EnemyServant.health.hediffSet.hediffs.Add(new Hediff_Injury { Severity = 2 });
+            Check(!WorkshopRebuildService.TryRebuild(State, enemy, out reason, ignoreTime: true)
+                && reason.Contains("伤势") && enemy.WorkshopRebuildAtTickAbs == deadline, "injury or deadline overwritten");
+            enemy.EnemyServant.health.hediffSet.hediffs.Clear(); master.Dead = true; WarOutcomeService.Tick(State);
+            Check(!WorkshopRebuildService.TryRebuild(State, enemy, out reason, ignoreTime: true)
+                && reason.Contains("战争"), "ended war rebuilt");
+        });
+        Test("debug rebuild exposes failed selection and retries without extending deadline", () => {
+            var enemy = AbandonWorkshop(); int deadline = enemy.WorkshopRebuildAtTickAbs;
+            TileFinder.Fail = true;
+            Check(!WorkshopRebuildService.TryRebuild(State, enemy, out string reason, ignoreTime: true)
+                && reason.Contains("地块") && enemy.WorkshopRebuildAtTickAbs == deadline, "selection failure hidden");
+            TileFinder.Fail = false;
+            Check(WorkshopRebuildService.TryRebuild(State, enemy, out reason, ignoreTime: true), "debug retry failed");
+        });
         Test("workshop defeat orders both original pawns to retreat without teleport", () => {
             var site = EnterWorkshop(); var enemy = State.CurrentWarEntry.FindEnemy(site.OwnerMaster);
             DefeatAt(site);

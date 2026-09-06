@@ -24,11 +24,13 @@ namespace MoonWorld
             return (int)Math.Max(0L, duration - elapsed);
         }
 
-        public static string ReadinessRejection(Pawn servant)
+        public static string ReadinessRejection(Pawn servant) => ReadinessRejection(servant, false);
+
+        internal static string ReadinessRejection(Pawn servant, bool ignoreRestTime)
         {
             if (!EnemyContractUtility.IsResting(servant))
                 return "敌方主从已退场、被俘、仍在地图或运输途中，不能再次出战。";
-            if (TicksRemaining(servant) > 0)
+            if (!ignoreRestTime && TicksRemaining(servant) > 0)
                 return "敌方从者仍在场外休整，尚未达到最短休整时间。";
             if (ServantQuery.Instance.GetMaster(servant).Downed || servant.InMentalState
                 || servant.health.ShouldBeDead() || servant.health.ShouldBeDowned())

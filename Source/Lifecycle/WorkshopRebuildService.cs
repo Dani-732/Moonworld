@@ -48,20 +48,37 @@ namespace MoonWorld
                 if (!enemy.WorkshopRebuildPending) continue;
                 if (enemy.EnemyEliminated) { enemy.CompleteWorkshopRebuild(); continue; }
                 if (HasWorkshop(enemy)) { enemy.CompleteWorkshopRebuild(); continue; }
-                if (GenTicks.TicksAbs < enemy.WorkshopRebuildAtTickAbs || !IsFreeSurvivor(enemy.EnemyMaster)
-                    || !IsFreeSurvivor(enemy.EnemyServant) || EnemyRestUtility.ReadinessRejection(enemy.EnemyServant) != null) continue;
-                Rebuild(enemy);
+                TryRebuild(war, enemy, out _);
             }
         }
 
-        private static void Rebuild(EnemyWarParticipant enemy)
+        internal static string RebuildRejection(GameComponent_MoonWorld war, EnemyWarParticipant enemy, bool ignoreTime = false)
         {
+            if (war == null || war.CurrentWarOutcome != WarOutcome.Ongoing)
+                return "本届战争没有进行中。";
+            if (enemy == null || war.CurrentWarEntry == null || !war.CurrentWarEntry.Enemies.Contains(enemy))
+                return "不是本届敌方阵营。";
+            if (enemy.EnemyEliminated) return "该阵营已淘汰，不能重建或复活。";
+            if (HasWorkshop(enemy)) return "旧工坊仍存在；需要主从实际逃脱，并在玩家离开后完成地图清理。";
+            if (!enemy.WorkshopRebuildPending) return "没有待重建记录；缺少双人逃脱及旧工坊移除记录，不能凭空补建。";
+            if (!IsFreeSurvivor(enemy.EnemyMaster)) return "原御主不是自由场外角色；请查看御主位置、存活、被俘及持有容器。";
+            if (!IsFreeSurvivor(enemy.EnemyServant)) return "原从者不是自由场外角色；请查看从者位置、存活、被俘及持有容器。";
+            if (!ignoreTime && GenTicks.TicksAbs < enemy.WorkshopRebuildAtTickAbs)
+                return "重建等待尚余 " + ((enemy.WorkshopRebuildAtTickAbs - GenTicks.TicksAbs) / 60000f).ToString("F2") + " 天。";
+            return EnemyRestUtility.ReadinessRejection(enemy.EnemyServant, ignoreTime);
+        }
+
+        internal static bool TryRebuild(GameComponent_MoonWorld war, EnemyWarParticipant enemy, out string rejection, bool ignoreTime = false)
+        {
+            rejection = RebuildRejection(war, enemy, ignoreTime);
+            if (rejection != null) return false;
             Site_WarWorkshop site = null;
             try
             {
                 PlanetTile origin = enemy.LostWorkshopTile;
                 if (!TileFinder.TryFindNewSiteTile(out PlanetTile tile, origin, selectLandmarkChance: 0f, layer: origin.Layer)
-                    || tile == origin) return;
+                    || tile == origin)
+                { rejection = "没有找到不同于旧工坊的有效新地块，保留记录等待重试。"; return false; }
                 site = (Site_WarWorkshop)WorldObjectMaker.MakeWorldObject(MW_DefOf.MW_WarWorkshop);
                 site.Tile = tile;
                 site.SetFaction(enemy.EnemyMaster.Faction);
@@ -76,10 +93,12 @@ namespace MoonWorld
             {
                 if (site != null && !site.Destroyed) site.Destroy();
                 Log.Warning("[MoonWorld] 工坊重建失败，保留原主从与待重建记录：" + ex.Message);
-                return;
+                rejection = "创建工坊失败：" + ex.Message;
+                return false;
             }
             enemy.CompleteWorkshopRebuild();
             Messages.Message("敌方御主已在新地点重建魔术工坊。", enemy.EnemyMaster, MessageTypeDefOf.ThreatBig, false);
+            return true;
         }
     }
 }

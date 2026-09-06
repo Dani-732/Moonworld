@@ -35,6 +35,15 @@ namespace MoonWorld
             }
 
             Map map = master.Map;
+            if (Prefs.DevMode)
+                yield return new Command_Action
+                {
+                    defaultLabel = "工坊调试",
+                    defaultDesc = "查看各阵营主从位置、撤退记录和重建阻塞原因，或跳过时间等待尝试重建。",
+                    icon = TexButton.Add,
+                    action = WorkshopDebugActions.Open,
+                    Order = -101f
+                };
             Command_Target summon = new Command_Target
             {
                 defaultLabel = "召唤从者",

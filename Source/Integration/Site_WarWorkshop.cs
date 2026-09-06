@@ -19,6 +19,8 @@ namespace MoonWorld
         public bool ServantDefeatedHere => servantDefeatedHere;
         public bool RetreatOrdered => retreatOrdered;
         public bool BothEscaped => masterEscaped && servantEscaped;
+        public bool MasterEscaped => masterEscaped;
+        public bool ServantEscaped => servantEscaped;
         public Pawn OwnerMaster => ownerMaster;
         internal void SetOwner(Pawn master) { ownerMaster = master; }
 
