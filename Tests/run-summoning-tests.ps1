@@ -17,7 +17,9 @@ try {
         (Join-Path $projectRoot 'Source\Lifecycle\EnemyWarPartyService.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\EnemyRestUtility.cs') `
         (Join-Path $projectRoot 'Source\Integration\IncidentWorker_EnemyServantRaid.cs') `
-        (Join-Path $projectRoot 'Source\Lifecycle\ServantSummoningService.cs')
+        (Join-Path $projectRoot 'Source\Lifecycle\ServantSummoningService.cs') `
+        (Join-Path $projectRoot 'Source\Quest\HolyGrailWarQuestPart.cs') `
+        (Join-Path $projectRoot 'Source\Quest\HolyGrailWarQuestService.cs')
     if ($LASTEXITCODE -ne 0) { throw 'Summoning test compilation failed' }
     & $testOutput
     if ($LASTEXITCODE -ne 0) { throw 'Summoning scenarios failed' }

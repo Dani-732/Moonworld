@@ -57,6 +57,7 @@ namespace MoonWorld
                     state.CommitRegularSummon();
                     state.CurrentWarEntry.SetParticipants(selected, opponent);
                     enemyPreparation.Commit(state.CurrentWarEntry);
+                    HolyGrailWarQuestService.Ensure(state);
                     servant = generated;
                     return true;
                 }

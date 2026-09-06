@@ -78,6 +78,7 @@ internal static class RuntimeContractChecks
             new[] { "MoonWorld.IncidentWorker_EnemyServantRaid", "RimWorld.IncidentWorker" },
             new[] { "MoonWorld.ChoiceLetter_HolyGrailWar", "Verse.ChoiceLetter" },
             new[] { "MoonWorld.HolyGrailWarEntry", "Verse.IExposable" },
+            new[] { "MoonWorld.QuestPart_HolyGrailWar", "RimWorld.QuestPart" },
             new[] { "MoonWorld.Site_WarWorkshop", "RimWorld.Planet.Site" },
             new[] { "MoonWorld.LordJob_EnemyWarParty", "Verse.AI.Group.LordJob" },
             new[] { "MoonWorld.LordToil_EnemyServantAssault", "Verse.AI.Group.LordToil" },
@@ -89,6 +90,13 @@ internal static class RuntimeContractChecks
                 || implementation.GetConstructor(Type.EmptyTypes) == null)
                 throw new Exception("Invalid XML/Scribe entry type: " + pair[0]);
         }
+        Type stateType = mod.GetType("MoonWorld.GameComponent_MoonWorld", true);
+        FieldInfo warQuest = stateType.GetField("warQuest", BindingFlags.Instance | BindingFlags.NonPublic);
+        if (warQuest == null || warQuest.FieldType != game.GetType("RimWorld.Quest"))
+            throw new Exception("MoonWorld war state must retain a native Quest reference");
+        Type questService = mod.GetType("MoonWorld.HolyGrailWarQuestService", true);
+        if (questService.GetMethod("Ensure", BindingFlags.Static | BindingFlags.NonPublic) == null)
+            throw new Exception("Holy Grail War quest service entry point missing");
         foreach (string removed in new[] { "Harmony_ServantDeparture_Selectable", "Harmony_ServantDeparture_NoCapture",
             "Harmony_ServantTravelAutonomy", "Harmony_ServantTravelBoardingDuty", "Harmony_ServantTravelSection",
             "Harmony_ServantTravel_NoHaulingStandingGuest", "Command_NoblePhantasm" })

@@ -22,7 +22,7 @@ internal static class SummoningTests
         Find.WorldPawns.Pawns.Clear();
         PawnGenerator.Created.Clear(); Find.FactionManager = new FactionManager();
         CellFinder.Fail = Verse.AI.Group.LordMaker.Fail = Pawn.EdgeBlocked = false;
-        Find.WorldPawns.FailPass = false; Find.WorldObjects = new WorldObjectsHolder(); TileFinder.Fail = false; HolyGrailWarContentBridge.Fail = false;
+        Find.WorldPawns.FailPass = false; Find.WorldObjects = new WorldObjectsHolder(); Find.QuestManager = new RimWorld.QuestManager(); TileFinder.Fail = false; HolyGrailWarContentBridge.Fail = false;
         MW_DefOf.MW_HolyGrailWarSettings.enemyRestDurationTicks = 180000;
         MW_DefOf.MW_HolyGrailWarSettings.enemyRaidPranaFraction = .8f;
         PawnGenerator.Last = null; PawnGenerator.Fail = 0; PawnGenerator.Callback = null;
@@ -321,6 +321,18 @@ internal static class SummoningTests
             Check(PawnGenerator.Created[0].State.Master == master && PawnGenerator.Created[0].Map == map, "wrong contract");
             Check(PawnGenerator.Request.ForceNew && !PawnGenerator.Request.Relations, "generation reused a world pawn or created relations");
         });
+        Test("first summon creates one accepted Holy Grail War quest with both factions", () => {
+            PrepareEnemy();
+            Check(Find.QuestManager.QuestsListForReading.Count == 1, "quest missing or duplicated");
+            RimWorld.Quest quest = Find.QuestManager.QuestsListForReading[0];
+            var part = quest.GetFirstPartOfType<QuestPart_HolyGrailWar>();
+            Check(quest.name == "圣杯战争" && quest.Accepted && part != null && part.WarStartTick == 1234, "quest metadata incorrect");
+            Check(part.Factions.Count == 2 && part.Factions[0].Master == master
+                && part.Factions[0].Servants.Count == 1 && part.Factions[1].Master == State.CurrentWarEntry.EnemyMaster
+                && part.Factions[1].Servants.Count == 1 && part.Factions[1].Sites.Count == 1, "quest faction snapshot incomplete");
+            State.LoadedGame(); State.LoadedGame();
+            Check(Find.QuestManager.QuestsListForReading.Count == 1 && State.warQuest == quest, "quest was recreated on reload");
+        });
         Test("second summon cannot overwrite first tick", () => { Accept(); Check(Summon(), "first failed"); Find.TickManager.TicksGame = 9999; Check(!Summon() && State.warStartTick == 1234, "repeat succeeded"); });
         Test("existing allied servant is not a global population cap", () => {
             Pawn existing = new Pawn { Servant = true, Spawned = false }; existing.State.Bind(master);
@@ -387,7 +399,7 @@ namespace Verse
     public class GameComponent { public virtual void LoadedGame() { } public virtual void GameComponentTick() { } public virtual void ExposeData() { } }
     public class Game { public GameComponent_MoonWorld State; public Game() { State = new GameComponent_MoonWorld(this); } public T GetComponent<T>() where T : class => State as T; }
     public static class Current { public static Game Game; }
-    public static class Find { public static TickManager TickManager = new TickManager(); public static WorldPawns WorldPawns = new WorldPawns(); public static FactionManager FactionManager = new FactionManager(); public static WorldObjectsHolder WorldObjects = new WorldObjectsHolder(); }
+    public static class Find { public static TickManager TickManager = new TickManager(); public static WorldPawns WorldPawns = new WorldPawns(); public static FactionManager FactionManager = new FactionManager(); public static WorldObjectsHolder WorldObjects = new WorldObjectsHolder(); public static RimWorld.QuestManager QuestManager = new RimWorld.QuestManager(); }
     public class FactionManager
     {
         private Faction faction;
@@ -483,7 +495,8 @@ namespace Verse
         public static void Spawn(Pawn p, IntVec3 c, Map m, WipeMode mode)
         { p.Spawned = true; p.Map = m; Callback?.Invoke(); if (Fail) throw new Exception("spawn"); }
     }
-    public static class Scribe { public static bool Loading; public static Dictionary<string, object> Data = new Dictionary<string, object>(); }
+    public enum LoadSaveMode { Inactive, Saving, LoadingVars, PostLoadInit }
+    public static class Scribe { public static bool Loading; public static Dictionary<string, object> Data = new Dictionary<string, object>(); public static LoadSaveMode mode => Loading ? LoadSaveMode.LoadingVars : LoadSaveMode.Saving; }
     public static class Scribe_Values
     {
         public static void Look<T>(ref T value, string key, T defaultValue)
@@ -492,6 +505,13 @@ namespace Verse
     public static class Scribe_References
     {
         public static void Look(ref Pawn value, string key) { Scribe_Values.Look(ref value, key, (Pawn)null); }
+        public static void Look(ref RimWorld.Quest value, string key) { Scribe_Values.Look(ref value, key, (RimWorld.Quest)null); }
+    }
+    public enum LookMode { Undefined, Value, Reference, Deep }
+    public static class Scribe_Collections
+    {
+        public static void Look<T>(ref List<T> value, string key, LookMode mode) where T : class
+        { if (Scribe.Loading) value = Scribe.Data.ContainsKey(key) ? (List<T>)Scribe.Data[key] : null; else Scribe.Data[key] = value; }
     }
     public static class Scribe_Defs
     {

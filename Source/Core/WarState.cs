@@ -1,5 +1,6 @@
 using UnityEngine;
 using Verse;
+using RimWorld;
 
 namespace MoonWorld
 {
@@ -15,6 +16,7 @@ namespace MoonWorld
         public int warStartTick = -1;
         private HolyGrailWarEntry currentWarEntry;
         private WarOutcome warOutcome = WarOutcome.Ongoing;
+        internal Quest warQuest;
 
         public HolyGrailWarEntry CurrentWarEntry => currentWarEntry;
         public WarOutcome CurrentWarOutcome => warOutcome;
@@ -29,6 +31,7 @@ namespace MoonWorld
             if (currentWarEntry == null && warStartTick >= 0)
                 currentWarEntry = new HolyGrailWarEntry(null, alreadySummoned: true);
             EnemyWarPreparation.ReconcileLoadedWar(this);
+            HolyGrailWarQuestService.Ensure(this);
         }
 
         public override void GameComponentTick()
@@ -69,6 +72,7 @@ namespace MoonWorld
             Scribe_Values.Look(ref warStartTick, "warStartTick", -1);
             Scribe_Deep.Look(ref currentWarEntry, "currentWarEntry");
             Scribe_Values.Look(ref warOutcome, "warOutcome", WarOutcome.Ongoing);
+            Scribe_References.Look(ref warQuest, "warQuest");
         }
 
         internal bool TrySetWarOutcome(WarOutcome outcome)

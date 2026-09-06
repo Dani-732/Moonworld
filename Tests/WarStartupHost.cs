@@ -16,22 +16,42 @@ namespace Verse
 }
 namespace RimWorld
 {
+    public class QuestPart
+    {
+        public Quest quest;
+        public virtual string DescriptionPart => null;
+        public virtual void ExposeData() { }
+    }
+    public class Quest
+    {
+        private readonly List<QuestPart> parts = new List<QuestPart>();
+        public string name, description; public bool hidden, hiddenInUI; public bool Accepted;
+        public T AddPart<T>() where T : QuestPart, new() { var part = new T { quest = this }; parts.Add(part); return part; }
+        public T GetFirstPartOfType<T>() where T : QuestPart { foreach (var part in parts) if (part is T typed) return typed; return null; }
+        public void SetInitiallyAccepted() { Accepted = true; }
+    }
+    public class QuestManager
+    {
+        public readonly List<Quest> QuestsListForReading = new List<Quest>();
+        public void Add(Quest quest) { QuestsListForReading.Add(quest); }
+    }
     public class SitePartDef { }
     public class SitePartParams { }
 }
 namespace RimWorld.Planet
 {
     public struct PlanetTile { public object Layer => null; }
+    public class WorldObject { public virtual void Destroy() { } }
     public class Caravan { }
     public class TransportersArrivalAction { }
     public class SitePart { public SitePart(Site site, SitePartDef def, SitePartParams parms) { } }
-    public class Site
+    public class Site : WorldObject
     {
         public PlanetTile Tile; public bool Destroyed; public Faction Faction;
         public bool Spawned => Find.WorldObjects.All.Contains(this);
         public void SetFaction(Faction faction) { Faction = faction; }
         public void AddPart(SitePart part) { }
-        public void Destroy() { Destroyed = true; Find.WorldObjects.All.Remove(this); }
+        public override void Destroy() { Destroyed = true; Find.WorldObjects.All.Remove(this); }
         public virtual void ExposeData() { }
         public virtual string GetInspectString() => "工坊";
         public virtual AcceptanceReport CanBeSettled => "不可定居";
@@ -45,7 +65,7 @@ namespace RimWorld.Planet
     }
     public class WorldObjectsHolder
     {
-        public List<Site> All = new List<Site>(); public bool FailAdd; public Action Callback;
+        public List<Site> All = new List<Site>(); public IEnumerable<WorldObject> AllWorldObjects => All; public bool FailAdd; public Action Callback;
         public void Add(Site site) { All.Add(site); Callback?.Invoke(); if (FailAdd) throw new Exception("partial site add"); }
     }
     public static class WorldObjectMaker { public static Site MakeWorldObject(WorldObjectDef def) => new Site_WarWorkshop(); }
