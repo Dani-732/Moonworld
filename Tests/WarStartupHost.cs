@@ -16,6 +16,8 @@ namespace Verse
 }
 namespace RimWorld
 {
+    public class QuestScriptDef { }
+    public static class QuestScriptDefOf { public static QuestScriptDef WandererJoins = new QuestScriptDef(); }
     public class QuestPart
     {
         public Quest quest;
@@ -25,7 +27,7 @@ namespace RimWorld
     public class Quest
     {
         private readonly List<QuestPart> parts = new List<QuestPart>();
-        public string name, description; public bool hidden, hiddenInUI; public bool Accepted;
+        public string name, description; public QuestScriptDef root; public bool hidden, hiddenInUI; public bool Accepted;
         public T AddPart<T>() where T : QuestPart, new() { var part = new T { quest = this }; parts.Add(part); return part; }
         public T GetFirstPartOfType<T>() where T : QuestPart { foreach (var part in parts) if (part is T typed) return typed; return null; }
         public void SetInitiallyAccepted() { Accepted = true; }
@@ -33,7 +35,7 @@ namespace RimWorld
     public class QuestManager
     {
         public readonly List<Quest> QuestsListForReading = new List<Quest>();
-        public void Add(Quest quest) { QuestsListForReading.Add(quest); }
+        public void Add(Quest quest) { if (!QuestsListForReading.Contains(quest)) QuestsListForReading.Add(quest); }
     }
     public class SitePartDef { }
     public class SitePartParams { }

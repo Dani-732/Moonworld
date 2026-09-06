@@ -326,7 +326,8 @@ internal static class SummoningTests
             Check(Find.QuestManager.QuestsListForReading.Count == 1, "quest missing or duplicated");
             RimWorld.Quest quest = Find.QuestManager.QuestsListForReading[0];
             var part = quest.GetFirstPartOfType<QuestPart_HolyGrailWar>();
-            Check(quest.name == "圣杯战争" && quest.Accepted && part != null && part.WarStartTick == 1234, "quest metadata incorrect");
+            Check(quest.name == "圣杯战争" && quest.root == RimWorld.QuestScriptDefOf.WandererJoins
+                && quest.Accepted && part != null && part.WarStartTick == 1234, "quest metadata incorrect");
             Check(part.Factions.Count == 2 && part.Factions[0].Master == master
                 && part.Factions[0].Servants.Count == 1 && part.Factions[1].Master == State.CurrentWarEntry.EnemyMaster
                 && part.Factions[1].Servants.Count == 1 && part.Factions[1].Sites.Count == 1, "quest faction snapshot incomplete");
