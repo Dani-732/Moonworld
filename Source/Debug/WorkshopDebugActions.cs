@@ -20,6 +20,8 @@ namespace MoonWorld
                     EnemyWarParticipant selected = enemy;
                     string label = enemy.Seat?.label ?? "未知职阶";
                     options.Add(new FloatMenuOption(label + "：查看状态", () => Show(war, selected)));
+                    options.Add(new FloatMenuOption(label + "：一键恢复敌方从者伤势", () => RestoreServant(war, selected, refillPrana: false)));
+                    options.Add(new FloatMenuOption(label + "：回满敌方从者魔力", () => RestoreServant(war, selected, refillPrana: true)));
                     options.Add(new FloatMenuOption(label + "：跳过时间并尝试重建", () =>
                     {
                         bool rebuilt = WorkshopRebuildService.TryRebuild(war, selected, out string reason, ignoreTime: true);
@@ -28,6 +30,37 @@ namespace MoonWorld
                 }
             if (options.Count == 0) Find.WindowStack.Add(new Dialog_MessageBox("本届没有敌方阵营记录。"));
             else Find.WindowStack.Add(new FloatMenu(options));
+        }
+
+        private static void RestoreServant(GameComponent_MoonWorld war, EnemyWarParticipant enemy, bool refillPrana)
+        {
+            Pawn servant = enemy?.EnemyServant;
+            if (war?.CurrentWarOutcome != WarOutcome.Ongoing || enemy == null
+                || war.CurrentWarEntry?.Enemies.Contains(enemy) != true || enemy.EnemyEliminated
+                || !EnemyContractUtility.HasEnemyContract(servant))
+            {
+                Find.WindowStack.Add(new Dialog_MessageBox("目标不是本届仍参战的有效敌方从者，不能恢复或复活。"));
+                return;
+            }
+            if (refillPrana)
+            {
+                Need_Prana prana = servant.needs?.TryGetNeed<Need_Prana>();
+                if (prana != null) prana.CurLevel = prana.MaxLevel;
+                Show(war, enemy, prana == null ? "目标没有从者魔力需求。" : "已回满原从者魔力。");
+                return;
+            }
+            int cured = 0;
+            // Restoring a missing part can also remove associated injuries; iterate a snapshot.
+            foreach (Hediff hediff in new List<Hediff>(servant.health.hediffSet.hediffs))
+            {
+                if (!servant.health.hediffSet.hediffs.Contains(hediff)) continue;
+                if (hediff is Hediff_Injury || hediff is Hediff_MissingPart || ServantHealingPolicy.IsCurableCondition(hediff))
+                {
+                    HealthUtility.Cure(hediff);
+                    cured++;
+                }
+            }
+            Show(war, enemy, "已治疗原从者的 " + cured + " 项伤势或有害状态；保持当前形态、灵基受损和魔力库存。");
         }
 
         private static void Show(GameComponent_MoonWorld war, EnemyWarParticipant enemy, string result = null)

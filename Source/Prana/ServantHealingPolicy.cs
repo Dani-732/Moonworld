@@ -26,7 +26,7 @@ namespace MoonWorld
             return worst;
         }
 
-        private static bool IsCurableCondition(Hediff hediff)
+        internal static bool IsCurableCondition(Hediff hediff)
         {
             HediffDef def = hediff?.def;
             return def != null
