@@ -32,6 +32,7 @@ namespace MoonWorld
                 currentWarEntry = new HolyGrailWarEntry(null, alreadySummoned: true);
             EnemyWarPreparation.ReconcileLoadedWar(this);
             HolyGrailWarQuestService.Ensure(this);
+            HolyGrailWarQuestService.SyncOutcome(this, notify: false);
         }
 
         public override void GameComponentTick()
@@ -79,6 +80,7 @@ namespace MoonWorld
         {
             if (warOutcome != WarOutcome.Ongoing || outcome == WarOutcome.Ongoing) return false;
             warOutcome = outcome;
+            HolyGrailWarQuestService.SyncOutcome(this, notify: true);
             return true;
         }
     }

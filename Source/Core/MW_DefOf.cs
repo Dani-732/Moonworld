@@ -18,6 +18,7 @@ namespace MoonWorld
         public static TraitDef MW_MagusCircuit_Basic;
         public static TraitDef MW_CommandSpell;
         public static LetterDef MW_HolyGrailWarInvitation;
+        public static QuestScriptDef MW_HolyGrailWarQuest;
         public static IncidentDef MW_HolyGrailWarEnemyServantRaid;
         public static FactionDef MW_WarOpposition;
         public static PawnKindDef MW_EnemyMaster;

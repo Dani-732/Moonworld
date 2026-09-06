@@ -326,7 +326,7 @@ internal static class SummoningTests
             Check(Find.QuestManager.QuestsListForReading.Count == 1, "quest missing or duplicated");
             RimWorld.Quest quest = Find.QuestManager.QuestsListForReading[0];
             var part = quest.GetFirstPartOfType<QuestPart_HolyGrailWar>();
-            Check(quest.name == "圣杯战争" && quest.root == RimWorld.QuestScriptDefOf.WandererJoins
+            Check(quest.name == "圣杯战争" && quest.root == MW_DefOf.MW_HolyGrailWarQuest && quest.id > 0
                 && quest.Accepted && part != null && part.WarStartTick == 1234, "quest metadata incorrect");
             Check(part.Factions.Count == 2 && part.Factions[0].Master == master
                 && part.Factions[0].Servants.Count == 1 && part.Factions[1].Master == State.CurrentWarEntry.EnemyMaster
@@ -388,6 +388,56 @@ internal static class SummoningTests
         Test("player master death ends war as defeat", () => {
             PrepareEnemy(); Check(Deploy(), "deployment failed"); master.Dead = true; WarOutcomeService.Tick(State);
             Check(State.CurrentWarOutcome == WarOutcome.PlayerDefeat, "master death did not lose war");
+        });
+        Test("victory completes quest once with notification and preserves participants", () => {
+            PrepareEnemy(); var entry = State.CurrentWarEntry; var quest = State.warQuest;
+            var servant = entry.EnemyServant; var workshop = Find.WorldObjects.All[0];
+            entry.EnemyMaster.Dead = true; WarOutcomeService.Tick(State); WarOutcomeService.Tick(State);
+            Check(quest.State == QuestState.EndedSuccess && quest.EndCalls == 1 && quest.Letters == 1, "quest victory not idempotent");
+            Check(!workshop.Destroyed && entry.EnemyServant == servant && PawnGenerator.Created.Count == 3
+                && State.warStartTick == 1234 && entry.RegularSummonUsed && !Deploy(), "quest cleanup changed war facts");
+        });
+        Test("defeat completes quest once and cannot be overwritten by later enemy death", () => {
+            PrepareEnemy(); master.Dead = true; WarOutcomeService.Tick(State);
+            State.CurrentWarEntry.EnemyMaster.Dead = true; WarOutcomeService.Tick(State);
+            Check(State.warQuest.State == QuestState.EndedFailed && State.warQuest.EndCalls == 1
+                && State.warQuest.Letters == 1, "quest defeat overwritten");
+        });
+        Test("rest and site destruction leave quest ongoing", () => {
+            RestEnemy(false); Find.WorldObjects.All[0].Destroy(); WarOutcomeService.Tick(State);
+            Check(State.warQuest.State == QuestState.Ongoing && State.warQuest.EndCalls == 0, "retreat ended quest");
+        });
+        Test("legacy ended war reconciles quest silently for both outcomes", () => {
+            foreach (var outcome in new[] { WarOutcome.PlayerVictory, WarOutcome.PlayerDefeat }) {
+                Setup(); PrepareEnemy(); var quest = State.warQuest; int id = quest.id;
+                quest.root = QuestScriptDefOf.WandererJoins;
+                State.ExposeData(); Scribe.Data["warOutcome"] = outcome;
+                Scribe.Loading = true; Current.Game = new Game(); State.ExposeData(); State.LoadedGame(); State.LoadedGame();
+                Check(quest.State == (outcome == WarOutcome.PlayerVictory ? QuestState.EndedSuccess : QuestState.EndedFailed)
+                    && quest.EndCalls == 1 && quest.Letters == 0 && quest.id == id
+                    && quest.root == MW_DefOf.MW_HolyGrailWarQuest && Find.QuestManager.QuestsListForReading.Count == 1,
+                    "legacy result reconciliation failed");
+            }
+        });
+        Test("completed quest reload never replays notification", () => {
+            PrepareEnemy(); State.CurrentWarEntry.EnemyServant.Dead = true; WarOutcomeService.Tick(State);
+            var quest = State.warQuest; State.ExposeData(); Scribe.Loading = true; Current.Game = new Game();
+            State.ExposeData(); State.LoadedGame(); WarOutcomeService.Tick(State);
+            Check(State.warQuest == quest && quest.EndCalls == 1 && quest.Letters == 1
+                && quest.State == QuestState.EndedSuccess, "completed quest reopened or renotified");
+        });
+        Test("lost component reference reuses existing quest", () => {
+            PrepareEnemy(); var quest = State.warQuest; State.warQuest = null; State.LoadedGame();
+            Check(State.warQuest == quest && Find.QuestManager.QuestsListForReading.Count == 1, "duplicate quest on recovery");
+        });
+        Test("legacy ended war without a quest creates a silent historical record", () => {
+            PrepareEnemy(); State.ExposeData(); Scribe.Data.Remove("warQuest");
+            Scribe.Data["warOutcome"] = WarOutcome.PlayerVictory;
+            Find.QuestManager = new QuestManager(); Scribe.Loading = true; Current.Game = new Game();
+            State.ExposeData(); State.LoadedGame(); State.LoadedGame();
+            Check(State.warQuest.State == QuestState.EndedSuccess && State.warQuest.Letters == 0
+                && Find.QuestManager.QuestsListForReading.Count == 1 && State.warStartTick == 1234
+                && PawnGenerator.Created.Count == 3, "missing quest reopened legacy war");
         });
         Console.WriteLine(passed + " entry and summoning scenarios passed. Native UI, XML loading and real save/load require in-game testing.");
     }
@@ -547,6 +597,7 @@ namespace MoonWorld
     public interface IServantSummoningService { }
     public static class MW_DefOf
     {
+        public static QuestScriptDef MW_HolyGrailWarQuest = new QuestScriptDef();
         public static TraitDef MW_CommandSpell = new TraitDef(), MW_MagusCircuit_Basic = new TraitDef(), MW_MageRank_Apprentice = new TraitDef();
         public static Settings MW_HolyGrailWarSettings = new Settings();
         public static FactionDef MW_WarOpposition = new FactionDef();

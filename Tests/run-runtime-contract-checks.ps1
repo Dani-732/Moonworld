@@ -13,6 +13,12 @@ try {
 
     $mwXmlFiles = Get-ChildItem (Join-Path $projectRoot '1.6') -Filter '*.xml' -Recurse
     foreach ($mwXmlFile in $mwXmlFiles) { [xml](Get-Content -LiteralPath $mwXmlFile.FullName -Raw) | Out-Null }
+    [xml]$mwQuestXml = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_HolyGrailWarQuest.xml') -Raw
+    $mwQuestDef = $mwQuestXml.SelectSingleNode('/Defs/QuestScriptDef[defName="MW_HolyGrailWarQuest"]')
+    if ($null -eq $mwQuestDef -or $mwQuestDef.randomlySelectable -ne 'false' -or
+        $mwQuestDef.hideOnCleanup -ne 'false' -or $mwQuestDef.endOnColonyMove -ne 'false' -or $mwQuestDef.defaultCharity -ne 'false' -or
+        $mwQuestDef.root.Class -ne 'QuestNode_Sequence' -or $mwQuestDef.successHistoryEvent -or
+        $mwQuestDef.failedOrExpiredHistoryEvent) { throw 'War quest must have its own non-random, visible historical root without charity events' }
     [xml]$mwWorkshop = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_WarWorkshop.xml') -Raw
     $mwSite = $mwWorkshop.SelectSingleNode('/Defs/WorldObjectDef[defName="MW_WarWorkshop"]')
     $mwPart = $mwWorkshop.SelectSingleNode('/Defs/SitePartDef[defName="MW_WarWorkshopPart"]')

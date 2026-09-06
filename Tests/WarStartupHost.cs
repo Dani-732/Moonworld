@@ -17,6 +17,8 @@ namespace Verse
 namespace RimWorld
 {
     public class QuestScriptDef { }
+    public enum QuestEndOutcome { Success, Fail }
+    public enum QuestState { Ongoing, EndedSuccess, EndedFailed }
     public static class QuestScriptDefOf { public static QuestScriptDef WandererJoins = new QuestScriptDef(); }
     public class QuestPart
     {
@@ -28,6 +30,18 @@ namespace RimWorld
     {
         private readonly List<QuestPart> parts = new List<QuestPart>();
         public string name, description; public QuestScriptDef root; public bool hidden, hiddenInUI; public bool Accepted;
+        private static int nextId = 1;
+        public int id, EndCalls, Letters;
+        public QuestState State;
+        public bool Historical => State != QuestState.Ongoing;
+        public static Quest MakeRaw() => new Quest { id = nextId++ };
+        public void End(QuestEndOutcome outcome, bool sendLetter = true, bool playSound = true)
+        {
+            if (Historical) throw new Exception("historical quest resolved again");
+            if (root == null) throw new Exception("quest cleanup requires root");
+            State = outcome == QuestEndOutcome.Success ? QuestState.EndedSuccess : QuestState.EndedFailed;
+            EndCalls++; if (sendLetter) Letters++;
+        }
         public T AddPart<T>() where T : QuestPart, new() { var part = new T { quest = this }; parts.Add(part); return part; }
         public T GetFirstPartOfType<T>() where T : QuestPart { foreach (var part in parts) if (part is T typed) return typed; return null; }
         public void SetInitiallyAccepted() { Accepted = true; }

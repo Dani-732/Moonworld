@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- Created only by the successful war-start service, never by random quest selection. -->
+  <QuestScriptDef>
+    <defName>MW_HolyGrailWarQuest</defName>
+    <label>圣杯战争</label>
+    <description>御主与英灵围绕圣杯展开的战争。</description>
+    <isRootSpecial>true</isRootSpecial>
+    <randomlySelectable>false</randomlySelectable>
+    <autoAccept>true</autoAccept>
+    <defaultHidden>false</defaultHidden>
+    <hideOnCleanup>false</hideOnCleanup>
+    <endOnColonyMove>false</endOnColonyMove>
+    <defaultCharity>false</defaultCharity>
+    <sendAvailableLetter>false</sendAvailableLetter>
+    <root Class="QuestNode_Sequence"><nodes /></root>
+  </QuestScriptDef>
+</Defs>

@@ -91,6 +91,11 @@ internal static class RuntimeContractChecks
                 throw new Exception("Invalid XML/Scribe entry type: " + pair[0]);
         }
         Type stateType = mod.GetType("MoonWorld.GameComponent_MoonWorld", true);
+        Type questType = game.GetType("RimWorld.Quest", true);
+        if (questType.GetMethod("MakeRaw", BindingFlags.Public | BindingFlags.Static) == null
+            || questType.GetMethod("End", new[] { game.GetType("RimWorld.QuestEndOutcome", true), typeof(bool), typeof(bool) }) == null
+            || game.GetType("RimWorld.QuestGen.QuestNode_Sequence") == null)
+            throw new Exception("Native quest construction, end API or sequence root missing");
         FieldInfo warQuest = stateType.GetField("warQuest", BindingFlags.Instance | BindingFlags.NonPublic);
         if (warQuest == null || warQuest.FieldType != game.GetType("RimWorld.Quest"))
             throw new Exception("MoonWorld war state must retain a native Quest reference");
