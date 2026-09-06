@@ -22,6 +22,8 @@ namespace MoonWorld
             string text = servant.LabelShortCap + "（" + servant.ThingID + "）"
                 + "\n灵基损伤：" + (damage?.Severity ?? 0f).ToString("F0")
                 + "\n魔力：" + (prana == null ? "无" : prana.CurLevel.ToString("F1") + "/" + prana.MaxLevel.ToString("F1"))
+                + "\n场外结算：" + (EnemyContractUtility.IsResting(servant) ? "有效" : "无效")
+                + "\n场外记录：" + (entry.EnemyRestStartTickAbs < 0 ? "未开始" : entry.EnemyRestStartTickAbs.ToString())
                 + "\n最短休整剩余：" + (EnemyRestUtility.TicksRemaining(servant) / 60000f).ToString("F2") + " 天"
                 + "\n" + (EnemyWarPartyService.ValidateRaid(Find.CurrentMap) ?? "可以再次出战，等待突袭事件。");
             Find.WindowStack.Add(new Dialog_MessageBox(text));

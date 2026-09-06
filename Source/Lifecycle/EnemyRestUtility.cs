@@ -9,8 +9,14 @@ namespace MoonWorld
         public static int TicksRemaining(Pawn servant)
         {
             int duration = Math.Max(0, MW_DefOf.MW_HolyGrailWarSettings.enemyRestDurationTicks);
-            if (servant == null || servant.becameWorldPawnTickAbs < 0) return duration;
-            long elapsed = Math.Max(0L, (long)GenTicks.TicksAbs - servant.becameWorldPawnTickAbs);
+            HolyGrailWarEntry entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
+            int startedAt = entry != null && entry.EnemyServant == servant
+                ? entry.EnemyRestStartTickAbs
+                : -1;
+            // Saves made before this field existed retain the original WorldPawn timestamp once.
+            if (startedAt < 0 && servant != null) startedAt = servant.becameWorldPawnTickAbs;
+            if (servant == null || startedAt < 0) return duration;
+            long elapsed = Math.Max(0L, (long)GenTicks.TicksAbs - startedAt);
             return (int)Math.Max(0L, duration - elapsed);
         }
 
@@ -18,7 +24,7 @@ namespace MoonWorld
         {
             if (!EnemyContractUtility.IsResting(servant))
                 return "敌方主从已退场、被俘、仍在地图或运输途中，不能再次出战。";
-            if (servant.becameWorldPawnTickAbs < 0 || TicksRemaining(servant) > 0)
+            if (TicksRemaining(servant) > 0)
                 return "敌方从者仍在场外休整，尚未达到最短休整时间。";
             if (ServantQuery.Instance.GetMaster(servant).Downed || servant.InMentalState
                 || servant.health.ShouldBeDead() || servant.health.ShouldBeDowned())

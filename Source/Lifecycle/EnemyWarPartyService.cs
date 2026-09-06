@@ -103,7 +103,6 @@ namespace MoonWorld
         {
             rejection = null;
             Pawn servant = entry.EnemyServant;
-            int worldSince = servant.becameWorldPawnTickAbs;
             Lord lord = null;
             try
             {
@@ -117,6 +116,7 @@ namespace MoonWorld
                 // Commit presence last; earlier failures must leave a resting spirit unchanged.
                 if (!ServantLifecycleService.Instance.TryPrepareEnemyRaid(servant, out rejection))
                     throw new InvalidOperationException(rejection);
+                entry.ClearEnemyRestStart();
                 return true;
             }
             catch (Exception ex)
@@ -132,7 +132,6 @@ namespace MoonWorld
                     if (servant.Spawned) servant.DeSpawn();
                     if (!Find.WorldPawns.Contains(servant))
                         Find.WorldPawns.PassToWorld(servant, PawnDiscardDecideMode.KeepForever);
-                    servant.becameWorldPawnTickAbs = worldSince;
                 }
                 Log.Error("[MoonWorld] 敌方从者再袭部署失败: " + ex);
                 rejection = "敌方再袭失败，原从者已退回场外，保留契约与休整时间。";
@@ -169,9 +168,11 @@ namespace MoonWorld
             HolyGrailWarEntry entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
             if (entry == null || (pawn != entry.EnemyMaster && pawn != entry.EnemyServant)
                 || pawn.Spawned || pawn.Dead || pawn.Destroyed || !EnemyContractUtility.IsWarPawn(pawn)) return;
-            // Preserve the actual participants for later encounters; do not regenerate away their damage.
-            if (Find.WorldPawns.Contains(pawn)) Find.WorldPawns.RemovePawn(pawn);
-            Find.WorldPawns.PassToWorld(pawn, PawnDiscardDecideMode.KeepForever);
+            // Pawn.ExitMap has already transferred it to WorldPawns and written its native timestamp.
+            // Do not remove and re-add it here: that makes the rest clock mutable.
+            if (Find.WorldPawns.Contains(pawn))
+                Find.WorldPawns.ForcefullyKeptPawns.Add(pawn);
+            if (pawn == entry.EnemyServant) entry.RecordEnemyDeparture(pawn);
         }
     }
 }

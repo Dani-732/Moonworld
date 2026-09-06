@@ -12,6 +12,7 @@ namespace MoonWorld
         private Pawn enemyMaster;
         private Pawn enemyServant;
         private bool enemyDeployed;
+        private int enemyRestStartTickAbs = -1;
 
         public Pawn DesignatedMaster => designatedMaster;
         public bool RegularSummonUsed => regularSummonUsed;
@@ -20,6 +21,7 @@ namespace MoonWorld
         public Pawn EnemyMaster => enemyMaster;
         public Pawn EnemyServant => enemyServant;
         public bool EnemyDeployed => enemyDeployed;
+        public int EnemyRestStartTickAbs => enemyRestStartTickAbs;
         public bool EnemyEliminated => enemyDeployed &&
             (enemyMaster == null || enemyMaster.Dead || enemyMaster.Destroyed
              || enemyServant == null || enemyServant.Dead || enemyServant.Destroyed);
@@ -48,6 +50,18 @@ namespace MoonWorld
             enemyMaster = master;
             enemyServant = servant;
             enemyDeployed = true;
+            enemyRestStartTickAbs = -1;
+        }
+
+        internal void RecordEnemyDeparture(Pawn servant)
+        {
+            if (servant == enemyServant && enemyRestStartTickAbs < 0)
+                enemyRestStartTickAbs = GenTicks.TicksAbs;
+        }
+
+        internal void ClearEnemyRestStart()
+        {
+            enemyRestStartTickAbs = -1;
         }
 
         public void ExposeData()
@@ -59,6 +73,7 @@ namespace MoonWorld
             Scribe_References.Look(ref enemyMaster, "enemyMaster");
             Scribe_References.Look(ref enemyServant, "enemyServant");
             Scribe_Values.Look(ref enemyDeployed, "enemyDeployed", false);
+            Scribe_Values.Look(ref enemyRestStartTickAbs, "enemyRestStartTickAbs", -1);
         }
     }
 }

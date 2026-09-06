@@ -72,6 +72,8 @@ internal static class SummoningTests
         PrepareEnemy(); Check(Deploy(), "initial deployment failed");
         Pawn enemy = State.CurrentWarEntry.EnemyServant;
         enemy.DeSpawn(); enemy.State.PresenceState = ServantPresenceState.DefeatedSpirit;
+        // Pawn.ExitMap first hands the pawn to WorldPawns; the postfix only pins that entry.
+        Find.WorldPawns.PassToWorld(enemy, RimWorld.Planet.PawnDiscardDecideMode.Decide);
         EnemyWarPartyService.RetainDepartedPawn(enemy);
         if (ready) Find.TickManager.TicksGame += 180000;
         return enemy;
@@ -79,8 +81,9 @@ internal static class SummoningTests
     private static void CheckReturned(Pawn enemy, int since)
     {
         Check(!enemy.Spawned && Find.WorldPawns.Contains(enemy) && enemy.Lord == null, "failed raid leaked map pawn or lord");
-        Check(!enemy.Destroyed && enemy.becameWorldPawnTickAbs == since && enemy.State.PresenceState == ServantPresenceState.DefeatedSpirit,
-            "failed raid reset rest or presence");
+        Check(!enemy.Destroyed && State.CurrentWarEntry.EnemyRestStartTickAbs == since
+            && enemy.State.PresenceState == ServantPresenceState.DefeatedSpirit,
+            "failed raid reset rest deadline or presence");
         Check(enemy.State.Master == State.CurrentWarEntry.EnemyMaster && PawnGenerator.Created.Count == 2
             && State.warStartTick == 1234 && State.CurrentWarEntry.RegularSummonUsed, "failed raid changed pair or player settlement");
     }
@@ -121,21 +124,28 @@ internal static class SummoningTests
             State.ExposeData(); Scribe.Loading = true; Current.Game = new Game(); State.ExposeData(); State.LoadedGame();
             Check(State.CurrentWarEntry.EnemyServant == enemy && EnemyRestUtility.TicksRemaining(enemy) == 120000 && !Deploy(), "reload changed rest deadline");
         });
+        Test("vanilla world transfer pins original rest deadline", () => {
+            Pawn enemy = RestEnemy(false); int startedAt = State.CurrentWarEntry.EnemyRestStartTickAbs;
+            Check(Find.WorldPawns.Contains(enemy) && Find.WorldPawns.ForcefullyKeptPawns.Contains(enemy)
+                && startedAt == 3601234, "departure did not retain original world pawn");
+            Find.TickManager.TicksGame += 60000;
+            Check(EnemyRestUtility.TicksRemaining(enemy) == 120000, "rest deadline did not advance from departure");
+        });
         Test("redeploy spawn failure returns same spirit and deadline", () => {
-            Pawn enemy = RestEnemy(); int since = enemy.becameWorldPawnTickAbs; GenSpawn.Fail = true;
+            Pawn enemy = RestEnemy(); int since = State.CurrentWarEntry.EnemyRestStartTickAbs; GenSpawn.Fail = true;
             Check(!Deploy(), "spawn failure accepted"); CheckReturned(enemy, since);
             GenSpawn.Fail = false; Check(Deploy(), "failed raid locked retry");
         });
         Test("redeploy unreachable edge returns original pawn", () => {
-            Pawn enemy = RestEnemy(); int since = enemy.becameWorldPawnTickAbs; Pawn.EdgeBlocked = true;
+            Pawn enemy = RestEnemy(); int since = State.CurrentWarEntry.EnemyRestStartTickAbs; Pawn.EdgeBlocked = true;
             Check(!Deploy(), "blocked exit accepted"); CheckReturned(enemy, since);
         });
         Test("partial lord failure removes registered lord", () => {
-            Pawn enemy = RestEnemy(); int since = enemy.becameWorldPawnTickAbs; Verse.AI.Group.LordMaker.Fail = true;
+            Pawn enemy = RestEnemy(); int since = State.CurrentWarEntry.EnemyRestStartTickAbs; Verse.AI.Group.LordMaker.Fail = true;
             Check(!Deploy(), "lord failure accepted"); CheckReturned(enemy, since);
         });
         Test("materialization failure returns resting spirit", () => {
-            Pawn enemy = RestEnemy(); int since = enemy.becameWorldPawnTickAbs; ServantLifecycleService.Fail = true;
+            Pawn enemy = RestEnemy(); int since = State.CurrentWarEntry.EnemyRestStartTickAbs; ServantLifecycleService.Fail = true;
             Check(!Deploy(), "presence failure accepted"); CheckReturned(enemy, since);
         });
         Test("reentrant redeploy cannot create another lord or pawn", () => {
@@ -177,6 +187,7 @@ internal static class SummoningTests
         });
         Test("departed enemy is retained as same pawn", () => {
             PrepareEnemy(); Check(Deploy(), "deployment failed"); Pawn enemy = State.CurrentWarEntry.EnemyServant; enemy.Spawned = false;
+            Find.WorldPawns.PassToWorld(enemy, RimWorld.Planet.PawnDiscardDecideMode.Decide);
             EnemyWarPartyService.RetainDepartedPawn(enemy); Check(Find.WorldPawns.Contains(enemy), "lost departed enemy");
         });
         Test("Saber reserves Archer opponent without spawning", () => {
@@ -290,9 +301,10 @@ namespace Verse
     {
         public bool FailPass;
         public HashSet<Pawn> Pawns = new HashSet<Pawn>();
+        public HashSet<Pawn> ForcefullyKeptPawns = new HashSet<Pawn>();
         public bool Contains(Pawn p) => Pawns.Contains(p);
         public void RemoveAndDiscardPawnViaGC(Pawn p) { Pawns.Remove(p); }
-        public void RemovePawn(Pawn p) { Pawns.Remove(p); p.becameWorldPawnTickAbs = -1; }
+        public void RemovePawn(Pawn p) { Pawns.Remove(p); ForcefullyKeptPawns.Remove(p); p.becameWorldPawnTickAbs = -1; }
         public void PassToWorld(Pawn p, RimWorld.Planet.PawnDiscardDecideMode mode)
         { if (!Pawns.Add(p)) throw new Exception("duplicate world pawn"); p.becameWorldPawnTickAbs = GenTicks.TicksAbs; if (FailPass) throw new Exception("world retention"); }
     }
@@ -447,7 +459,7 @@ namespace MoonWorld
         public bool TryPrepareEnemyRaid(Pawn pawn, out string rejection) { rejection = "materialization"; if (Fail) return false; pawn.State.PresenceState = ServantPresenceState.Materialized; return true; }
     }
 }
-namespace RimWorld.Planet { public enum PawnDiscardDecideMode { KeepForever } }
+namespace RimWorld.Planet { public enum PawnDiscardDecideMode { Decide, KeepForever } }
 namespace Verse.AI.Group
 {
     public class Lord { public Pawn Pawn; }
