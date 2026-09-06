@@ -7,7 +7,7 @@
 - 更新日期：2026-09-06
 - 仓库：`D:\AGENT工作区\rimworld\MoonWorld`
 - 分支：`main`
-- 已验收功能提交：`ea2878f Remove paired departure restrictions and support spirit retreat`；用户已确认开放简易工坊后发现的主从离图阻塞修正“验证完毕”。前置工坊实现为 `315b94a`。
+- 已验收功能提交：`817ea9c Support independent servant travel and cross-map actions`，前置为 `ff889c5`；用户反馈“可以了”，确认独立行动与跨图魔力切片，要求先接入依赖中的七名从者，再开始多阵营运行基础。
 - 游戏目录：`G:\steam\steamapps\common\RimWorld`
 - 测试部署目录：`G:\steam\steamapps\common\RimWorld\Mods\MoonWorld`
 - 视觉与角色原型：`D:\AGENT工作区\rimworld\HolyGrailWarTest`
@@ -94,6 +94,8 @@
 
 ## 3. 最近验收记录
 
+- `ff889c5` / `817ea9c`：扩展计划已写入 `docs/design/HolyGrailWar_Expansion_Plan.md`。主从同地图、同一远行队或同组旅行运输工具时最低维持线为基础值；分离时默认乘 2，通过原版 Stat 允许特殊能力修正，断供、自愈和显示共用计算。玩家旅行进入统一魔力周期，从者自身宝具和地图内形态切换允许御主异图；令咒过载仍要求同图。用户反馈“可以了”，按整体验收记录。267 项宿主场景、26 个 Harmony 目标与 16 份 XML 检查通过，部署 DLL 哈希已核对；不追认所有第三方旅行容器均测试通过。
+
 - `059f66a Keep summoned servants on map`：修复从者按访客计时离图，加入旧存档 Lord 迁移。
 - `163a4a4 Regenerate chronic servant conditions`：加入长期损伤治疗策略及 `conditionCurePranaCost=40`。
 - RimWorld 1.6 编译通过。
@@ -148,7 +150,7 @@
 
 ## 6. 下一开发切片
 
-当前无已授权的新功能切片。简易工坊和主从独立撤离已完成本轮验证，不重新列为未开工。
+当前已授权：在扩展计划切片 2 之前，先依赖接入 HolyGrailWarTest 已实现的七名从者，每职阶一名；不迁移资源、不修改原型、不提前实现七阵营运行。独立行动与跨图魔力切片已经用户确认，不重新列为待验收。
 
 主动进攻和撤离再战已获用户明确确认，不再作为下一项待办。后续先评估 MVP 之后的扩展优先级；已验收机制仅在出现具体问题或相关代码变化时回归，不重复要求用户测试同一路径。
 
