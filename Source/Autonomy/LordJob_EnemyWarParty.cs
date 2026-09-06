@@ -32,7 +32,7 @@ namespace MoonWorld
         {
             if (Retreating) return;
             HolyGrailWarEntry entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
-            if (entry == null || !entry.EnemyDeployed) return;
+            if (entry == null || (!entry.EnemyDeployed && !(lord.Map.Parent is Site_WarWorkshop))) return;
             if (entry.EnemyEliminated || entry.EnemyMaster.Downed || entry.EnemyMaster.IsPrisoner
                 || entry.EnemyServant.IsPrisoner || ServantQuery.Instance.IsSpirit(entry.EnemyServant))
             {

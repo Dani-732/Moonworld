@@ -91,6 +91,13 @@ internal static class RuntimeContractChecks
                 throw new Exception("Invalid XML/Scribe entry type: " + pair[0]);
         }
         Type stateType = mod.GetType("MoonWorld.GameComponent_MoonWorld", true);
+        Type outpostType = game.GetType("RimWorld.GenStep_Outpost", true);
+        foreach (string field in new[] { "size", "settlementDontGeneratePawns", "allowGeneratingThronerooms", "allowGeneratingFarms", "generateLoot" })
+            if (outpostType.GetField(field) == null) throw new Exception("Native Outpost setting missing: " + field);
+        Type workshopType = mod.GetType("MoonWorld.Site_WarWorkshop", true);
+        if (workshopType.GetMethod("GetFloatMenuOptions").DeclaringType != game.GetType("RimWorld.Planet.Site")
+            || workshopType.GetMethod("GetGizmos").DeclaringType != game.GetType("RimWorld.Planet.Site"))
+            throw new Exception("Workshop must inherit the native site entry and caravan gizmos");
         Type questType = game.GetType("RimWorld.Quest", true);
         if (questType.GetMethod("MakeRaw", BindingFlags.Public | BindingFlags.Static) == null
             || questType.GetMethod("End", new[] { game.GetType("RimWorld.QuestEndOutcome", true), typeof(bool), typeof(bool) }) == null

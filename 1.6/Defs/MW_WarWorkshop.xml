@@ -3,9 +3,14 @@
   <WorldObjectDef ParentName="StaticWorldObjectBase">
     <defName>MW_WarWorkshop</defName>
     <label>敌方魔术工坊</label>
-    <description>敌方御主设立的魔术工坊。御主在场外留守，从者可独自出击。当前仅显示据点位置，暂不开放工坊地图。</description>
+    <description>敌方御主设立的简易魔术工坊。可派远行队进攻，打击留守御主；外出突袭的从者不会同时出现在这里。</description>
     <worldObjectClass>MoonWorld.Site_WarWorkshop</worldObjectClass>
-    <canHaveMap>false</canHaveMap>
+    <canHaveMap>true</canHaveMap>
+    <comps>
+      <li Class="WorldObjectCompProperties_FormCaravan" />
+      <li Class="WorldObjectCompProperties_TimedDetectionRaids" />
+      <li Class="WorldObjectCompProperties_EnterCooldown" />
+    </comps>
     <expandingIcon>true</expandingIcon>
     <expandingIconPriority>70</expandingIconPriority>
   </WorldObjectDef>
@@ -19,5 +24,28 @@
     <applyFactionColorToSiteTexture>true</applyFactionColorToSiteTexture>
     <showFactionInInspectString>true</showFactionInInspectString>
     <requiresFaction>true</requiresFaction>
+    <approachOrderString>进攻{0}</approachOrderString>
+    <approachingReportString>正在进攻{0}。</approachingReportString>
+    <arrivedLetter>远行队已抵达敌方魔术工坊。击杀敌方御主或使敌方从者湮灭才能淘汰该阵营；摧毁建筑不等于战争胜利。</arrivedLetter>
+    <arrivedLetterDef>NegativeEvent</arrivedLetterDef>
+    <disallowsAutomaticDetectionTimerStart>true</disallowsAutomaticDetectionTimerStart>
   </SitePartDef>
+  <GenStepDef>
+    <defName>MW_WarWorkshopOutpost</defName>
+    <linkWithSite>MW_WarWorkshopPart</linkWithSite>
+    <order>400</order>
+    <genStep Class="GenStep_Outpost">
+      <size>16</size>
+      <settlementDontGeneratePawns>true</settlementDontGeneratePawns>
+      <allowGeneratingThronerooms>false</allowGeneratingThronerooms>
+      <allowGeneratingFarms>false</allowGeneratingFarms>
+      <generateLoot>false</generateLoot>
+    </genStep>
+  </GenStepDef>
+  <GenStepDef>
+    <defName>MW_WarWorkshopPower</defName>
+    <linkWithSite>MW_WarWorkshopPart</linkWithSite>
+    <order>401</order>
+    <genStep Class="GenStep_Power" />
+  </GenStepDef>
 </Defs>

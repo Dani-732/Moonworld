@@ -7,6 +7,7 @@ try {
         (Join-Path $PSScriptRoot 'WarStartupHost.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\EnemyWarPreparation.cs') `
         (Join-Path $projectRoot 'Source\Integration\Site_WarWorkshop.cs') `
+        (Join-Path $projectRoot 'Source\Lifecycle\WarWorkshopService.cs') `
         (Join-Path $PSScriptRoot 'SummoningTests.cs') `
         (Join-Path $projectRoot 'Source\Core\HolyGrailWarEntry.cs') `
         (Join-Path $projectRoot 'Source\Core\HolyGrailWarClass.cs') `

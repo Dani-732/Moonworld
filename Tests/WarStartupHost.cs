@@ -17,6 +17,7 @@ namespace Verse
 namespace RimWorld
 {
     public class QuestScriptDef { }
+    public class LordJob_DefendBase { public LordJob_DefendBase(Faction faction, IntVec3 cell, int delay) { } }
     public enum QuestEndOutcome { Success, Fail }
     public enum QuestState { Ongoing, EndedSuccess, EndedFailed }
     public static class QuestScriptDefOf { public static QuestScriptDef WandererJoins = new QuestScriptDef(); }
@@ -63,6 +64,11 @@ namespace RimWorld.Planet
     public class SitePart { public SitePart(Site site, SitePartDef def, SitePartParams parms) { } }
     public class Site : WorldObject
     {
+        public Map Map; public bool HasMap => Map != null;
+        public virtual void PostMapGenerate() { }
+        protected virtual void TickInterval(int delta) { }
+        public virtual void Notify_MyMapAboutToBeRemoved() { }
+        public virtual bool ShouldRemoveMapNow(out bool remove) { remove = true; return true; }
         public PlanetTile Tile; public bool Destroyed; public Faction Faction;
         public bool Spawned => Find.WorldObjects.All.Contains(this);
         public void SetFaction(Faction faction) { Faction = faction; }

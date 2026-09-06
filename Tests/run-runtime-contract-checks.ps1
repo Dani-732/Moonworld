@@ -22,9 +22,17 @@ try {
     [xml]$mwWorkshop = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_WarWorkshop.xml') -Raw
     $mwSite = $mwWorkshop.SelectSingleNode('/Defs/WorldObjectDef[defName="MW_WarWorkshop"]')
     $mwPart = $mwWorkshop.SelectSingleNode('/Defs/SitePartDef[defName="MW_WarWorkshopPart"]')
-    if ($mwSite.ParentName -ne 'StaticWorldObjectBase' -or $mwSite.canHaveMap -ne 'false' -or
+    if ($mwSite.ParentName -ne 'StaticWorldObjectBase' -or $mwSite.canHaveMap -ne 'true' -or
         $mwSite.worldObjectClass -ne 'MoonWorld.Site_WarWorkshop' -or $mwPart.workerClass -ne 'SitePartWorker' -or
-        $mwSite.comps -or $mwPart.extraGenStepDefs) { throw 'Workshop must remain a persistent non-enterable Site without raid-generation parts' }
+        $mwPart.disallowsAutomaticDetectionTimerStart -ne 'true') { throw 'Workshop map or safe native site configuration missing' }
+    foreach ($mwComp in @('WorldObjectCompProperties_FormCaravan','WorldObjectCompProperties_TimedDetectionRaids','WorldObjectCompProperties_EnterCooldown')) {
+        if ($mwSite.SelectNodes("comps/li[@Class='$mwComp']").Count -ne 1) { throw "Workshop missing native component: $mwComp" }
+    }
+    $mwOutpostStep = $mwWorkshop.SelectSingleNode('/Defs/GenStepDef[defName="MW_WarWorkshopOutpost"]')
+    if ($mwOutpostStep.linkWithSite -ne 'MW_WarWorkshopPart' -or $mwOutpostStep.genStep.Class -ne 'GenStep_Outpost' -or
+        $mwOutpostStep.genStep.settlementDontGeneratePawns -ne 'true' -or $mwOutpostStep.genStep.generateLoot -ne 'false') {
+        throw 'Workshop must reuse the native Outpost generator without new defenders or repeat loot'
+    }
     [xml]$mwOutpost = Get-Content (Join-Path $RimWorldPath 'Data\Core\Defs\Sites\Parts\Outpost.xml') -Raw
     $mwNativePart = $mwOutpost.SelectSingleNode('/Defs/SitePartDef[defName="Outpost"]')
     if ($mwPart.siteTexture -ne $mwNativePart.siteTexture -or $mwPart.expandingIconTexture -ne $mwNativePart.expandingIconTexture) {

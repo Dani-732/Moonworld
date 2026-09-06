@@ -439,6 +439,83 @@ internal static class SummoningTests
                 && Find.QuestManager.QuestsListForReading.Count == 1 && State.warStartTick == 1234
                 && PawnGenerator.Created.Count == 3, "missing quest reopened legacy war");
         });
+        Test("workshop deploys original pair once without healing or spending qualification", () => {
+            PrepareEnemy(); var entry = State.CurrentWarEntry; var site = (Site_WarWorkshop)Find.WorldObjects.All[0];
+            site.Map = new Map { IsPlayerHome = false }; entry.EnemyServant.needs.Prana.CurLevel = 37;
+            site.PostMapGenerate(); site.PostMapGenerate();
+            Check(entry.EnemyMaster.Map == site.Map && entry.EnemyServant.Map == site.Map
+                && entry.EnemyServant.needs.Prana.CurLevel == 37 && PawnGenerator.Created.Count == 3
+                && entry.EnemyServant.State.Master == entry.EnemyMaster && State.warStartTick == 1234
+                && !Deploy(), "workshop duplicated, reset or redeployed participants");
+        });
+        Test("workshop does not pull servant back from an active raid", () => {
+            PrepareEnemy(); Check(Deploy(), "raid failed"); var entry = State.CurrentWarEntry;
+            var site = (Site_WarWorkshop)Find.WorldObjects.All[0]; site.Map = new Map { IsPlayerHome = false };
+            site.PostMapGenerate();
+            Check(entry.EnemyMaster.Map == site.Map && entry.EnemyServant.Map == map
+                && PawnGenerator.Created.Count == 3, "raid servant duplicated or teleported");
+        });
+        Test("workshop preserves resting spirit and deadline through departure and reentry", () => {
+            Pawn enemy = RestEnemy(false); int since = State.CurrentWarEntry.EnemyRestStartTickAbs;
+            enemy.needs.Prana.CurLevel = 17; var site = (Site_WarWorkshop)Find.WorldObjects.All[0];
+            site.Map = new Map { IsPlayerHome = false }; site.PostMapGenerate();
+            Check(enemy.State.PresenceState == ServantPresenceState.DefeatedSpirit && enemy.needs.Prana.CurLevel == 17, "ambush healed defender");
+            bool removeSite; Check(site.ShouldRemoveMapNow(out removeSite) && !removeSite, "retreat deleted live site");
+            site.Notify_MyMapAboutToBeRemoved();
+            Check(!enemy.Spawned && EnemyContractUtility.IsResting(enemy)
+                && State.CurrentWarEntry.EnemyRestStartTickAbs == since, "map unload lost pair or restarted rest");
+            site.Map = new Map { IsPlayerHome = false }; site.PostMapGenerate();
+            Check(enemy.Map == site.Map && PawnGenerator.Created.Count == 3 && enemy.needs.Prana.CurLevel == 17, "reentry reset pawn");
+        });
+        Test("workshop partial spawn and lord failures return same world pawns", () => {
+            foreach (int failure in new[] { 0, 1, 2 }) {
+                Setup(); PrepareEnemy(); var site = (Site_WarWorkshop)Find.WorldObjects.All[0];
+                site.Map = new Map { IsPlayerHome = false };
+                GenSpawn.Fail = failure == 0; Verse.AI.Group.LordMaker.Fail = failure == 1; CellFinder.Fail = failure == 2;
+                Check(!WarWorkshopService.TryPlaceDefenders(site), "workshop failure accepted");
+                var entry = State.CurrentWarEntry;
+                Check(!entry.EnemyMaster.Spawned && !entry.EnemyServant.Spawned
+                    && Find.WorldPawns.Contains(entry.EnemyMaster) && Find.WorldPawns.Contains(entry.EnemyServant)
+                    && entry.EnemyMaster.Lord == null && entry.EnemyServant.Lord == null
+                    && PawnGenerator.Created.Count == 3, "workshop failed to rollback original pawns");
+                GenSpawn.Fail = Verse.AI.Group.LordMaker.Fail = CellFinder.Fail = false;
+                Check(WarWorkshopService.TryPlaceDefenders(site), "workshop retry locked");
+            }
+        });
+        Test("captured and transported enemies are never pulled into workshop", () => {
+            PrepareEnemy(); var entry = State.CurrentWarEntry; entry.EnemyMaster.IsPrisoner = true;
+            entry.EnemyServant.ParentHolder = new object(); var site = (Site_WarWorkshop)Find.WorldObjects.All[0];
+            site.Map = new Map { IsPlayerHome = false }; site.PostMapGenerate();
+            Check(!entry.EnemyMaster.Spawned && !entry.EnemyServant.Spawned, "holder stolen");
+        });
+        Test("defeated workshop owner permits site removal and normal war victory", () => {
+            PrepareEnemy(); var site = (Site_WarWorkshop)Find.WorldObjects.All[0]; site.Map = new Map { IsPlayerHome = false };
+            site.PostMapGenerate(); State.CurrentWarEntry.EnemyMaster.Dead = true; WarOutcomeService.Tick(State);
+            bool removeSite; Check(site.ShouldRemoveMapNow(out removeSite) && removeSite
+                && State.CurrentWarOutcome == WarOutcome.PlayerVictory && State.warQuest.State == QuestState.EndedSuccess,
+                "workshop victory mismatch");
+        });
+        Test("workshop retreat before first raid starts real rest duration", () => {
+            PrepareEnemy(); var site = (Site_WarWorkshop)Find.WorldObjects.All[0]; site.Map = new Map { IsPlayerHome = false };
+            site.PostMapGenerate(); site.Notify_MyMapAboutToBeRemoved();
+            Check(EnemyRestUtility.TicksRemaining(State.CurrentWarEntry.EnemyServant) == 180000 && !Deploy(), "workshop retreat bypassed rest");
+        });
+        Test("ready resting spirit can defend workshop without resetting mana or rest", () => {
+            Pawn enemy = RestEnemy(); enemy.needs.Prana.CurLevel = 80;
+            int since = State.CurrentWarEntry.EnemyRestStartTickAbs;
+            var site = (Site_WarWorkshop)Find.WorldObjects.All[0]; site.Map = new Map { IsPlayerHome = false };
+            site.PostMapGenerate();
+            Check(enemy.State.PresenceState == ServantPresenceState.Materialized && enemy.needs.Prana.CurLevel == 80
+                && State.CurrentWarEntry.EnemyRestStartTickAbs == since, "ready defender reset resources");
+        });
+        Test("workshop loaded deployment marker preserves already deployed defenders", () => {
+            PrepareEnemy(); var site = (Site_WarWorkshop)Find.WorldObjects.All[0]; site.Map = new Map { IsPlayerHome = false };
+            site.PostMapGenerate(); var enemy = State.CurrentWarEntry.EnemyServant;
+            site.ExposeData(); Scribe.Loading = true; var loaded = new Site_WarWorkshop { Map = site.Map };
+            loaded.ExposeData(); loaded.PostMapGenerate();
+            Check(enemy.Map == site.Map && PawnGenerator.Created.Count == 3
+                && loaded.OwnerMaster == site.OwnerMaster, "site reload duplicated participants");
+        });
         Console.WriteLine(passed + " entry and summoning scenarios passed. Native UI, XML loading and real save/load require in-game testing.");
     }
 }
@@ -470,7 +547,10 @@ namespace Verse
         public void PassToWorld(Pawn p, RimWorld.Planet.PawnDiscardDecideMode mode)
         { if (!Pawns.Add(p)) throw new Exception("duplicate world pawn"); p.becameWorldPawnTickAbs = GenTicks.TicksAbs; if (FailPass) throw new Exception("world retention"); }
     }
-    public class Map { public PlanetTile Tile = new PlanetTile(); public bool IsPlayerHome = true, CanEverExit = true; public Verse.AI.Group.LordManager lordManager = new Verse.AI.Group.LordManager(); }
+    public class Map { public IntVec3 Center => new IntVec3 { Valid = true }; public Reachability reachability = new Reachability(); public PlanetTile Tile = new PlanetTile(); public bool IsPlayerHome = true, CanEverExit = true; public Verse.AI.Group.LordManager lordManager = new Verse.AI.Group.LordManager(); }
+    public enum TraverseMode { PassDoors }
+    public struct TraverseParms { public static TraverseParms For(TraverseMode mode) => new TraverseParms(); }
+    public class Reachability { public bool CanReachMapEdge(IntVec3 cell, TraverseParms parms) => !Pawn.EdgeBlocked; }
     public struct IntVec3 { public bool Valid, Fog, Occupied; public int Id; public bool InBounds(Map m) => Valid; public bool Standable(Map m) => Valid; public bool Fogged(Map m) => Fog;
         public Pawn GetFirstPawn(Map m) => Occupied ? new Pawn() : null;
         public static bool operator ==(IntVec3 a, IntVec3 b) => a.Id == b.Id; public static bool operator !=(IntVec3 a, IntVec3 b) => a.Id != b.Id;
@@ -616,7 +696,7 @@ namespace MoonWorld
     public enum ServantPresenceState { Materialized, Annihilated, DefeatedSpirit }
     public class Need_Prana { public float CurLevel, MaxLevel = 100; }
     public class CompServantState { public Pawn Master; public ServantPresenceState PresenceState; public void Bind(Pawn p) { Master = p; } }
-    public class ServantQuery { public static ServantQuery Instance = new ServantQuery(); public bool IsServant(Pawn p) => p.Servant; public Pawn GetMaster(Pawn p) => p?.State.Master; }
+    public class ServantQuery { public static ServantQuery Instance = new ServantQuery(); public bool IsServant(Pawn p) => p.Servant; public bool IsSpirit(Pawn p) => p?.State.PresenceState == ServantPresenceState.DefeatedSpirit; public Pawn GetMaster(Pawn p) => p?.State.Master; }
     public static class ServantIdentityUtility { public static ServantIdentityDef GetIdentity(Pawn p) => p?.Identity; public static ServantResourceProfileDef GetProfile(Pawn p) => new ServantResourceProfileDef(); }
     public class ServantResourceProfileDef { public float materializedSustainThreshold = 30; }
     public static class ServantHealingPolicy { public static Hediff FindWorstCurableCondition(Pawn p) => null; }
@@ -630,6 +710,7 @@ namespace MoonWorld
         { pawn.State.Bind(master); rejection = "binding failure"; Callback?.Invoke(pawn); if (Fail) throw new Exception("binding"); return true; }
         public bool TryBindEnemy(Pawn master, Pawn pawn, out string rejection) => TryBind(master, pawn, out rejection);
         public bool TryPrepareEnemyRaid(Pawn pawn, out string rejection) { rejection = "materialization"; if (Fail) return false; pawn.State.PresenceState = ServantPresenceState.Materialized; return true; }
+        public bool TryRematerialize(Pawn master, Pawn pawn, out string reason) => TryPrepareEnemyRaid(pawn, out reason);
     }
 }
 namespace RimWorld.Planet { public enum PawnDiscardDecideMode { Decide, KeepForever } }
