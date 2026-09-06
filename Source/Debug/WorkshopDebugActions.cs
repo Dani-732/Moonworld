@@ -18,18 +18,39 @@ namespace MoonWorld
                 foreach (var enemy in war.CurrentWarEntry.Enemies)
                 {
                     EnemyWarParticipant selected = enemy;
-                    string label = enemy.Seat?.label ?? "未知职阶";
-                    options.Add(new FloatMenuOption(label + "：查看状态", () => Show(war, selected)));
-                    options.Add(new FloatMenuOption(label + "：一键恢复敌方从者伤势", () => RestoreServant(war, selected, refillPrana: false)));
-                    options.Add(new FloatMenuOption(label + "：回满敌方从者魔力", () => RestoreServant(war, selected, refillPrana: true)));
-                    options.Add(new FloatMenuOption(label + "：跳过时间并尝试重建", () =>
-                    {
-                        bool rebuilt = WorkshopRebuildService.TryRebuild(war, selected, out string reason, ignoreTime: true);
-                        Show(war, selected, rebuilt ? "已使用原主从重建工坊。" : "重建未执行：" + reason);
-                    }));
+                    string state = enemy.EnemyEliminated ? "已淘汰" : enemy.WorkshopRebuildPending ? "等待重建"
+                        : WorkshopRebuildService.BlocksRaid(enemy) ? "工坊撤退中" : "参战中";
+                    options.Add(new FloatMenuOption(ParticipantLabel(enemy) + "（" + state + "）", () => OpenActions(war, selected)));
                 }
             if (options.Count == 0) Find.WindowStack.Add(new Dialog_MessageBox("本届没有敌方阵营记录。"));
             else Find.WindowStack.Add(new FloatMenu(options));
+        }
+
+        private static string ParticipantLabel(EnemyWarParticipant enemy)
+            => (enemy.Seat?.label ?? "未知职阶") + " / " + (enemy.EnemyServant?.LabelShortCap.ToString() ?? "无从者")
+                + " / 御主 " + (enemy.EnemyMaster?.LabelShortCap.ToString() ?? "无");
+
+        private static void OpenActions(GameComponent_MoonWorld war, EnemyWarParticipant enemy)
+        {
+            string label = ParticipantLabel(enemy);
+            var options = new List<FloatMenuOption>
+            {
+                new FloatMenuOption(label + "：查看状态", () => Show(war, enemy)),
+                new FloatMenuOption(label + "：一键恢复敌方从者伤势", () => RestoreServant(war, enemy, refillPrana: false)),
+                new FloatMenuOption(label + "：回满敌方从者魔力", () => RestoreServant(war, enemy, refillPrana: true)),
+                new FloatMenuOption(label + "：跳过时间并尝试重建", () =>
+                {
+                    bool rebuilt = WorkshopRebuildService.TryRebuild(war, enemy, out string reason, ignoreTime: true);
+                    Show(war, enemy, rebuilt ? "已使用原主从重建工坊。" : "重建未执行：" + reason);
+                }),
+                new FloatMenuOption(label + "：定位现存工坊", () =>
+                {
+                    Site_WarWorkshop site = WorkshopRebuildService.FindWorkshop(enemy);
+                    if (site == null) Show(war, enemy, "所选阵营当前没有工坊，请查看下方重建条件。");
+                    else CameraJumper.TryJumpAndSelect(site);
+                })
+            };
+            Find.WindowStack.Add(new FloatMenu(options));
         }
 
         private static void RestoreServant(GameComponent_MoonWorld war, EnemyWarParticipant enemy, bool refillPrana)

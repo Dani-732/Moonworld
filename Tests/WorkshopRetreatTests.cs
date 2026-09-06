@@ -59,6 +59,28 @@ internal static partial class SummoningTests
 
     private static void RunWorkshopTests()
     {
+        Test("workshop diagnostics identify selected faction without blocking another faction rebuild", () => {
+            SevenClasses(); var displaced = AbandonWorkshop();
+            var other = State.CurrentWarEntry.Enemies[1];
+            var intact = WorkshopRebuildService.FindWorkshop(other); intact.ID = 113;
+            Check(WorkshopRebuildService.FindWorkshop(displaced) == null
+                && WorkshopRebuildService.RebuildRejection(State, displaced, ignoreTime: true) == null,
+                "another faction workshop blocked displaced faction");
+            string report = WorkshopRebuildService.RebuildRejection(State, other);
+            Check(report.Contains(other.Seat.label) && report.Contains("#113") && report.Contains("未下达撤退"),
+                "intact site was mislabeled as a retreating old workshop");
+            Check(WorkshopRebuildService.TryRebuild(State, displaced, out _, ignoreTime: true), "displaced faction cannot rebuild");
+            Check(WorkshopRebuildService.FindWorkshop(other) == intact && Find.WorldObjects.All.Count == 6,
+                "unrelated workshop changed");
+            report = WorkshopRebuildService.RebuildRejection(State, displaced);
+            Check(report.Contains("未下达撤退") && !report.Contains("旧工坊"), "rebuilt workshop mislabeled as old");
+        });
+        Test("withdrawing workshop diagnostic identifies pending site removal", () => {
+            var site = EnterWorkshop(); site.ID = 111; DefeatAt(site);
+            string report = WorkshopRebuildService.RebuildRejection(State, State.CurrentWarEntry.Enemies[0]);
+            Check(report.Contains("#111") && report.Contains("已下达撤退") && report.Contains("尚未完成移除"),
+                "withdrawing site described as intact");
+        });
         Test("debug rebuild bypasses clocks but preserves original pawns and resources", () => {
             var enemy = AbandonWorkshop(); int rest = enemy.EnemyRestStartTickAbs;
             int now = GenTicks.TicksAbs; enemy.EnemyServant.needs.Prana.CurLevel = 85;
@@ -71,7 +93,7 @@ internal static partial class SummoningTests
         Test("debug rebuild reports blockers and never fabricates escape", () => {
             var site = EnterWorkshop(); var enemy = State.CurrentWarEntry.FindEnemy(site.OwnerMaster);
             Check(!WorkshopRebuildService.TryRebuild(State, enemy, out string reason, ignoreTime: true)
-                && reason.Contains("旧工坊"), "existing site bypassed");
+                && reason.Contains("已有工坊") && reason.Contains("未下达撤退"), "existing site bypassed or mislabeled");
             site.Map = null; site.Destroy();
             Check(!WorkshopRebuildService.TryRebuild(State, enemy, out reason, ignoreTime: true)
                 && reason.Contains("没有待重建记录"), "escape invented");

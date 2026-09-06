@@ -77,7 +77,7 @@ namespace RimWorld.Planet
         protected virtual void TickInterval(int delta) { }
         public virtual void Notify_MyMapAboutToBeRemoved() { }
         public virtual bool ShouldRemoveMapNow(out bool remove) { remove = true; return true; }
-        public PlanetTile Tile; public bool Destroyed; public Faction Faction;
+        public PlanetTile Tile; public int ID; public bool Destroyed; public Faction Faction;
         public bool Spawned => Find.WorldObjects.All.Contains(this);
         public void SetFaction(Faction faction) { Faction = faction; }
         public void AddPart(SitePart part) { }

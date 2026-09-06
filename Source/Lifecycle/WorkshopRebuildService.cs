@@ -13,12 +13,14 @@ namespace MoonWorld
                 && !pawn.IsPrisoner && !pawn.IsSlave && Find.WorldPawns.Contains(pawn);
         }
 
-        internal static bool HasWorkshop(EnemyWarParticipant enemy)
+        internal static bool HasWorkshop(EnemyWarParticipant enemy) => FindWorkshop(enemy) != null;
+
+        internal static Site_WarWorkshop FindWorkshop(EnemyWarParticipant enemy)
         {
             foreach (var worldObject in Find.WorldObjects.AllWorldObjects)
                 if (worldObject is Site_WarWorkshop site && !site.Destroyed && site.OwnerMaster == enemy.EnemyMaster)
-                    return true;
-            return false;
+                    return site;
+            return null;
         }
 
         internal static bool BlocksRaid(EnemyWarParticipant enemy)
@@ -59,7 +61,12 @@ namespace MoonWorld
             if (enemy == null || war.CurrentWarEntry == null || !war.CurrentWarEntry.Enemies.Contains(enemy))
                 return "不是本届敌方阵营。";
             if (enemy.EnemyEliminated) return "该阵营已淘汰，不能重建或复活。";
-            if (HasWorkshop(enemy)) return "旧工坊仍存在；需要主从实际逃脱，并在玩家离开后完成地图清理。";
+            Site_WarWorkshop existing = FindWorkshop(enemy);
+            if (existing != null)
+                return "所选阵营 " + enemy.Seat?.label + " 已有工坊 #" + existing.ID + "（地块 " + existing.Tile + "）。"
+                    + (existing.RetreatOrdered
+                        ? "该工坊已下达撤退命令，尚未完成移除；请核对双人逃脱及地图清理。"
+                        : "该工坊未下达撤退命令，不需要重复重建；请核对选择的职阶和从者。");
             if (!enemy.WorkshopRebuildPending) return "没有待重建记录；缺少双人逃脱及旧工坊移除记录，不能凭空补建。";
             if (!IsFreeSurvivor(enemy.EnemyMaster)) return "原御主不是自由场外角色；请查看御主位置、存活、被俘及持有容器。";
             if (!IsFreeSurvivor(enemy.EnemyServant)) return "原从者不是自由场外角色；请查看从者位置、存活、被俘及持有容器。";
