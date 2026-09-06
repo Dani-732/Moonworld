@@ -106,6 +106,16 @@ try {
         }
     }
     $mwFaction = $mwOpposition.SelectSingleNode('/Defs/FactionDef[defName="MW_WarOpposition"]')
+    if ($mwFaction.Name -ne 'MW_WarOpposition' -or $mwFaction.ParentName -ne 'FactionBase') {
+        throw 'Class faction inheritance must resolve through the XML Name attribute, not defName'
+    }
+    foreach ($mwSeat in @('Saber','Archer','Lancer','Assassin','Caster','Rider','Berserker')) {
+        $mwChild = $mwOpposition.SelectSingleNode("/Defs/FactionDef[defName='MW_WarOpposition_$mwSeat']")
+        if ($null -eq $mwChild -or $mwChild.ParentName -ne 'MW_WarOpposition' -or
+            $mwOpposition.SelectNodes("/Defs/FactionDef[@Name='$($mwChild.ParentName)']").Count -ne 1) {
+            throw "Class faction parent missing or ambiguous: $mwSeat"
+        }
+    }
     if ($mwOpposition.SelectNodes('/Defs/DutyDef[defName="MW_EnemyServantAssault"]/thinkNode/subNodes/li[1][@Class="MoonWorld.JobGiver_EnemyServantAssault"]').Count -ne 1) {
         throw 'Enemy duty must run servant targeting before vanilla assault fallback'
     }

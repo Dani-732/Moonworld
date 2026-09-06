@@ -7,7 +7,15 @@ namespace MoonWorld
     {
         public static bool IsWarPawn(Pawn pawn)
         {
-            return pawn?.Faction != null && pawn.Faction.def == MW_DefOf.MW_WarOpposition;
+            var def = pawn?.Faction?.def;
+            return def != null && (def == MW_DefOf.MW_WarOpposition
+                || def == MW_DefOf.MW_WarOpposition_Saber
+                || def == MW_DefOf.MW_WarOpposition_Archer
+                || def == MW_DefOf.MW_WarOpposition_Lancer
+                || def == MW_DefOf.MW_WarOpposition_Assassin
+                || def == MW_DefOf.MW_WarOpposition_Caster
+                || def == MW_DefOf.MW_WarOpposition_Rider
+                || def == MW_DefOf.MW_WarOpposition_Berserker);
         }
 
         public static bool HasEnemyContract(Pawn servant)

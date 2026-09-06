@@ -17,7 +17,7 @@
       </subNodes>
     </thinkNode>
   </DutyDef>
-  <FactionDef ParentName="FactionBase">
+  <FactionDef Name="MW_WarOpposition" ParentName="FactionBase">
     <defName>MW_WarOpposition</defName>
     <label>圣杯战争敌对参战方</label>
     <fixedName>圣杯战争敌对参战方</fixedName>

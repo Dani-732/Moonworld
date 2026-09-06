@@ -38,6 +38,9 @@ namespace MoonWorld
                     faction = FactionGenerator.NewGeneratedFaction(new FactionGeneratorParms(oppositionDef, hidden: true));
                     Find.FactionManager.Add(faction);
                 }
+                // Repair a faction retained by a failed summon under the old broken XML inheritance.
+                if (!faction.HostileTo(Faction.OfPlayer))
+                    faction.SetRelationDirect(Faction.OfPlayer, FactionRelationKind.Hostile, false);
                 if (!faction.HostileTo(Faction.OfPlayer))
                     throw new InvalidOperationException("敌方派系必须与玩家敌对。");
                 Master = PawnGenerator.GeneratePawn(new PawnGenerationRequest(MW_DefOf.MW_EnemyMaster, faction,
@@ -97,7 +100,8 @@ namespace MoonWorld
                 case HolyGrailWarClass.Rider: selected = MW_DefOf.MW_WarOpposition_Rider; break;
                 case HolyGrailWarClass.Berserker: selected = MW_DefOf.MW_WarOpposition_Berserker; break;
             }
-            return selected ?? MW_DefOf.MW_WarOpposition;
+            if (selected == null) throw new InvalidOperationException("敌方职阶派系定义缺失：" + seat);
+            return selected;
         }
 
         internal void Commit(HolyGrailWarEntry entry)

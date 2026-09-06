@@ -307,6 +307,9 @@ namespace MoonWorld
     public static class MW_DefOf
     {
         public static object MW_WarOpposition = new object(), MW_PranaShortage = new object();
+        public static object MW_WarOpposition_Saber = new object(), MW_WarOpposition_Archer = new object(),
+            MW_WarOpposition_Lancer = new object(), MW_WarOpposition_Assassin = new object(),
+            MW_WarOpposition_Caster = new object(), MW_WarOpposition_Rider = new object(), MW_WarOpposition_Berserker = new object();
         public static object MW_SeparatedSustainMultiplier = new object();
         public static MoonWorldSettingsDef MW_HolyGrailWarSettings = new MoonWorldSettingsDef();
     }

@@ -314,7 +314,8 @@ internal static class SummoningTests
         {
             int selected = i;
             Test("each class summons and reserves a different enemy: " + (HolyGrailWarClass)(i + 1), () => {
-                SevenClasses(); GenCollection.Draws.Enqueue(selected); Accept(); Check(Summon(), "class summon failed");
+                SevenClasses(); GenCollection.Draws.Enqueue(selected); GenCollection.Draws.Enqueue(0);
+                GenCollection.Draws.Enqueue(selected % 6); Accept(); Check(Summon(), "class summon failed");
                 Check(State.CurrentWarEntry.PlayerIdentity.warClass == (HolyGrailWarClass)(selected + 1)
                     && State.CurrentWarEntry.EnemyIdentity.warClass != State.CurrentWarEntry.PlayerIdentity.warClass,
                     "wrong player or enemy class");
@@ -322,12 +323,35 @@ internal static class SummoningTests
                     && GenCollection.Sizes[2] == 6 && GenCollection.Sizes[3] == 1, "not class-first draws");
                 Check(State.CurrentWarEntry.EnemyServant.State.Master == State.CurrentWarEntry.EnemyMaster
                     && Find.WorldObjects.All.Count == 1, "enemy contract/site missing");
+                var expectedDefs = new[] { MW_DefOf.MW_WarOpposition_Saber, MW_DefOf.MW_WarOpposition_Archer,
+                    MW_DefOf.MW_WarOpposition_Lancer, MW_DefOf.MW_WarOpposition_Assassin,
+                    MW_DefOf.MW_WarOpposition_Caster, MW_DefOf.MW_WarOpposition_Rider, MW_DefOf.MW_WarOpposition_Berserker };
+                Pawn enemyPawn = State.CurrentWarEntry.EnemyServant;
+                Check(enemyPawn.Faction.def == expectedDefs[(int)State.CurrentWarEntry.EnemyIdentity.warClass - 1]
+                    && Find.WorldObjects.All[0].Faction == enemyPawn.Faction
+                    && EnemyContractUtility.CanReceiveSupply(enemyPawn), "class faction rejected contract/supply or mismatched site");
                 var player = State.CurrentWarEntry.PlayerIdentity; var enemy = State.CurrentWarEntry.EnemyIdentity;
                 State.LoadedGame();
                 Check(State.CurrentWarEntry.PlayerIdentity == player && State.CurrentWarEntry.EnemyIdentity == enemy
                     && State.warStartTick == 1234 && GenCollection.Sizes.Count == 4, "reload rerolled participants");
+                Check(Deploy(), "class faction cannot raid");
             });
         }
+        Test("legacy opposition contract remains valid while unrelated factions are rejected", () => {
+            var legacy = new Faction { def = MW_DefOf.MW_WarOpposition };
+            Pawn owner = new Pawn { Faction = legacy }, pawn = new Pawn { Faction = legacy };
+            pawn.State.Bind(owner);
+            Check(EnemyContractUtility.HasEnemyContract(pawn), "legacy contract rejected");
+            pawn.Faction = new Faction { def = MW_DefOf.MW_WarOpposition_Saber };
+            Check(!EnemyContractUtility.HasEnemyContract(pawn), "cross-faction contract accepted");
+            Check(!EnemyContractUtility.IsWarPawn(new Pawn { Faction = new Faction { def = new FactionDef() } })
+                && !EnemyContractUtility.IsWarPawn(null), "unrelated faction accepted");
+        });
+        Test("failed summon saved neutral class faction can retry", () => {
+            var oldFaction = new Faction { def = MW_DefOf.MW_WarOpposition_Archer, Neutral = true };
+            Find.FactionManager.Add(oldFaction); Accept(); Check(Summon(), "neutral leftover blocked retry");
+            Check(State.CurrentWarEntry.EnemyMaster.Faction == oldFaction && oldFaction.HostileTo(Faction.OfPlayer), "leftover not repaired");
+        });
         Test("class weight is independent of population and duplicate extension tables", () => {
             var pools = DefDatabase<ServantSummonPoolDef>.AllDefsListForReading;
             var secondSaber = new ServantIdentityDef { warClass = HolyGrailWarClass.Saber };
@@ -610,7 +634,7 @@ namespace Verse
     public class FactionManager
     {
         private Faction faction;
-        public Faction FirstFactionOfDef(FactionDef def) => faction;
+        public Faction FirstFactionOfDef(FactionDef def) => faction?.def == def ? faction : null;
         public void Add(Faction f) { faction = f; }
     }
     public class TickManager { public int TicksGame; }
@@ -749,8 +773,15 @@ namespace RimWorld
     public class IncidentParms { public object target; }
     public class IncidentWorker { protected virtual bool CanFireNowSub(IncidentParms p) => true; protected virtual bool TryExecuteWorker(IncidentParms p) => false; public bool TryExecute(IncidentParms p) => TryExecuteWorker(p); }
     public static class MessageTypeDefOf { public static object ThreatBig = new object(), NegativeEvent = new object(), PositiveEvent = new object(); }
-    public class Faction { public FactionDef def; public bool HostileTo(Faction other) => def == MW_DefOf.MW_WarOpposition; public static Faction OfPlayer = new Faction(); }
-    public class FactionDef { }
+    public enum FactionRelationKind { Hostile }
+    public class Faction
+    {
+        public FactionDef def; public bool Neutral;
+        public bool HostileTo(Faction other) => def != null && def.permanentEnemy && !Neutral && other != this;
+        public void SetRelationDirect(Faction other, FactionRelationKind kind, bool letter) { Neutral = false; }
+        public static Faction OfPlayer = new Faction();
+    }
+    public class FactionDef { public bool permanentEnemy = true; }
     public struct FactionGeneratorParms { public FactionDef Def; public FactionGeneratorParms(FactionDef def, bool hidden) { Def = def; } }
     public static class FactionGenerator { public static Faction NewGeneratedFaction(FactionGeneratorParms p) => new Faction { def = p.Def }; }
     public static class PawnsFinder { public static List<Pawn> AllMapsAndWorld_Alive => PawnGenerator.Created; }
@@ -767,8 +798,9 @@ namespace MoonWorld
         public static TraitDef MW_CommandSpell = new TraitDef(), MW_MagusCircuit_Basic = new TraitDef(), MW_MageRank_Apprentice = new TraitDef();
         public static Settings MW_HolyGrailWarSettings = new Settings();
         public static FactionDef MW_WarOpposition = new FactionDef();
-        public static FactionDef MW_WarOpposition_Saber, MW_WarOpposition_Archer, MW_WarOpposition_Lancer,
-            MW_WarOpposition_Assassin, MW_WarOpposition_Caster, MW_WarOpposition_Rider, MW_WarOpposition_Berserker;
+        public static FactionDef MW_WarOpposition_Saber = new FactionDef(), MW_WarOpposition_Archer = new FactionDef(),
+            MW_WarOpposition_Lancer = new FactionDef(), MW_WarOpposition_Assassin = new FactionDef(),
+            MW_WarOpposition_Caster = new FactionDef(), MW_WarOpposition_Rider = new FactionDef(), MW_WarOpposition_Berserker = new FactionDef();
         public static PawnKindDef MW_EnemyMaster = new PawnKindDef(); public static object MW_Prana = new object(); public static WorldObjectDef MW_WarWorkshop = new WorldObjectDef(); public static SitePartDef MW_WarWorkshopPart = new SitePartDef();
     }
     public class Settings { public int pranaUpdateIntervalTicks = 250, enemyRestDurationTicks = 180000; public float enemyRaidPranaFraction = .8f; }
