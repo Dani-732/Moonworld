@@ -8,6 +8,8 @@
 
 ## 依赖规则
 
+工坊撤退切片补充（优先于下方旧阶段范围）：七阵营运行时由 `HolyGrailWarEntry.enemies` 保存，Quest 仅展示与归档。可进入的 `Site_WarWorkshop` 保存本地战败、撤退命令及逃脱标记；`WorkshopRetreatPolicy` 是可由外部魔术模块替换的决策接口，默认从者战败灵体化则御主撤退。`WarWorkshopService` 安排原版撤退职责，`WorkshopRebuildService` 消费实际逃脱结果，为原主从安排一个新 Site；重建期限归 `EnemyWarParticipant`，不复制魔力或契约。详细边界见 [工坊撤退与重建](design/HolyGrailWar_Workshop_Retreat.md)。本 Mod 不开发魔术系统。
+
 当前开战切片补充（优先于以下历史范围）：`ServantSummoningService` 拥有首召事务与最终开战提交；`EnemyWarPreparation` 负责敌方场外 Pawn、内容初始化、契约与初始 Site 的准备和回滚，并为已开战旧档提供一次性补齐。`EnemyWarPartyService` 只部署既有从者及处理离图保留。`HolyGrailWarContentBridge` 窄调用内容依赖自身的身份/装备初始化，不修改原型；`Site_WarWorkshop` 只保存位置和所属御主，不持有 Pawn 容器、魔力或胜负副本，暂不开放地图。最小胜负继续沿用已验收代码，未来多阵营 Quest 另行迁移。
 
 新增范围仅为已批准的七职阶定义与一组敌方主从交战测试：目前 Saber/Archer 互为对席，其余为空；不扩展到据点、自动突袭、休整再袭或战争胜负。敌方通过独立调试入口部署，用户游戏验收前不记为完成。
