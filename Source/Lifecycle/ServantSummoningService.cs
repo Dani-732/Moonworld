@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using RimWorld;
 using Verse;
 
@@ -7,7 +6,6 @@ namespace MoonWorld
     public sealed class ServantSummoningService : IServantSummoningService
     {
         public static readonly ServantSummoningService Instance = new ServantSummoningService();
-        private readonly List<ServantIdentityDef> candidates = new List<ServantIdentityDef>();
         private bool summoning;
 
         private ServantSummoningService() { }
@@ -24,15 +22,8 @@ namespace MoonWorld
             {
                 using (var enemyPreparation = new EnemyWarPreparation())
                 {
-                    candidates.Clear();
-                    foreach (ServantIdentityDef identity in DefDatabase<ServantIdentityDef>.AllDefsListForReading)
-                    {
-                        if (identity.summonable && identity.servantKind != null && identity.servantKind.race != null)
-                            candidates.Add(identity);
-                    }
-                    if (candidates.Count == 0) { rejection = "当前没有可召唤的从者。"; return false; }
-
-                    ServantIdentityDef selected = candidates.RandomElement();
+                    ServantIdentityDef selected = ServantSummonPoolDef.Pick();
+                    if (selected == null) { rejection = "当前没有可召唤的从者，请检查职阶召唤池与前置模组。"; return false; }
                     ServantIdentityDef opponent = HolyGrailWarClassUtility.PickOpponent(selected);
                     if (opponent == null)
                     {
@@ -43,6 +34,8 @@ namespace MoonWorld
                         Faction.OfPlayer, PawnGenerationContext.NonPlayer, forceGenerateNewPawn: true,
                         canGeneratePawnRelations: false, validatorPreGear: pawn => { generated = pawn; return true; }));
                     if (generated == null) throw new SummoningFailureException("从者生成未返回有效角色。");
+                    // Normalize dependency-owned full-body/loadout state before the first render pass.
+                    HolyGrailWarContentBridge.InitializeWorldServant(generated);
                     GenSpawn.Spawn(generated, cell, map, WipeMode.Vanish);
                     // The source mod's PostSpawnSetup owns appearance, loadout and body visibility.
                     if (!ServantLifecycleService.Instance.TryBind(master, generated, out rejection))

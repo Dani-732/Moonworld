@@ -29,10 +29,26 @@ internal static class SummoningTests
         PawnGenerator.FailAt = 0; PawnGenerator.FailAfterValidation = false;
         GenSpawn.Fail = ServantLifecycleService.Fail = false;
         GenSpawn.Callback = null; ServantLifecycleService.Callback = null;
+        HolyGrailWarContentBridge.Calls = HolyGrailWarContentBridge.FailAt = 0;
         DefDatabase<ServantIdentityDef>.AllDefsListForReading = new List<ServantIdentityDef> {
             new ServantIdentityDef { warClass = HolyGrailWarClass.Saber },
             new ServantIdentityDef { warClass = HolyGrailWarClass.Archer } };
+        SetPools(); GenCollection.Draws.Clear(); GenCollection.Sizes.Clear();
         Scribe.Loading = false; Scribe.Data.Clear();
+    }
+    private static void SetPools()
+    {
+        DefDatabase<ServantSummonPoolDef>.AllDefsListForReading = new List<ServantSummonPoolDef>();
+        foreach (ServantIdentityDef identity in DefDatabase<ServantIdentityDef>.AllDefsListForReading)
+            DefDatabase<ServantSummonPoolDef>.AllDefsListForReading.Add(new ServantSummonPoolDef {
+                warClass = identity.warClass, servants = new List<ServantIdentityDef> { identity } });
+    }
+    private static void SevenClasses()
+    {
+        DefDatabase<ServantIdentityDef>.AllDefsListForReading.Clear();
+        for (int i = 1; i <= 7; i++)
+            DefDatabase<ServantIdentityDef>.AllDefsListForReading.Add(new ServantIdentityDef { warClass = (HolyGrailWarClass)i });
+        SetPools();
     }
     private static void Test(string name, Action body) { Setup(); body(); passed++; Console.WriteLine("PASS " + name); }
     private static void Accept()
@@ -250,6 +266,14 @@ internal static class SummoningTests
         });
         Test("raid never calls pawn generation", () => { PrepareEnemy(); PawnGenerator.Fail = 1; Check(Deploy(), "raid tried to generate pawn"); });
         Test("dependency initialization failure rolls back startup", () => { Accept(); HolyGrailWarContentBridge.Fail = true; RejectUnspent(); });
+        Test("enemy dependency initialization failure rolls back player and enemy", () => {
+            Accept(); HolyGrailWarContentBridge.FailAt = 2; RejectUnspent();
+            Check(PawnGenerator.Created.Count == 3, "did not reach enemy content initialization");
+        });
+        Test("player dependency appearance initialized before spawn", () => {
+            Accept(); GenSpawn.Callback = () => Check(HolyGrailWarContentBridge.Calls == 1, "player rendered before initialization");
+            Check(Summon() && HolyGrailWarContentBridge.Calls == 2, "player/enemy initialization missing");
+        });
         Test("first raid spawn failure retains prepared pair", () => { PrepareEnemy(); GenSpawn.Fail = true; FailedDeployment(); });
         Test("first raid materialization failure retains prepared pair", () => { PrepareEnemy(); ServantLifecycleService.Fail = true; FailedDeployment(); });
         Test("first raid lord failure retains prepared pair", () => { PrepareEnemy(); Verse.AI.Group.LordMaker.Fail = true; FailedDeployment(); });
@@ -280,16 +304,71 @@ internal static class SummoningTests
                 && !State.CurrentWarEntry.EnemyDeployed, "incorrect opposing seat");
         });
         Test("Archer reserves Saber opponent", () => {
-            DefDatabase<ServantIdentityDef>.AllDefsListForReading.Reverse(); Accept(); Check(Summon(), "failed");
+            DefDatabase<ServantIdentityDef>.AllDefsListForReading.Reverse(); SetPools(); Accept(); Check(Summon(), "failed");
             Check(State.CurrentWarEntry.EnemyIdentity.warClass == HolyGrailWarClass.Saber, "incorrect opponent");
         });
         Test("missing opposite class leaves summon unspent", () => {
-            DefDatabase<ServantIdentityDef>.AllDefsListForReading.RemoveAt(1); Accept(); RejectUnspent();
+            DefDatabase<ServantIdentityDef>.AllDefsListForReading.RemoveAt(1); SetPools(); Accept(); RejectUnspent();
         });
-        Test("inactive five classes cannot invent opponents", () => {
-            foreach (HolyGrailWarClass seat in new[] { HolyGrailWarClass.Lancer, HolyGrailWarClass.Assassin,
-                HolyGrailWarClass.Caster, HolyGrailWarClass.Rider, HolyGrailWarClass.Berserker })
-                Check(HolyGrailWarClassUtility.Opponent(seat) == HolyGrailWarClass.None, "inactive seat activated");
+        for (int i = 0; i < 7; i++)
+        {
+            int selected = i;
+            Test("each class summons and reserves a different enemy: " + (HolyGrailWarClass)(i + 1), () => {
+                SevenClasses(); GenCollection.Draws.Enqueue(selected); Accept(); Check(Summon(), "class summon failed");
+                Check(State.CurrentWarEntry.PlayerIdentity.warClass == (HolyGrailWarClass)(selected + 1)
+                    && State.CurrentWarEntry.EnemyIdentity.warClass != State.CurrentWarEntry.PlayerIdentity.warClass,
+                    "wrong player or enemy class");
+                Check(GenCollection.Sizes[0] == 7 && GenCollection.Sizes[1] == 1
+                    && GenCollection.Sizes[2] == 6 && GenCollection.Sizes[3] == 1, "not class-first draws");
+                Check(State.CurrentWarEntry.EnemyServant.State.Master == State.CurrentWarEntry.EnemyMaster
+                    && Find.WorldObjects.All.Count == 1, "enemy contract/site missing");
+                var player = State.CurrentWarEntry.PlayerIdentity; var enemy = State.CurrentWarEntry.EnemyIdentity;
+                State.LoadedGame();
+                Check(State.CurrentWarEntry.PlayerIdentity == player && State.CurrentWarEntry.EnemyIdentity == enemy
+                    && State.warStartTick == 1234 && GenCollection.Sizes.Count == 4, "reload rerolled participants");
+            });
+        }
+        Test("class weight is independent of population and duplicate extension tables", () => {
+            var pools = DefDatabase<ServantSummonPoolDef>.AllDefsListForReading;
+            var secondSaber = new ServantIdentityDef { warClass = HolyGrailWarClass.Saber };
+            pools[0].servants.Add(secondSaber); pools[0].servants.Add(secondSaber); pools.Add(pools[0]);
+            GenCollection.Draws.Enqueue(0); GenCollection.Draws.Enqueue(1);
+            Check(ServantSummonPoolDef.Pick() == secondSaber && GenCollection.Sizes[0] == 2
+                && GenCollection.Sizes[1] == 2, "duplicate entries or pool size biased class selection");
+            GenCollection.Draws.Enqueue(1); GenCollection.Draws.Enqueue(0);
+            Check(ServantSummonPoolDef.Pick().warClass == HolyGrailWarClass.Archer
+                && GenCollection.Sizes[2] == 2 && GenCollection.Sizes[3] == 1, "small pool lost equal class slot");
+        });
+        Test("all six opposing classes remain selectable for every player class", () => {
+            SevenClasses();
+            foreach (ServantIdentityDef player in DefDatabase<ServantIdentityDef>.AllDefsListForReading)
+            {
+                var opponents = new HashSet<HolyGrailWarClass>();
+                for (int i = 0; i < 6; i++)
+                {
+                    GenCollection.Draws.Enqueue(i); GenCollection.Draws.Enqueue(0);
+                    var enemy = HolyGrailWarClassUtility.PickOpponent(player);
+                    Check(enemy != null && enemy.warClass != player.warClass, "same class opponent");
+                    opponents.Add(enemy.warClass);
+                }
+                Check(opponents.Count == 6, "opposing class unreachable");
+            }
+        });
+        Test("invalid and empty pools are excluded without spawning", () => {
+            var pools = DefDatabase<ServantSummonPoolDef>.AllDefsListForReading;
+            pools[0].servants.Clear(); pools[1].servants[0].summonable = false;
+            pools.Add(new ServantSummonPoolDef { warClass = HolyGrailWarClass.None,
+                servants = new List<ServantIdentityDef> { new ServantIdentityDef() } });
+            pools.Add(new ServantSummonPoolDef { warClass = HolyGrailWarClass.Lancer,
+                servants = new List<ServantIdentityDef> { null, new ServantIdentityDef { warClass = HolyGrailWarClass.Saber },
+                    new ServantIdentityDef { warClass = HolyGrailWarClass.Lancer, servantKind = null } } });
+            pools.Add(new ServantSummonPoolDef { warClass = HolyGrailWarClass.Rider, servants = null });
+            Accept(); RejectUnspent(); Check(GenCollection.Sizes.Count == 0 && PawnGenerator.Created.Count == 0, "empty pools drawn");
+        });
+        Test("identity outside configured pools is not summonable", () => {
+            DefDatabase<ServantIdentityDef>.AllDefsListForReading.Add(new ServantIdentityDef { warClass = HolyGrailWarClass.Lancer });
+            Check(ServantSummonPoolDef.Pick().warClass == HolyGrailWarClass.Saber && GenCollection.Sizes[0] == 2,
+                "unregistered identity entered a pool");
         });
         Test("circuit and independently granted seals cannot summon", () => {
             master.story.traits.GainTrait(new Trait(MW_DefOf.MW_CommandSpell)); Check(!Summon(), "trait bypass");
@@ -349,7 +428,7 @@ internal static class SummoningTests
         Test("another map rejected", () => { Accept(); map = new Map(); RejectUnspent(); });
         Test("blocked cell rejected", () => { Accept(); cell = new IntVec3(); RejectUnspent(); });
         Test("fogged cell rejected", () => { Accept(); cell.Fog = true; RejectUnspent(); });
-        Test("empty candidate pool preserves qualification", () => { Accept(); DefDatabase<ServantIdentityDef>.AllDefsListForReading.Clear(); RejectUnspent(); });
+        Test("empty candidate pool preserves qualification", () => { Accept(); DefDatabase<ServantSummonPoolDef>.AllDefsListForReading.Clear(); RejectUnspent(); });
         Test("generation failure before returning pawn preserves qualification", () => { Accept(); PawnGenerator.Fail = 1; RejectUnspent(); });
         Test("generation failure after validation cleans partial pawn", () => { Accept(); PawnGenerator.Fail = 2; RejectUnspent(); });
         Test("spawn failure cleans pawn", () => { Accept(); GenSpawn.Fail = true; RejectUnspent(); });
@@ -590,7 +669,14 @@ namespace Verse
     public static class Log { public static void Error(string s) { } public static void Warning(string s) { } }
     public static class Messages { public static void Message(string s, Pawn p, object kind, bool historical) { } }
     public static class DefDatabase<T> { public static List<T> AllDefsListForReading; }
-    public static class GenCollection { public static T RandomElement<T>(this List<T> list) => list[0]; }
+    public class Def { public virtual IEnumerable<string> ConfigErrors() { yield break; } }
+    public static class GenCollection
+    {
+        public static Queue<int> Draws = new Queue<int>();
+        public static List<int> Sizes = new List<int>();
+        public static T RandomElement<T>(this List<T> list)
+        { Sizes.Add(list.Count); return list[Draws.Count == 0 ? 0 : Draws.Dequeue()]; }
+    }
     public enum PawnGenerationContext { NonPlayer }
     public struct PawnGenerationRequest
     {

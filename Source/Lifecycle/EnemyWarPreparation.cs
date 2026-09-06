@@ -115,7 +115,7 @@ namespace MoonWorld
                 if (master?.Faction != Faction.OfPlayer
                     || (entry.DesignatedMaster != null && master != entry.DesignatedMaster)) continue;
                 ServantIdentityDef identity = ServantIdentityUtility.GetIdentity(pawn);
-                if (HolyGrailWarClassUtility.Opponent(identity?.warClass ?? HolyGrailWarClass.None) == HolyGrailWarClass.None) continue;
+                if (!HolyGrailWarClassUtility.IsWarClass(identity?.warClass ?? HolyGrailWarClass.None)) continue;
                 if (found != null && found != identity)
                 { rejection = "旧档存在不同职阶契约，无法确定本届首骑；请用新开局测试敌方。"; return false; }
                 found = identity;

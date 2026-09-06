@@ -16,4 +16,44 @@
     <autonomyProfile>MW_QuestLodgerAutonomy</autonomyProfile>
     <summonable>true</summonable>
   </Def>
+  <Def Class="MoonWorld.ServantIdentityDef">
+    <defName>MW_GWW_CuChulainnIdentity</defName>
+    <servantKind>GWW_CuChulainn</servantKind>
+    <warClass>Lancer</warClass>
+    <resourceProfile>MW_TestServantResources</resourceProfile>
+    <autonomyProfile>MW_QuestLodgerAutonomy</autonomyProfile>
+    <summonable>true</summonable>
+  </Def>
+  <Def Class="MoonWorld.ServantIdentityDef">
+    <defName>MW_GWW_MedusaIdentity</defName>
+    <servantKind>GWW_Medusa</servantKind>
+    <warClass>Rider</warClass>
+    <resourceProfile>MW_TestServantResources</resourceProfile>
+    <autonomyProfile>MW_QuestLodgerAutonomy</autonomyProfile>
+    <summonable>true</summonable>
+  </Def>
+  <Def Class="MoonWorld.ServantIdentityDef">
+    <defName>MW_GWW_MedeaIdentity</defName>
+    <servantKind>GWW_Medea</servantKind>
+    <warClass>Caster</warClass>
+    <resourceProfile>MW_TestServantResources</resourceProfile>
+    <autonomyProfile>MW_QuestLodgerAutonomy</autonomyProfile>
+    <summonable>true</summonable>
+  </Def>
+  <Def Class="MoonWorld.ServantIdentityDef">
+    <defName>MW_GWW_SasakiIdentity</defName>
+    <servantKind>GWW_Sasaki</servantKind>
+    <warClass>Assassin</warClass>
+    <resourceProfile>MW_TestServantResources</resourceProfile>
+    <autonomyProfile>MW_QuestLodgerAutonomy</autonomyProfile>
+    <summonable>true</summonable>
+  </Def>
+  <Def Class="MoonWorld.ServantIdentityDef">
+    <defName>MW_GWW_HeraclesIdentity</defName>
+    <servantKind>GWW_Heracles</servantKind>
+    <warClass>Berserker</warClass>
+    <resourceProfile>MW_TestServantResources</resourceProfile>
+    <autonomyProfile>MW_QuestLodgerAutonomy</autonomyProfile>
+    <summonable>true</summonable>
+  </Def>
 </Defs>

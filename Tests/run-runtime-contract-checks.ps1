@@ -115,11 +115,38 @@ try {
         throw 'Enemy faction must be isolated from ordinary world generation and raids'
     }
     [xml]$mwIdentities = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_HolyGrailWarBridge.xml') -Raw
-    if ($mwIdentities.SelectSingleNode('/Defs/Def[servantKind="GWW_Artoria"]/warClass').InnerText -ne 'Saber' -or
-        $mwIdentities.SelectSingleNode('/Defs/Def[servantKind="GWW_Emiya"]/warClass').InnerText -ne 'Archer') {
-        throw 'Saber/Archer identities must define their war seats explicitly'
+    [xml]$mwPools = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_SummonPools.xml') -Raw
+    $mwSeats = [ordered]@{ Saber='Artoria'; Archer='Emiya'; Lancer='CuChulainn'; Assassin='Sasaki'; Caster='Medea'; Rider='Medusa'; Berserker='Heracles' }
+    if ($mwPools.SelectNodes('/Defs/MoonWorld.ServantSummonPoolDef').Count -ne 7) { throw 'Expected seven class pool tables' }
+    $mwTextures = Get-ChildItem (Join-Path $RimWorldPath 'Mods\HolyGrailWarTest\1.6\Textures') -File -Recurse
+    foreach ($mwSeat in $mwSeats.Keys) {
+        $mwKindName = 'GWW_' + $mwSeats[$mwSeat]
+        $mwIdentity = $mwIdentities.SelectSingleNode("/Defs/Def[servantKind='$mwKindName']")
+        $mwPool = $mwPools.SelectNodes("/Defs/MoonWorld.ServantSummonPoolDef[warClass='$mwSeat']")
+        if ($mwIdentity.warClass -ne $mwSeat -or $mwIdentity.summonable -ne 'true' -or $mwPool.Count -ne 1 -or
+            $mwPool[0].servants.li -ne $mwIdentity.defName) { throw "Invalid class pool/identity: $mwSeat" }
+        $mwKind = $mwDefs.SelectSingleNode("/Defs/PawnKindDef[defName='$mwKindName']")
+        $mwSourceIdentity = $mwDefs.SelectSingleNode("/Defs/HolyGrailWar.ServantIdentityDef[servantKind='$mwKindName']")
+        if ($mwKind.race -ne 'GWW_HeroicSpirit' -or $null -eq $mwSourceIdentity -or
+            [string]::IsNullOrWhiteSpace($mwSourceIdentity.fixedName)) { throw "Installed servant missing: $mwKindName" }
+        $mwAssetNodes = @($mwSourceIdentity)
+        foreach ($mwRef in $mwSourceIdentity.SelectNodes('requiredWeapon|requiredApparel|requiredAccessories/li|requiredInventory/li|requiredHair|requiredTraits/li|facialAnimationEyeColorMarker')) {
+            if (-not $mwRef.InnerText.StartsWith('GWW_')) { continue }
+            $mwAsset = $mwDefs.SelectSingleNode("/Defs/*[defName='$($mwRef.InnerText)']")
+            if ($null -eq $mwAsset) { throw "Installed content reference missing: $($mwRef.InnerText)" }
+            $mwAssetNodes += $mwAsset
+        }
+        foreach ($mwAsset in $mwAssetNodes) {
+            foreach ($mwPath in $mwAsset.SelectNodes('.//texPath|.//wornGraphicPath|transparentBodyPath|fullBodyGraphicPath')) {
+                if (-not $mwPath.InnerText.StartsWith('HolyGrailWar/')) { continue }
+                $mwSuffix = $mwPath.InnerText.Replace('/', '\')
+                if (-not ($mwTextures | Where-Object { $_.FullName -like "*\$mwSuffix.png" -or $_.FullName -like "*\${mwSuffix}_*.png" })) {
+                    throw "Installed content texture missing: $($mwPath.InnerText)"
+                }
+            }
+        }
     }
-    Write-Host "$($mwXmlFiles.Count) XML files parsed; native ability, installed prototype target, Chinese scenario, entry Defs and isolated enemy faction checked."
+    Write-Host "$($mwXmlFiles.Count) XML files parsed; seven class pools, installed identities/loadout textures, native ability, Chinese scenario and isolated enemy faction checked."
 }
 finally {
     if (Test-Path -LiteralPath $testOutput) { Remove-Item -LiteralPath $testOutput }

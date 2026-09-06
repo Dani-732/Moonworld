@@ -103,7 +103,9 @@ namespace MoonWorld
     internal static class HolyGrailWarContentBridge
     {
         internal static bool Fail;
-        internal static void InitializeWorldServant(Pawn pawn) { if (Fail) throw new Exception("dependency init"); }
+        internal static int Calls, FailAt;
+        internal static void InitializeWorldServant(Pawn pawn)
+        { Calls++; if (Fail || Calls == FailAt) throw new Exception("dependency init"); }
     }
     internal static class PawnNeedAccess { internal static void EnsureNeed(Pawn pawn, object def) { } }
     public static class NoblePhantasmService { public static void EnsureAbilities(Pawn pawn) { } }

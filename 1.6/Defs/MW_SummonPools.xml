@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <!-- First choose a nonempty class uniformly, then choose a servant within it uniformly. -->
+  <MoonWorld.ServantSummonPoolDef>
+    <defName>MW_SaberSummonPool</defName>
+    <warClass>Saber</warClass>
+    <servants><li>MW_GWW_ArtoriaIdentity</li></servants>
+  </MoonWorld.ServantSummonPoolDef>
+  <MoonWorld.ServantSummonPoolDef>
+    <defName>MW_ArcherSummonPool</defName>
+    <warClass>Archer</warClass>
+    <servants><li>MW_GWW_EmiyaIdentity</li></servants>
+  </MoonWorld.ServantSummonPoolDef>
+  <MoonWorld.ServantSummonPoolDef>
+    <defName>MW_LancerSummonPool</defName>
+    <warClass>Lancer</warClass>
+    <servants><li>MW_GWW_CuChulainnIdentity</li></servants>
+  </MoonWorld.ServantSummonPoolDef>
+  <MoonWorld.ServantSummonPoolDef>
+    <defName>MW_AssassinSummonPool</defName>
+    <warClass>Assassin</warClass>
+    <servants><li>MW_GWW_SasakiIdentity</li></servants>
+  </MoonWorld.ServantSummonPoolDef>
+  <MoonWorld.ServantSummonPoolDef>
+    <defName>MW_CasterSummonPool</defName>
+    <warClass>Caster</warClass>
+    <servants><li>MW_GWW_MedeaIdentity</li></servants>
+  </MoonWorld.ServantSummonPoolDef>
+  <MoonWorld.ServantSummonPoolDef>
+    <defName>MW_RiderSummonPool</defName>
+    <warClass>Rider</warClass>
+    <servants><li>MW_GWW_MedusaIdentity</li></servants>
+  </MoonWorld.ServantSummonPoolDef>
+  <MoonWorld.ServantSummonPoolDef>
+    <defName>MW_BerserkerSummonPool</defName>
+    <warClass>Berserker</warClass>
+    <servants><li>MW_GWW_HeraclesIdentity</li></servants>
+  </MoonWorld.ServantSummonPoolDef>
+</Defs>

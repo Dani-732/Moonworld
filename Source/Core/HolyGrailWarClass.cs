@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using Verse;
-
 namespace MoonWorld
 {
     public enum HolyGrailWarClass
@@ -17,22 +14,15 @@ namespace MoonWorld
 
     public static class HolyGrailWarClassUtility
     {
-        public static HolyGrailWarClass Opponent(HolyGrailWarClass playerClass)
+        public static bool IsWarClass(HolyGrailWarClass warClass)
         {
-            if (playerClass == HolyGrailWarClass.Saber) return HolyGrailWarClass.Archer;
-            if (playerClass == HolyGrailWarClass.Archer) return HolyGrailWarClass.Saber;
-            return HolyGrailWarClass.None;
+            return warClass >= HolyGrailWarClass.Saber && warClass <= HolyGrailWarClass.Berserker;
         }
 
         public static ServantIdentityDef PickOpponent(ServantIdentityDef player)
         {
-            HolyGrailWarClass opponent = Opponent(player?.warClass ?? HolyGrailWarClass.None);
-            if (opponent == HolyGrailWarClass.None) return null;
-            List<ServantIdentityDef> candidates = new List<ServantIdentityDef>();
-            foreach (ServantIdentityDef identity in DefDatabase<ServantIdentityDef>.AllDefsListForReading)
-                if (identity.summonable && identity.warClass == opponent
-                    && identity.servantKind?.race != null) candidates.Add(identity);
-            return candidates.Count == 0 ? null : candidates.RandomElement();
+            if (player == null || !IsWarClass(player.warClass)) return null;
+            return ServantSummonPoolDef.Pick(player.warClass);
         }
     }
 }
