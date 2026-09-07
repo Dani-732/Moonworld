@@ -8,6 +8,8 @@
 
 ## 依赖规则
 
+切片 4 最终合同优先于以下历史范围，见 [扩展计划](design/HolyGrailWar_Expansion_Plan.md)：御主资格从右手令咒 Hediff 派生，划数仅由该 Hediff severity 保存；旧组件只提供入口、旧计数的一次迁移及迁移完成标记。专用手术使用原版 Recipe/Job 与物品，普通健康操作不产出可移植令咒。契约与落单存续归 Lifecycle，魔力归 Need/Prana，当前职阶阵营与开战历史明确区分；Quest 只展示。御主死亡/失格断契断供，默认落单一天；重签沿用原 Pawn 并改属从者职阶，胜负依据本届当前敌对从者存续，不依据御主或旧 enemy 淘汰标记。分批落地不等于这些行为已全部实现。
+
 工坊撤退切片补充（优先于下方旧阶段范围）：七阵营运行时由 `HolyGrailWarEntry.enemies` 保存，Quest 仅展示与归档。可进入的 `Site_WarWorkshop` 保存本地战败、撤退命令及逃脱标记；`WorkshopRetreatPolicy` 是可由外部魔术模块替换的决策接口，默认从者战败灵体化则御主撤退。`WarWorkshopService` 安排原版撤退职责，`WorkshopRebuildService` 消费实际逃脱结果，为原主从安排一个新 Site；重建期限归 `EnemyWarParticipant`，不复制魔力或契约。详细边界见 [工坊撤退与重建](design/HolyGrailWar_Workshop_Retreat.md)。本 Mod 不开发魔术系统。
 
 当前开战切片补充（优先于以下历史范围）：`ServantSummoningService` 拥有首召事务与最终开战提交；`EnemyWarPreparation` 负责敌方场外 Pawn、内容初始化、契约与初始 Site 的准备和回滚，并为已开战旧档提供一次性补齐。`EnemyWarPartyService` 只部署既有从者及处理离图保留。`HolyGrailWarContentBridge` 窄调用内容依赖自身的身份/装备初始化，不修改原型；`Site_WarWorkshop` 只保存位置和所属御主，不持有 Pawn 容器、魔力或胜负副本，暂不开放地图。最小胜负继续沿用已验收代码，未来多阵营 Quest 另行迁移。
@@ -56,7 +58,8 @@ HolyGrailWarEntry.enemyMaster / enemyServant / enemyDeployed
 CompServantState.master
 CompServantState.presenceState
 CompMasterPranaControl.supplyThresholdOverride
-CompMasterCommandSpells.commandSpellCharges
+Hediff_CommandSpell.severity（右手，唯一剩余划数）
+CompMasterCommandSpells.commandSpellHealthMigrated（一次迁移标记；失败时保留旧 commandSpellCharges 原值，成功后不写回）
 ```
 
 魔力数值继续由 `Need_MasterPrana` 和 `Need_Prana` 保存；断供时长使用原版 Hediff 的 `ageTicks`，灵基受损使用 Hediff 的 severity。运行时递归保护不存档。契约反向索引由查询服务即时重建，不存档。

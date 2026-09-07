@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <HediffDef>
+    <defName>MW_CommandSpellMark</defName>
+    <label>令咒</label>
+    <description>右手承载的圣杯战争令咒印记。剩余划数代表御主资格，耗尽或承载部位缺失时消失；普通断肢不能取得可移植令咒。</description>
+    <hediffClass>MoonWorld.Hediff_CommandSpell</hediffClass>
+    <isBad>false</isBad>
+    <initialSeverity>0</initialSeverity>
+    <maxSeverity>3</maxSeverity>
+    <scenarioCanAdd>false</scenarioCanAdd>
+    <duplicationAllowed>false</duplicationAllowed>
+    <countsAsAddedPartOrImplant>true</countsAsAddedPartOrImplant>
+    <everCurableByItem>false</everCurableByItem>
+  </HediffDef>
+</Defs>

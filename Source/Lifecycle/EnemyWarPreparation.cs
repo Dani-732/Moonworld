@@ -59,6 +59,9 @@ namespace MoonWorld
                     Master.story.traits.GainTrait(new Trait(MW_DefOf.MW_MagusCircuit_Basic));
                 if (!Master.story.traits.HasTrait(MW_DefOf.MW_MageRank_Apprentice))
                     Master.story.traits.GainTrait(new Trait(MW_DefOf.MW_MageRank_Apprentice));
+                if (Master.TryGetComp<CompMasterCommandSpells>() == null
+                    || !Master.TryGetComp<CompMasterCommandSpells>().TryGrantForWar(out _))
+                    throw new InvalidOperationException("敌方御主未能获得右手令咒。");
                 Servant = PawnGenerator.GeneratePawn(new PawnGenerationRequest(identity.servantKind, faction,
                     PawnGenerationContext.NonPlayer, forceGenerateNewPawn: true, canGeneratePawnRelations: false,
                     validatorPreGear: pawn => { Servant = pawn; return true; }));
@@ -112,6 +115,7 @@ namespace MoonWorld
                 || Servant.TryGetComp<CompServantState>()?.PresenceState == ServantPresenceState.Annihilated
                 || Master.Spawned || Servant.Spawned || !Find.WorldPawns.Contains(Master) || !Find.WorldPawns.Contains(Servant)
                 || !EnemyContractUtility.HasEnemyContract(Servant) || ServantQuery.Instance.GetMaster(Servant) != Master
+                || !CommandSpellService.HasQualification(Master)
                 || workshop == null || !workshop.Spawned || workshop.Destroyed || workshop.OwnerMaster != Master
                 || workshop.Faction != Master.Faction)
                 throw new InvalidOperationException("多阵营准备期间已有参与者或工坊失效。");

@@ -569,7 +569,7 @@ internal static partial class SummoningTests
         Test("dead designated master cannot summon", () => { Accept(); master.Dead = true; RejectUnspent(); });
         Test("captured designated master cannot summon", () => { Accept(); master.IsPrisoner = true; RejectUnspent(); });
         Test("exhausted seals cannot summon", () => { Accept(); master.Spells.Charges = 0; RejectUnspent(); });
-        Test("removed seal trait cannot summon", () => { Accept(); master.story.traits.allTraits.Clear(); RejectUnspent(); });
+        Test("legacy trait absence does not revoke health qualification", () => { Accept(); master.story.traits.allTraits.Clear(); Check(Summon(), "trait still required"); });
         Test("another map rejected", () => { Accept(); map = new Map(); RejectUnspent(); });
         Test("blocked cell rejected", () => { Accept(); cell = new IntVec3(); RejectUnspent(); });
         Test("fogged cell rejected", () => { Accept(); cell.Fog = true; RejectUnspent(); });
@@ -932,9 +932,13 @@ namespace MoonWorld
     public static class MasterCircuitUtility { public static bool HasCircuit(Pawn p) => p != null && p.Circuit; public static void EnsureMasterPranaNeed(Pawn p) { } }
     public class CompMasterCommandSpells
     {
-        public Pawn Pawn; public int Charges = 3, Grants; public bool Fail;
+        public Pawn Pawn; public int Charges, Grants; public bool Fail;
         public bool TryGrantForWar(out string reason)
-        { reason = null; if (Fail) return false; Charges = 3; Grants++; Pawn.story.traits.GainTrait(new Trait(MW_DefOf.MW_CommandSpell)); return true; }
+        { reason = null; if (Fail) return false; Charges = 3; Grants++; return true; }
+    }
+    public static class CommandSpellService
+    {
+        public static bool HasQualification(Pawn pawn) => pawn != null && !pawn.Dead && !pawn.Destroyed && pawn.Spells.Charges > 0;
     }
     public enum ServantPresenceState { Materialized, Annihilated, DefeatedSpirit }
     public class Need_Prana { public float CurLevel, MaxLevel = 100; }

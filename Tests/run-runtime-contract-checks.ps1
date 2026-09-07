@@ -18,6 +18,18 @@ try {
         throw 'Separated threshold must default to 2 with a debug-only native stat modifier fixture'
     }
     foreach ($mwXmlFile in $mwXmlFiles) { [xml](Get-Content -LiteralPath $mwXmlFile.FullName -Raw) | Out-Null }
+    [xml]$mwSeals = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_CommandSpells.xml') -Raw
+    $mwMark = $mwSeals.SelectSingleNode('/Defs/HediffDef[defName="MW_CommandSpellMark"]')
+    if ($mwMark.hediffClass -ne 'MoonWorld.Hediff_CommandSpell' -or $mwMark.initialSeverity -ne '0' -or
+        $mwMark.maxSeverity -ne '3' -or $mwMark.countsAsAddedPartOrImplant -ne 'true' -or
+        $mwMark.everCurableByItem -ne 'false' -or $mwMark.duplicationAllowed -ne 'false' -or
+        $mwMark.keepOnBodyPartRestoration -eq 'true' -or $mwMark.spawnThingOnRemoved) {
+        throw 'Command seal authority must be a bounded implant without ordinary removal products or restoration retention'
+    }
+    [xml]$mwBody = Get-Content (Join-Path $RimWorldPath 'Data\Core\Defs\Bodies\Bodies_Humanlike.xml') -Raw
+    if ($mwBody.SelectNodes('/Defs/BodyDef[defName="Human"]//li[def="Hand" and parts/li/groups/li="RightHand"]').Count -ne 1) {
+        throw 'Installed human body must identify exactly one hand through the RightHand finger group'
+    }
     [xml]$mwQuestXml = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_HolyGrailWarQuest.xml') -Raw
     $mwQuestDef = $mwQuestXml.SelectSingleNode('/Defs/QuestScriptDef[defName="MW_HolyGrailWarQuest"]')
     if ($null -eq $mwQuestDef -or $mwQuestDef.randomlySelectable -ne 'false' -or

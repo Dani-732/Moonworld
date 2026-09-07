@@ -14,50 +14,37 @@ namespace MoonWorld
 
     public sealed class CompMasterCommandSpells : ThingComp
     {
-        private const int DefaultCharges = 3;
-        private int charges = DefaultCharges;
+        private const int DefaultCharges = CommandSpellService.MaximumCharges;
+        private bool healthMigrated = true;
+        private int legacyCharges;
 
-        public int Charges => charges;
+        public int Charges => CommandSpellService.Mark(parent as Pawn)?.Charges ?? 0;
 
         internal bool TryGrantForWar(out string rejection)
         {
-            Pawn master = parent as Pawn;
-            rejection = null;
-            Trait added = null;
-            try
-            {
-                if (!master.story.traits.HasTrait(MW_DefOf.MW_CommandSpell))
-                {
-                    added = new Trait(MW_DefOf.MW_CommandSpell);
-                    master.story.traits.GainTrait(added);
-                }
-                if (!master.story.traits.HasTrait(MW_DefOf.MW_CommandSpell))
-                    throw new System.InvalidOperationException("令咒特质未能授予。");
-                charges = DefaultCharges;
-                return true;
-            }
-            catch (System.Exception ex)
-            {
-                if (added != null && master.story.traits.allTraits.Contains(added))
-                    master.story.traits.RemoveTrait(added);
-                Log.Error("[MoonWorld] 授予令咒失败: " + ex);
-                rejection = "未能授予令咒，本届事件尚未接取。";
-                return false;
-            }
+            return CommandSpellService.TryGrant(parent as Pawn, DefaultCharges, out rejection);
         }
 
         public override void PostExposeData()
         {
-            Scribe_Values.Look(ref charges, "commandSpellCharges", DefaultCharges);
+            Scribe_Values.Look(ref healthMigrated, "commandSpellHealthMigrated", false);
+            if (!healthMigrated && (Scribe.mode == LoadSaveMode.LoadingVars || Scribe.mode == LoadSaveMode.Saving))
+                Scribe_Values.Look(ref legacyCharges, "commandSpellCharges", DefaultCharges);
+            if (Scribe.mode == LoadSaveMode.PostLoadInit)
+            {
+                if (healthMigrated) CommandSpellService.RemoveLegacyTrait(parent as Pawn);
+                else if (!CommandSpellService.MigrateLegacy(parent as Pawn, legacyCharges)) return;
+                legacyCharges = 0;
+                healthMigrated = true;
+            }
         }
 
         public override string CompInspectStringExtra()
         {
             Pawn master = parent as Pawn;
-            if (!MasterCircuitUtility.HasCircuit(master)
-                || (master.story?.traits?.HasTrait(MW_DefOf.MW_CommandSpell) != true && charges > 0))
-                return null;
-            return "令咒：" + charges + " / " + DefaultCharges;
+            if (!MasterCircuitUtility.HasCircuit(master) && Charges == 0) return null;
+            return "令咒：" + Charges + " / " + DefaultCharges
+                + (CommandSpellService.HasQualification(master) ? "（右手印记有效）" : "（无御主资格）");
         }
 
         public static Command_Action CreateMiracleCommand(Pawn master, Pawn servant)
@@ -82,8 +69,8 @@ namespace MoonWorld
                 },
                 Order = -96f
             };
-            if (spells.charges <= 0)
-                command.Disable("令咒已耗尽。");
+            if (!CommandSpellService.HasQualification(master))
+                command.Disable("没有有效的右手令咒印记。");
             else if (!damaged)
                 command.Disable("目标没有灵基受损。");
             return command;
@@ -93,7 +80,7 @@ namespace MoonWorld
         {
             Pawn master = parent as Pawn;
             rejection = null;
-            if (charges <= 0) { rejection = "令咒已耗尽。"; return false; }
+            if (!CommandSpellService.HasQualification(master)) { rejection = "没有有效的右手令咒印记。"; return false; }
             if (!IsValidTarget(master, servant)) { rejection = "目标不是有效的己方契约从者。"; return false; }
             List<Hediff> hediffs = servant.health.hediffSet.hediffs;
             bool removed = false;
@@ -114,22 +101,14 @@ namespace MoonWorld
 
         internal bool TrySpendCharge()
         {
-            if (charges <= 0) return false;
-            Pawn master = parent as Pawn;
-            if (charges == 1 && master.story?.traits?.HasTrait(MW_DefOf.MW_CommandSpell) == true)
-            {
-                Trait commandSpell = master.story.traits.allTraits.Find(t => t.def == MW_DefOf.MW_CommandSpell);
-                if (commandSpell != null)
-                    master.story.traits.RemoveTrait(commandSpell);
-            }
-            charges--;
-            return true;
+            return CommandSpellService.TrySpend(parent as Pawn);
         }
 
         private static bool IsValidTarget(Pawn master, Pawn servant)
         {
             CompServantState state = servant?.TryGetComp<CompServantState>();
             return master != null && servant != null && master.Faction == Faction.OfPlayer
+                && !master.Dead && !master.Destroyed && !servant.Dead && !servant.Destroyed
                 && MasterCircuitUtility.HasCircuit(master) && ServantQuery.Instance.GetMaster(servant) == master
                 && state != null && state.PresenceState != ServantPresenceState.Annihilated;
         }

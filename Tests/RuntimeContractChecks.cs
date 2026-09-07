@@ -77,6 +77,7 @@ internal static class RuntimeContractChecks
             new[] { "MoonWorld.IncidentWorker_HolyGrailWarInvitation", "RimWorld.IncidentWorker" },
             new[] { "MoonWorld.IncidentWorker_EnemyServantRaid", "RimWorld.IncidentWorker" },
             new[] { "MoonWorld.ChoiceLetter_HolyGrailWar", "Verse.ChoiceLetter" },
+            new[] { "MoonWorld.Hediff_CommandSpell", "Verse.Hediff_Implant" },
             new[] { "MoonWorld.HolyGrailWarEntry", "Verse.IExposable" },
             new[] { "MoonWorld.EnemyWarParticipant", "Verse.IExposable" },
             new[] { "MoonWorld.HolyGrailWarClassDef", "Verse.Def" },

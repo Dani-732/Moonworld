@@ -59,8 +59,7 @@ namespace MoonWorld
                 ? "本届圣杯战争的常规召唤已使用。" : "请先在降灵之兆事件中指定御主并接受。";
             if (entry.RegularSummonUsed) return "本届圣杯战争的常规召唤已使用。";
             if (entry.DesignatedMaster != master) return "只有本届事件指定的御主拥有常规召唤资格。";
-            if (master.story?.traits?.HasTrait(MW_DefOf.MW_CommandSpell) != true
-                || master.TryGetComp<CompMasterCommandSpells>().Charges <= 0)
+            if (!CommandSpellService.HasQualification(master))
                 return "御主已没有令咒。";
             return null;
         }
