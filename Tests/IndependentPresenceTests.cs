@@ -18,6 +18,28 @@ internal static class IndependentPresenceTests
     private static bool Return() => ServantLifecycleService.Instance.TryRematerialize(master, servant, out _);
     public static void Main()
     {
+        Test("unqualified master cannot bind or authorize form changes", () => {
+            master.Qualified = false;
+            Check(!ServantLifecycleService.Instance.TryBind(master, servant, out _) && !Enter(), "mark ignored");
+        });
+        Test("expired unbound servant cannot bind or refresh deadline", () => {
+            servant.State.Master = null; servant.State.UnboundUntilTickAbs = 10; GenTicks.TicksAbs = 10;
+            Check(!ServantLifecycleService.Instance.TryBind(master, servant, out _) && servant.State.UnboundUntilTickAbs == 10, "expired binding accepted");
+        });
+        Test("valid binding preserves defeated presence and clears deadline", () => {
+            servant.State.Master = null; servant.State.UnboundUntilTickAbs = 100;
+            servant.State.PresenceState = ServantPresenceState.DefeatedSpirit;
+            Check(ServantLifecycleService.Instance.TryBind(master, servant, out _)
+                && servant.State.PresenceState == ServantPresenceState.DefeatedSpirit && servant.State.UnboundUntilTickAbs == -1, "binding reset form");
+        });
+        Test("binding effects failure restores original unbound deadline", () => {
+            servant.State.Master = null; servant.State.UnboundUntilTickAbs = 100;
+            ServantColonyMembership.Fail = true;
+            try { ServantLifecycleService.Instance.TryBind(master, servant, out _); Check(false, "expected effects failure"); }
+            catch (InvalidOperationException) { }
+            finally { ServantColonyMembership.Fail = false; }
+            Check(servant.State.Master == null && servant.State.UnboundUntilTickAbs == 100, "failed binding refreshed life");
+        });
         Test("only resolved battle defeat notifies workshop after spirit state commits", () => {
             var site = new Site_WarWorkshop(); servant.Map.Parent = site;
             Check(Enter() && site.Notifications == 0 && Return(), "voluntary spirit notified workshop");
@@ -50,12 +72,13 @@ internal static class IndependentPresenceTests
 }
 namespace Verse
 {
+    public static class GenTicks { public static int TicksAbs; }
     public class Map { public bool Standable = true; public object Parent; }
     public struct IntVec3 { public bool Standable(Map map) => map != null && map.Standable; }
     public class Pawn
     {
         public bool Dead, Destroyed, IsPrisoner, IsSlave, Downed;
-        public bool Spawned = true, Circuit = true;
+        public bool Spawned = true, Circuit = true, Qualified = true;
         public Faction Faction = Faction.OfPlayer, HostFaction;
         public Map Map; public IntVec3 Position;
         public string LabelShortCap = "servant";
@@ -78,6 +101,7 @@ namespace Verse
 namespace RimWorld { public class Faction { public static Faction OfPlayer = new Faction(); } }
 namespace MoonWorld
 {
+    public static class CommandSpellService { public static bool HasQualification(Pawn p) => p != null && !p.Dead && !p.Destroyed && p.Qualified; }
     public class Site_WarWorkshop
     {
         public int Notifications; public ServantPresenceState LastPresence;
@@ -89,8 +113,10 @@ namespace MoonWorld
     public class Need_Prana { public float CurLevel; }
     public class CompServantState
     {
+        public int UnboundUntilTickAbs = -1;
         public Pawn Master; public ServantPresenceState PresenceState; public bool DefeatResolutionInProgress;
-        public void Bind(Pawn master) { Master = master; }
+        public void Bind(Pawn master) { Master = master; if (master != null) UnboundUntilTickAbs = -1; }
+        public void RestoreContract(Pawn master, int deadline) { Master = master; UnboundUntilTickAbs = deadline; }
         public void SetPresence(ServantPresenceState state) { PresenceState = state; }
         public void SetDefeatResolutionInProgress(bool value) { DefeatResolutionInProgress = value; }
     }
@@ -108,7 +134,7 @@ namespace MoonWorld
         public static bool HasEnemyContract(Pawn pawn) => false;
         public static bool CanReceiveSupply(Pawn pawn) => false;
     }
-    public static class ServantColonyMembership { public static void Initialize(Pawn pawn, bool newContract = false) { } }
+    public static class ServantColonyMembership { public static bool Fail; public static void Initialize(Pawn pawn, bool newContract = false) { if (Fail) throw new InvalidOperationException(); } }
     public static class ServantPresenceEffects { public static void Reconcile(Pawn pawn) { } }
     public static class ServantFatalDamageRecovery { public static bool TryStabilize(Pawn pawn, Hediff hediff) => true; }
     public class ServantResourceProfileDef { public int maxSpiritDamageStages = 4; }

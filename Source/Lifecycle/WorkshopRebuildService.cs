@@ -18,7 +18,7 @@ namespace MoonWorld
         internal static Site_WarWorkshop FindWorkshop(EnemyWarParticipant enemy)
         {
             foreach (var worldObject in Find.WorldObjects.AllWorldObjects)
-                if (worldObject is Site_WarWorkshop site && !site.Destroyed && site.OwnerMaster == enemy.EnemyMaster)
+                if (worldObject is Site_WarWorkshop site && !site.Destroyed && site.Participant == enemy)
                     return site;
             return null;
         }
@@ -27,7 +27,7 @@ namespace MoonWorld
         {
             if (enemy.WorkshopRebuildPending) return true;
             foreach (var worldObject in Find.WorldObjects.AllWorldObjects)
-                if (worldObject is Site_WarWorkshop site && !site.Destroyed && site.OwnerMaster == enemy.EnemyMaster
+                if (worldObject is Site_WarWorkshop site && !site.Destroyed && site.Participant == enemy
                     && site.RetreatOrdered) return true;
             return false;
         }
@@ -45,7 +45,7 @@ namespace MoonWorld
         internal static void Tick(GameComponent_MoonWorld war)
         {
             if (war.CurrentWarOutcome != WarOutcome.Ongoing || war.CurrentWarEntry == null) return;
-            foreach (var enemy in war.CurrentWarEntry.Enemies)
+            foreach (var enemy in war.CurrentWarEntry.Participants)
             {
                 if (!enemy.WorkshopRebuildPending) continue;
                 if (enemy.EnemyEliminated) { enemy.CompleteWorkshopRebuild(); continue; }
@@ -58,7 +58,7 @@ namespace MoonWorld
         {
             if (war == null || war.CurrentWarOutcome != WarOutcome.Ongoing)
                 return "本届战争没有进行中。";
-            if (enemy == null || war.CurrentWarEntry == null || !war.CurrentWarEntry.Enemies.Contains(enemy))
+            if (enemy == null || war.CurrentWarEntry == null || !war.CurrentWarEntry.Participants.Contains(enemy))
                 return "不是本届敌方阵营。";
             if (enemy.EnemyEliminated) return "该阵营已淘汰，不能重建或复活。";
             Site_WarWorkshop existing = FindWorkshop(enemy);
@@ -89,7 +89,7 @@ namespace MoonWorld
                 site = (Site_WarWorkshop)WorldObjectMaker.MakeWorldObject(MW_DefOf.MW_WarWorkshop);
                 site.Tile = tile;
                 site.SetFaction(enemy.EnemyMaster.Faction);
-                site.SetOwner(enemy.EnemyMaster);
+                site.SetOwner(enemy.EnemyMaster, enemy.EnemyServant);
                 site.AddPart(new SitePart(site, MW_DefOf.MW_WarWorkshopPart, new SitePartParams()));
                 Find.WorldObjects.Add(site);
                 if (!site.Spawned || site.Destroyed || enemy.EnemyEliminated || !IsFreeSurvivor(enemy.EnemyMaster)

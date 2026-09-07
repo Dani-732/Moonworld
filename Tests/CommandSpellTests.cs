@@ -4,7 +4,7 @@ using MoonWorld;
 using RimWorld;
 using Verse;
 
-internal static class CommandSpellTests
+internal static partial class CommandSpellTests
 {
     private static int passed;
     private static void Check(bool condition, string message)
@@ -44,6 +44,7 @@ internal static class CommandSpellTests
     {
         try
         {
+            SurgeryScenarios();
             Test("circuit and trait alone never grant health qualification", () => {
                 Pawn p = Master(); LegacyTrait(p);
                 Check(!CommandSpellService.HasQualification(p) && p.Spells.Charges == 0, "trait granted seals");
@@ -66,6 +67,7 @@ internal static class CommandSpellTests
                 Pawn p = Master(); Grant(p);
                 for (int i = 2; i >= 0; i--) Check(p.Spells.TrySpendCharge() && p.Spells.Charges == i, "spend mismatch");
                 Check(!p.Spells.TrySpendCharge() && !CommandSpellService.HasQualification(p) && p.health.hediffSet.hediffs.Count == 0, "exhaustion retained mark");
+                Check(UnboundServantService.LastUnavailable == p, "exhaustion did not notify loss");
             });
             foreach (bool arm in new[] { false, true })
                 Test(arm ? "arm loss destroys child mark immediately" : "hand loss destroys mark immediately", () => {
@@ -73,6 +75,7 @@ internal static class CommandSpellTests
                     p.health.AddHediff(new Hediff_MissingPart(), arm ? hand.parent : hand);
                     Check(!CommandSpellService.HasQualification(p) && p.Spells.Charges == 0, "lost limb retained qualification");
                     Check(p.health.hediffSet.GetFirstHediffOfDef(MW_DefOf.MW_CommandSpellMark) == null, "mark retained");
+                    Check(UnboundServantService.LastUnavailable == p, "limb loss did not notify loss");
                     p.health.hediffSet.hediffs.Clear();
                     Check(p.Spells.Charges == 0, "restoration reissued seals");
                 });
@@ -202,9 +205,18 @@ namespace Verse
 {
     public class CompProperties { public Type compClass; }
     public class ThingComp { public Pawn parent; public virtual void PostExposeData() { } public virtual string CompInspectStringExtra() => null; }
-    public class Pawn
+    public class ThingDef { }
+    public class Thing { public ThingDef def; public bool Destroyed; public int stackCount = 1; public void Destroy() { Destroyed = true; } }
+    public class Map { }
+    public struct IntVec3 { }
+    public enum ThingPlaceMode { Near }
+    public static class ThingMaker { public static Thing MakeThing(ThingDef def) => new Thing { def = def }; }
+    public static class GenPlace { public static bool TryPlaceThing(Thing t, IntVec3 p, Map m, ThingPlaceMode mode) => true; }
+    public class RecipeDef { }
+    public class Pawn : Thing
     {
-        public bool Dead, Destroyed, WarPawn, Servant, Circuit = true;
+        public bool Dead, WarPawn, Servant, Downed, Spawned = true, Circuit = true;
+        public Map Map = new Map(); public IntVec3 Position;
         public string LabelShort = "Pawn", LabelShortCap = "Pawn";
         public Faction Faction = Faction.OfPlayer;
         public Story story = new Story(); public RaceProperties RaceProps = new RaceProperties();
@@ -234,6 +246,7 @@ namespace Verse
     {
         public Pawn pawn; public BodyPartRecord Part; public HediffDef def = new HediffDef(); public float Severity = 1;
         public virtual string LabelInBrackets => null; public virtual bool ShouldRemove => Severity <= 0;
+        public virtual void PostRemoved() { }
         public virtual bool TryMergeWith(Hediff other) { if (other.def != def || other.Part != Part) return false; Severity += other.Severity; return true; }
     }
     public class Hediff_Implant : Hediff { }
@@ -254,15 +267,16 @@ namespace Verse
         public Health(Pawn pawn) { this.pawn = pawn; }
         public void AddHediff(Hediff h, BodyPartRecord part = null)
         {
+            Harmony_CommandSpellHealth.Prefix(pawn, out bool hadMark);
             if (FailAdd && !FailAfterAdd) return;
             h.pawn = pawn; h.Part = part ?? h.Part;
             bool merged = false;
             foreach (Hediff current in hediffSet.hediffs) if (current.TryMergeWith(h)) merged = true;
             if (!merged) hediffSet.hediffs.Add(h);
-            Harmony_CommandSpellHealth.Postfix(pawn, h);
+            Harmony_CommandSpellHealth.Postfix(pawn, h, hadMark);
             if (FailAdd && FailAfterAdd) throw new Exception("Injected health failure");
         }
-        public void RemoveHediff(Hediff h) => hediffSet.hediffs.Remove(h);
+        public void RemoveHediff(Hediff h) { if (hediffSet.hediffs.Remove(h)) h.PostRemoved(); }
     }
     public static class HediffMaker
     { public static Hediff MakeHediff(HediffDef def, Pawn pawn, BodyPartRecord part = null) => new Hediff_CommandSpell { def = def, pawn = pawn, Part = part, Severity = 0 }; }
@@ -284,6 +298,16 @@ namespace Verse
 }
 namespace RimWorld
 {
+    public class Bill { }
+    public class Recipe_Surgery
+    {
+        public static Func<bool> Outcome;
+        protected bool CheckSurgeryFail(Pawn a, Pawn b, List<Thing> i, BodyPartRecord p, Bill bill) => Outcome?.Invoke() ?? false;
+        public virtual bool AvailableOnNow(Thing t, BodyPartRecord p = null) => true;
+        public virtual IEnumerable<BodyPartRecord> GetPartsToApplyOn(Pawn p, RecipeDef r) { yield break; }
+        public virtual void ApplyOnPawn(Pawn p, BodyPartRecord b, Pawn d, List<Thing> i, Bill bill) { }
+        public virtual void ConsumeIngredient(Thing t, RecipeDef r, Map m) { t.Destroy(); }
+    }
     public class TraitDef { }
     public class Trait { public TraitDef def; public Trait(TraitDef def) { this.def = def; } }
     public class Faction { public static Faction OfPlayer = new Faction(); }
@@ -293,7 +317,12 @@ namespace RimWorld
 }
 namespace MoonWorld
 {
-    public static class MW_DefOf { public static TraitDef MW_CommandSpell = new TraitDef(); public static HediffDef MW_CommandSpellMark = new HediffDef(), MW_SpiritDamage = new HediffDef(); }
+    internal static class UnboundServantService
+    {
+        internal static Pawn LastUnavailable;
+        internal static void NotifyMasterUnavailable(Pawn pawn) { if (!CommandSpellService.HasQualification(pawn)) LastUnavailable = pawn; }
+    }
+    public static class MW_DefOf { public static ThingDef MW_CommandSealOne = new ThingDef(), MW_CommandSealTwo = new ThingDef(), MW_CommandSealThree = new ThingDef(); public static TraitDef MW_CommandSpell = new TraitDef(); public static HediffDef MW_CommandSpellMark = new HediffDef(), MW_SpiritDamage = new HediffDef(); }
     public static class MasterCircuitUtility { public static bool HasCircuit(Pawn pawn) => pawn?.Circuit == true; }
     public static class EnemyContractUtility { public static bool IsWarPawn(Pawn pawn) => pawn?.WarPawn == true; }
     public enum ServantPresenceState { Materialized, Annihilated }

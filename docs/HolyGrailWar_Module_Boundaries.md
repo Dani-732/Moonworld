@@ -8,6 +8,10 @@
 
 ## 依赖规则
 
+失契批次实现边界：`UnboundServantService` 消费死亡/健康资格变化和每 250 Tick 的全局校正，断开 `CompServantState.master`，不生成 Pawn、不修改魔力库存或派系。唯一落单期限为该组件的 `unboundUntilTickAbs`；Native Stat `MW_UnboundSurvivalDays` 在失契时取值，默认且最低一天。`PranaCycle` 对落单者停止原御主供魔与敌方固定补给，移除旧断供惩罚，保留正常库存结算。`HolyGrailWarEntry.playerServant` 仅补充本届参战 Pawn 引用，不能充当契约；胜负按本届存续从者的当前派系关系查询。Quest 展示资格与存续，不能反向改变状态。专用手术、重签入口和完整职阶归属变更仍属后续批次。
+
+合并交付补充（替代上一段“后续批次”的范围）：`CommandSealSurgery` 在 `Recipe_Surgery` 接口内完成印记到物品及物品到印记的一次性转移，原版负责麻醉、医疗工作、药品与失败伤害；一至三划物品各用不可堆叠 ThingDef，不另存可变划数。`ServantRecontractService` 校验资格、原从者、剩余期限，协调原版派系、Need 保留、Lord、场外入场和工坊交接。玩家决定由 `ChoiceLetter_Recontract` 保存为原版信件，概率检查不拥有契约；`recontractOfferSent` 只是本次落单的通知去重标志。原玩家席位 `playerParticipant` 与六个原敌方席位一并查询，`Enemies` 仍是开战敌方历史列表，不能据此判断当前敌对性。完整验收一次进行，不要求每个内部步骤重启游戏。
+
 切片 4 最终合同优先于以下历史范围，见 [扩展计划](design/HolyGrailWar_Expansion_Plan.md)：御主资格从右手令咒 Hediff 派生，划数仅由该 Hediff severity 保存；旧组件只提供入口、旧计数的一次迁移及迁移完成标记。专用手术使用原版 Recipe/Job 与物品，普通健康操作不产出可移植令咒。契约与落单存续归 Lifecycle，魔力归 Need/Prana，当前职阶阵营与开战历史明确区分；Quest 只展示。御主死亡/失格断契断供，默认落单一天；重签沿用原 Pawn 并改属从者职阶，胜负依据本届当前敌对从者存续，不依据御主或旧 enemy 淘汰标记。分批落地不等于这些行为已全部实现。
 
 工坊撤退切片补充（优先于下方旧阶段范围）：七阵营运行时由 `HolyGrailWarEntry.enemies` 保存，Quest 仅展示与归档。可进入的 `Site_WarWorkshop` 保存本地战败、撤退命令及逃脱标记；`WorkshopRetreatPolicy` 是可由外部魔术模块替换的决策接口，默认从者战败灵体化则御主撤退。`WarWorkshopService` 安排原版撤退职责，`WorkshopRebuildService` 消费实际逃脱结果，为原主从安排一个新 Site；重建期限归 `EnemyWarParticipant`，不复制魔力或契约。详细边界见 [工坊撤退与重建](design/HolyGrailWar_Workshop_Retreat.md)。本 Mod 不开发魔术系统。
@@ -57,6 +61,8 @@ HolyGrailWarEntry.playerIdentity / enemyIdentity
 HolyGrailWarEntry.enemyMaster / enemyServant / enemyDeployed
 CompServantState.master
 CompServantState.presenceState
+CompServantState.unboundUntilTickAbs（-1 为未落单；绝对 Tick）
+HolyGrailWarEntry.playerServant（本届参战引用，不是当前契约）
 CompMasterPranaControl.supplyThresholdOverride
 Hediff_CommandSpell.severity（右手，唯一剩余划数）
 CompMasterCommandSpells.commandSpellHealthMigrated（一次迁移标记；失败时保留旧 commandSpellCharges 原值，成功后不写回）

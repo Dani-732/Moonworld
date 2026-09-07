@@ -15,7 +15,8 @@ namespace MoonWorld
     {
         MasterDeath,
         SpiritDamageLimit,
-        ExplicitKill
+        ExplicitKill,
+        UnboundExpired
     }
 
 

@@ -17,6 +17,8 @@ internal static partial class SummoningTests
     private static void Setup()
     {
         Current.Game = new Game();
+        Find.LetterStack.LettersListForReading.Clear();
+        Rand.Pass = true;
         map = new Map(); master = new Pawn { Map = map }; cell = new IntVec3 { Valid = true };
         Find.TickManager.TicksGame = 1234;
         Find.WorldPawns.Pawns.Clear();
@@ -120,8 +122,9 @@ internal static partial class SummoningTests
     }
     public static void Main()
     {
+        RecontractScenarios();
         RunWorkshopTests();
-        Test("seven faction war only ends after all six opponents lose qualification", () => {
+        Test("seven faction war only ends after all six servants cease existing", () => {
             SevenClasses(); PrepareEnemy(); var enemies = State.CurrentWarEntry.Enemies;
             Check(enemies.Count == 6 && State.warQuest.GetFirstPartOfType<QuestPart_HolyGrailWar>().Factions.Count == 7, "roster incomplete");
             var factions = new HashSet<Faction>();
@@ -129,8 +132,10 @@ internal static partial class SummoningTests
             {
                 factions.Add(enemies[i].EnemyMaster.Faction);
                 Check(enemies[i].EnemyMaster.Faction == enemies[i].EnemyServant.Faction, "mismatched faction");
-                if (i % 2 == 0) enemies[i].EnemyMaster.Dead = true;
-                else enemies[i].EnemyServant.State.PresenceState = ServantPresenceState.Annihilated;
+                enemies[i].EnemyMaster.Dead = true;
+                WarOutcomeService.Tick(State);
+                Check(State.CurrentWarOutcome == WarOutcome.Ongoing, "master death ended war");
+                enemies[i].EnemyServant.State.PresenceState = ServantPresenceState.Annihilated;
                 WarOutcomeService.Tick(State);
                 Check(State.CurrentWarOutcome == (i == 5 ? WarOutcome.PlayerVictory : WarOutcome.Ongoing), "premature/absent victory");
             }
@@ -226,7 +231,8 @@ internal static partial class SummoningTests
             SevenClasses(); PrepareEnemy(); var part = State.warQuest.GetFirstPartOfType<QuestPart_HolyGrailWar>();
             State.CurrentWarEntry.Enemies[0].EnemyServant.Dead = true;
             string description = part.DescriptionPart;
-            Check(!part.Factions[1].Qualified && part.Factions[2].Qualified && part.Factions.Count == 7, "live status stale");
+            Check(part.Factions[1].Qualified && part.Factions[1].Status.Contains("资格保留")
+                && part.Factions[2].Qualified && part.Factions.Count == 7, "master lost qualification with servant");
             for (int i = 1; i < 6; i++) State.CurrentWarEntry.Enemies[i].EnemyServant.Dead = true;
             WarOutcomeService.Tick(State); master.Dead = true; description = part.DescriptionPart;
             Check(part.Factions[0].Qualified && State.warQuest.Historical, "history changed after completion");
@@ -409,9 +415,9 @@ internal static partial class SummoningTests
                 && !Deploy(), "reloaded opponent replaced");
             Check(!State.CurrentWarEntry.EnemyMaster.Spawned && Find.WorldPawns.Contains(State.CurrentWarEntry.EnemyMaster), "world master lost on reload");
         });
-        Test("dead enemy cannot respawn", () => {
+        Test("dead enemy master blocks raids without eliminating surviving servant", () => {
             PrepareEnemy(); Check(Deploy(), "deployment failed"); State.CurrentWarEntry.EnemyMaster.Dead = true;
-            Check(State.CurrentWarEntry.EnemyEliminated && !Deploy(), "eliminated enemy respawned");
+            Check(!State.CurrentWarEntry.EnemyEliminated && !Deploy(), "orphan raided or was eliminated");
         });
         Test("departed enemy is retained as same pawn", () => {
             PrepareEnemy(); Check(Deploy(), "deployment failed"); Pawn enemy = State.CurrentWarEntry.EnemyServant; enemy.Spawned = false;
@@ -461,6 +467,7 @@ internal static partial class SummoningTests
         Test("legacy opposition contract remains valid while unrelated factions are rejected", () => {
             var legacy = new Faction { def = MW_DefOf.MW_WarOpposition };
             Pawn owner = new Pawn { Faction = legacy }, pawn = new Pawn { Faction = legacy };
+            owner.Spells.TryGrantForWar(out _);
             pawn.State.Bind(owner);
             Check(EnemyContractUtility.HasEnemyContract(pawn), "legacy contract rejected");
             pawn.Faction = new Faction { def = MW_DefOf.MW_WarOpposition_Saber };
@@ -609,21 +616,63 @@ internal static partial class SummoningTests
             Check(State.CurrentWarOutcome == WarOutcome.PlayerVictory, "enemy elimination did not win war");
             WarOutcomeService.Tick(State); Check(State.CurrentWarOutcome == WarOutcome.PlayerVictory, "war outcome changed on second tick");
         });
-        Test("player master death ends war as defeat", () => {
+        Test("player master death preserves surviving servant participation", () => {
             PrepareEnemy(); Check(Deploy(), "deployment failed"); master.Dead = true; WarOutcomeService.Tick(State);
-            Check(State.CurrentWarOutcome == WarOutcome.PlayerDefeat, "master death did not lose war");
+            Check(State.CurrentWarOutcome == WarOutcome.Ongoing, "master death ended war prematurely");
+        });
+        Test("surviving player master retains eligibility after servant death", () => {
+            PrepareEnemy(); State.CurrentWarEntry.PlayerServant.Dead = true; WarOutcomeService.Tick(State);
+            Check(State.CurrentWarOutcome == WarOutcome.Ongoing && CommandSpellService.HasQualification(master)
+                && State.CurrentWarEntry.RegularSummonUsed, "retired master lost eligibility or gained summon");
+        });
+        Test("unbound off-map enemy blocks victory regardless of master health", () => {
+            PrepareEnemy(); var entry = State.CurrentWarEntry; entry.EnemyMaster.Dead = true;
+            entry.EnemyServant.State.Bind(null); WarOutcomeService.Tick(State);
+            Check(State.CurrentWarOutcome == WarOutcome.Ongoing && !entry.EnemyEliminated, "orphan ignored");
+            entry.EnemyServant.State.PresenceState = ServantPresenceState.Annihilated; WarOutcomeService.Tick(State);
+            Check(State.CurrentWarOutcome == WarOutcome.PlayerVictory, "true disappearance ignored");
+        });
+        Test("changed servant allegiance uses current hostility instead of original enemy list", () => {
+            PrepareEnemy(); State.CurrentWarEntry.EnemyServant.Faction = Faction.OfPlayer; WarOutcomeService.Tick(State);
+            Check(State.CurrentWarOutcome == WarOutcome.PlayerVictory, "original enemy list overrode current faction");
+        });
+        Test("original player servant becoming hostile still blocks victory", () => {
+            PrepareEnemy(); var entry = State.CurrentWarEntry;
+            entry.PlayerServant.Faction = entry.EnemyServant.Faction; entry.EnemyServant.Dead = true;
+            WarOutcomeService.Tick(State); Check(State.CurrentWarOutcome == WarOutcome.Ongoing, "hostile original servant ignored");
+        });
+        Test("player servant reference survives field save after loss of contract", () => {
+            PrepareEnemy(); var entry = State.CurrentWarEntry; Pawn original = entry.PlayerServant;
+            original.State.Bind(null); entry.ExposeData(); Scribe.Loading = true;
+            var restored = new HolyGrailWarEntry(); restored.ExposeData(); Scribe.Loading = false;
+            Check(restored.PlayerServant == original && restored.RegularSummonUsed, "unbound identity lost on save");
+        });
+        Test("legacy player reference resolves identity instead of first bound servant", () => {
+            PrepareEnemy(); var entry = State.CurrentWarEntry; Pawn original = entry.PlayerServant;
+            var extra = new Pawn { Servant = true, Identity = entry.EnemyIdentity }; extra.State.Bind(master);
+            PawnGenerator.Created.Insert(0, extra); entry.RecordPlayerServant(null);
+            entry.ResolveLegacyPlayerServant();
+            Check(entry.PlayerServant == original && extra.State.Master == master, "legacy identity confused");
+        });
+        Test("ambiguous legacy player candidates remain unknown without losing qualification", () => {
+            PrepareEnemy(); var entry = State.CurrentWarEntry;
+            var extra = new Pawn { Servant = true, Identity = entry.PlayerIdentity }; extra.State.Bind(master);
+            PawnGenerator.Created.Add(extra); entry.RecordPlayerServant(null);
+            entry.ResolveLegacyPlayerServant(); WarOutcomeService.Tick(State);
+            Check(entry.PlayerServant == null && State.CurrentWarOutcome == WarOutcome.Ongoing
+                && entry.RegularSummonUsed, "ambiguous migration selected an arbitrary pawn");
         });
         Test("victory completes quest once with notification and preserves participants", () => {
             PrepareEnemy(); var entry = State.CurrentWarEntry; var quest = State.warQuest;
             var servant = entry.EnemyServant; var workshop = Find.WorldObjects.All[0];
-            entry.EnemyMaster.Dead = true; WarOutcomeService.Tick(State); WarOutcomeService.Tick(State);
+            entry.EnemyServant.Dead = true; WarOutcomeService.Tick(State); WarOutcomeService.Tick(State);
             Check(quest.State == QuestState.EndedSuccess && quest.EndCalls == 1 && quest.Letters == 1, "quest victory not idempotent");
             Check(!workshop.Destroyed && entry.EnemyServant == servant && PawnGenerator.Created.Count == 3
                 && State.warStartTick == 1234 && entry.RegularSummonUsed && !Deploy(), "quest cleanup changed war facts");
         });
         Test("defeat completes quest once and cannot be overwritten by later enemy death", () => {
-            PrepareEnemy(); master.Dead = true; WarOutcomeService.Tick(State);
-            State.CurrentWarEntry.EnemyMaster.Dead = true; WarOutcomeService.Tick(State);
+            PrepareEnemy(); master.Dead = true; State.CurrentWarEntry.PlayerServant.Dead = true; WarOutcomeService.Tick(State);
+            State.CurrentWarEntry.EnemyServant.Dead = true; WarOutcomeService.Tick(State);
             Check(State.warQuest.State == QuestState.EndedFailed && State.warQuest.EndCalls == 1
                 && State.warQuest.Letters == 1, "quest defeat overwritten");
         });
@@ -712,11 +761,11 @@ internal static partial class SummoningTests
             site.Map = new Map { IsPlayerHome = false }; site.PostMapGenerate();
             Check(!entry.EnemyMaster.Spawned && !entry.EnemyServant.Spawned, "holder stolen");
         });
-        Test("defeated workshop owner permits site removal and normal war victory", () => {
+        Test("dead workshop owner leaves living servant and war ongoing", () => {
             PrepareEnemy(); var site = (Site_WarWorkshop)Find.WorldObjects.All[0]; site.Map = new Map { IsPlayerHome = false };
             site.PostMapGenerate(); State.CurrentWarEntry.EnemyMaster.Dead = true; WarOutcomeService.Tick(State);
-            bool removeSite; Check(site.ShouldRemoveMapNow(out removeSite) && removeSite
-                && State.CurrentWarOutcome == WarOutcome.PlayerVictory && State.warQuest.State == QuestState.EndedSuccess,
+            bool removeSite; Check(site.ShouldRemoveMapNow(out removeSite) && !removeSite
+                && State.CurrentWarOutcome == WarOutcome.Ongoing && State.warQuest.State == QuestState.Ongoing,
                 "workshop victory mismatch");
         });
         Test("workshop retreat before first raid starts real rest duration", () => {
@@ -751,7 +800,34 @@ namespace Verse
     public class GameComponent { public virtual void LoadedGame() { } public virtual void GameComponentTick() { } public virtual void ExposeData() { } }
     public class Game { public GameComponent_MoonWorld State; public Game() { State = new GameComponent_MoonWorld(this); } public T GetComponent<T>() where T : class => State as T; }
     public static class Current { public static Game Game; }
-    public static class Find { public static TickManager TickManager = new TickManager(); public static WorldPawns WorldPawns = new WorldPawns(); public static FactionManager FactionManager = new FactionManager(); public static WorldObjectsHolder WorldObjects = new WorldObjectsHolder(); public static RimWorld.QuestManager QuestManager = new RimWorld.QuestManager(); }
+    public static class Find { public static LetterStack LetterStack = new LetterStack(); public static TickManager TickManager = new TickManager(); public static WorldPawns WorldPawns = new WorldPawns(); public static FactionManager FactionManager = new FactionManager(); public static WorldObjectsHolder WorldObjects = new WorldObjectsHolder(); public static RimWorld.QuestManager QuestManager = new RimWorld.QuestManager(); }
+    public class DiaOption
+    {
+        public string Label; public bool resolveTree; public Action action;
+        public DiaOption(string label) { Label = label; }
+    }
+    public class Letter { public bool ArchivedOnly; public virtual void ExposeData() { } }
+    public class ChoiceLetter : Letter
+    {
+        private int timeout;
+        public bool TimeoutPassed => GenTicks.TicksAbs >= timeout;
+        public void StartTimeout(int duration) { timeout = GenTicks.TicksAbs + duration; }
+        public virtual IEnumerable<DiaOption> Choices => new DiaOption[0];
+        public DiaOption Option_Postpone => new DiaOption("postpone");
+        public DiaOption Option_Reject => new DiaOption("reject") { action = () => Find.LetterStack.RemoveLetter(this) };
+        public DiaOption Option_Close => new DiaOption("close");
+        public override void ExposeData() { Scribe_Values.Look(ref timeout, "timeout", 0); }
+    }
+    public class LetterStack
+    {
+        public List<Letter> LettersListForReading = new List<Letter>();
+        public void ReceiveLetter(Letter letter) { LettersListForReading.Add(letter); }
+        public void RemoveLetter(Letter letter) { letter.ArchivedOnly = true; LettersListForReading.Remove(letter); }
+    }
+    public static class LetterMaker
+    {
+        public static Letter MakeLetter(string label, string text, object def, Pawn pawn) => new ChoiceLetter_Recontract();
+    }
     public class FactionManager
     {
         public List<Faction> AllFactionsListForReading = new List<Faction>();
@@ -786,7 +862,11 @@ namespace Verse
     public class Pawn
     {
         public Map MapHeld => Spawned ? Map : null;
-        public bool Dead, Destroyed, IsPrisoner, IsSlave, Lodger, Servant, Downed, InMentalState;
+        public bool Dead, Destroyed, IsPrisoner, IsSlave, Lodger, Servant, Downed, InMentalState, Suspended, Travel;
+        public int thingIDNumber;
+        public IntVec3 Position;
+        public Caravan Caravan;
+        public Jobs jobs = new Jobs();
         public object ParentHolder; public int becameWorldPawnTickAbs = -1;
         public string LabelShortCap => "测试御主"; public object Rotation; public Health health = new Health(); public Verse.AI.Group.Lord Lord;
         public void DeSpawn() { Spawned = false; Map = null; if (Lord != null) { Lord.Pawn = null; Lord = null; } }
@@ -808,12 +888,13 @@ namespace Verse
     public class Hediff_Injury : Hediff { }
     public class HediffSet { public List<Hediff> hediffs = new List<Hediff>(); }
     public class Health { public bool Unsafe; public HediffSet hediffSet = new HediffSet(); public bool ShouldBeDead() => Unsafe; public bool ShouldBeDowned() => Unsafe; }
-    public class Needs { public Need_Prana Prana = new Need_Prana(); public T TryGetNeed<T>() where T : class => Prana as T; }
+    public class Jobs { public void StopAll(bool a, bool b) { } }
+    public class Needs { public Need_Prana Prana = new Need_Prana(); public List<Need> AllNeeds => new List<Need> { Prana }; public T TryGetNeed<T>() where T : class => Prana as T; }
     public class Story { public TraitSet traits = new TraitSet(); }
     public class TraitSet { public List<Trait> allTraits = new List<Trait>(); public bool HasTrait(TraitDef d) => allTraits.Exists(t => t.def == d); public void GainTrait(Trait t) { allTraits.Add(t); } }
     public static class PawnExtensions { public static bool IsQuestLodger(this Pawn p) => p.Lodger; }
     public static class Log { public static void Error(string s) { } public static void Warning(string s) { } }
-    public static class Messages { public static void Message(string s, Pawn p, object kind, bool historical) { } }
+    public static class Messages { public static void Message(string s, object kind, bool historical) { } public static void Message(string s, Pawn p, object kind, bool historical) { } }
     public static class DefDatabase<T> { public static List<T> AllDefsListForReading; }
     public class Def { public string defName, label; public virtual IEnumerable<string> ConfigErrors() { yield break; } }
     public static class GenCollection
@@ -823,6 +904,7 @@ namespace Verse
         public static T RandomElement<T>(this List<T> list)
         { Sizes.Add(list.Count); return list[Draws.Count == 0 ? 0 : Draws.Dequeue()]; }
     }
+    public static class Rand { public static bool Pass = true; public static bool Chance(float chance) => Pass; }
     public enum PawnGenerationContext { NonPlayer }
     public struct PawnGenerationRequest
     {
@@ -894,7 +976,9 @@ namespace RimWorld
 {
     public class IncidentParms { public object target; }
     public class IncidentWorker { protected virtual bool CanFireNowSub(IncidentParms p) => true; protected virtual bool TryExecuteWorker(IncidentParms p) => false; public bool TryExecute(IncidentParms p) => TryExecuteWorker(p); }
-    public static class MessageTypeDefOf { public static object ThreatBig = new object(), NegativeEvent = new object(), PositiveEvent = new object(); }
+    public class NeedDef { }
+    public class Need { public NeedDef def = new NeedDef(); public float CurLevel, MaxLevel = 100; }
+    public static class MessageTypeDefOf { public static object RejectInput = new object(), NeutralEvent = new object(), ThreatBig = new object(), NegativeEvent = new object(), PositiveEvent = new object(); }
     public enum FactionRelationKind { Hostile }
     public class Faction
     {
@@ -907,16 +991,31 @@ namespace RimWorld
     public class FactionDef { public bool permanentEnemy = true, hidden = true, raidsForbidden = true; }
     public struct FactionGeneratorParms { public FactionDef Def; public FactionGeneratorParms(FactionDef def, bool hidden) { Def = def; } }
     public static class FactionGenerator { public static Faction NewGeneratedFaction(FactionGeneratorParms p) => new Faction { def = p.Def }; }
-    public static class PawnsFinder { public static List<Pawn> AllMapsAndWorld_Alive => PawnGenerator.Created; }
+    public static class PawnsFinder
+    {
+        private static readonly List<Pawn> alive = new List<Pawn>();
+        public static List<Pawn> AllMapsAndWorld_Alive
+        {
+            get { alive.Clear(); alive.AddRange(PawnGenerator.Created); return alive; }
+        }
+    }
     public class TraitDef { }
     public class Trait { public TraitDef def; public Trait(TraitDef d) { def = d; } }
     public class PawnKindDef { public object race = new object(); }
 }
 namespace MoonWorld
 {
+    internal static class UnboundServantService
+    {
+        internal static void Tick() { }
+        internal static List<Pawn> KnownServants() => new List<Pawn>(PawnsFinder.AllMapsAndWorld_Alive).FindAll(Exists);
+        internal static bool Exists(Pawn p) => p != null && p.Servant && !p.Dead && !p.Destroyed
+            && p.State.PresenceState != ServantPresenceState.Annihilated;
+    }
     public interface IServantSummoningService { }
     public static class MW_DefOf
     {
+        public static object MW_RecontractOffer = new object();
         public static QuestScriptDef MW_HolyGrailWarQuest = new QuestScriptDef();
         public static TraitDef MW_CommandSpell = new TraitDef(), MW_MagusCircuit_Basic = new TraitDef(), MW_MageRank_Apprentice = new TraitDef();
         public static Settings MW_HolyGrailWarSettings = new Settings();
@@ -928,7 +1027,8 @@ namespace MoonWorld
     }
     public class Settings { public int pranaUpdateIntervalTicks = 250, enemyRestDurationTicks = 180000; public float enemyRaidPranaFraction = .8f; }
     public static class PranaCycleService { public static int Calls; public static void Execute(int ticks) { Calls++; } }
-    public static class ServantColonyMembership { public static void ReconcileLoadedGame() { } }
+    public static class ServantColonyMembership { public static void ReconcileLoadedGame() { } public static void SetFactionPreservingKind(Pawn p, Faction f) { p.Faction = f; } }
+    public static class ServantTravelAutonomy { public static bool HasTravelAssignment(Pawn p) => p.Travel; }
     public static class MasterCircuitUtility { public static bool HasCircuit(Pawn p) => p != null && p.Circuit; public static void EnsureMasterPranaNeed(Pawn p) { } }
     public class CompMasterCommandSpells
     {
@@ -941,8 +1041,13 @@ namespace MoonWorld
         public static bool HasQualification(Pawn pawn) => pawn != null && !pawn.Dead && !pawn.Destroyed && pawn.Spells.Charges > 0;
     }
     public enum ServantPresenceState { Materialized, Annihilated, DefeatedSpirit }
-    public class Need_Prana { public float CurLevel, MaxLevel = 100; }
-    public class CompServantState { public Pawn Master; public ServantPresenceState PresenceState; public void Bind(Pawn p) { Master = p; } }
+    public class Need_Prana : Need { }
+    public class CompServantState {
+        public Pawn Master; public ServantPresenceState PresenceState; public int UnboundUntilTickAbs = -1; public bool RecontractOfferSent;
+        public void MarkRecontractOfferSent() { RecontractOfferSent = true; }
+        public void Bind(Pawn p) { Master = p; if (p != null) UnboundUntilTickAbs = -1; }
+        public void RestoreContract(Pawn p, int deadline) { Master = p; UnboundUntilTickAbs = deadline; }
+    }
     public class ServantQuery { public static ServantQuery Instance = new ServantQuery(); public bool IsServant(Pawn p) => p.Servant; public bool IsSpirit(Pawn p) => p?.State.PresenceState == ServantPresenceState.DefeatedSpirit; public Pawn GetMaster(Pawn p) => p?.State.Master; }
     public static class ServantIdentityUtility { public static ServantIdentityDef GetIdentity(Pawn p) => p?.Identity; public static ServantResourceProfileDef GetProfile(Pawn p) => new ServantResourceProfileDef(); }
     public class ServantResourceProfileDef { public float materializedSustainThreshold = 30; }
@@ -962,12 +1067,17 @@ namespace MoonWorld
         public bool TryRematerialize(Pawn master, Pawn pawn, out string reason) => TryPrepareEnemyRaid(pawn, out reason);
     }
 }
-namespace RimWorld.Planet { public enum PawnDiscardDecideMode { Decide, KeepForever } }
+namespace RimWorld.Planet { public enum PawnDiscardDecideMode { Decide, KeepForever } public static class CaravanUtility { public static Caravan GetCaravan(this Pawn p) => p.Caravan; } }
 namespace Verse.AI.Group
 {
-    public class Lord { public Pawn Pawn; public object LordJob; }
+    public class Lord {
+        public Pawn Pawn; public object LordJob; public Map Map;
+        public List<Pawn> ownedPawns => Pawn == null ? new List<Pawn>() : new List<Pawn> { Pawn };
+        public void RemovePawn(Pawn p) { if (Pawn == p) Pawn = null; if (p.Lord == this) p.Lord = null; }
+        public void AddPawn(Pawn p) { Pawn = p; p.Lord = this; }
+    }
     public static class LordExtensions { public static Lord GetLord(this Pawn p) => p.Lord; }
     public class LordManager { public void RemoveLord(Lord l) { if (l.Pawn != null) l.Pawn.Lord = null; l.Pawn = null; } }
     public static class LordMaker { public static bool Fail; public static Pawn[] LastPawns;
-        public static Lord MakeNewLord(Faction f, object job, Map m, Pawn[] pawns) { LastPawns = pawns; Lord result = new Lord { Pawn = pawns[0], LordJob = job }; pawns[0].Lord = result; if (Fail) throw new Exception("lord"); return result; } }
+        public static Lord MakeNewLord(Faction f, object job, Map m, Pawn[] pawns) { LastPawns = pawns; Lord result = new Lord { Pawn = pawns[0], LordJob = job, Map = m }; pawns[0].Lord = result; if (Fail) throw new Exception("lord"); return result; } }
 }

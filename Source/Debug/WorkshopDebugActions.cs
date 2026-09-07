@@ -15,10 +15,11 @@ namespace MoonWorld
             var war = Current.Game?.GetComponent<GameComponent_MoonWorld>();
             var options = new List<FloatMenuOption>();
             if (war?.CurrentWarEntry != null)
-                foreach (var enemy in war.CurrentWarEntry.Enemies)
+                foreach (var enemy in war.CurrentWarEntry.Participants)
                 {
                     EnemyWarParticipant selected = enemy;
-                    string state = enemy.EnemyEliminated ? "已淘汰" : enemy.WorkshopRebuildPending ? "等待重建"
+                    string state = enemy.EnemyEliminated ? "从者已退场" : enemy.CurrentMaster == null ? "失契落单"
+                        : !WarOutcomeService.IsHostileServant(enemy.EnemyServant) ? "非敌对" : enemy.WorkshopRebuildPending ? "等待重建"
                         : WorkshopRebuildService.BlocksRaid(enemy) ? "工坊撤退中" : "参战中";
                     options.Add(new FloatMenuOption(ParticipantLabel(enemy) + "（" + state + "）", () => OpenActions(war, selected)));
                 }
@@ -57,7 +58,7 @@ namespace MoonWorld
         {
             Pawn servant = enemy?.EnemyServant;
             if (war?.CurrentWarOutcome != WarOutcome.Ongoing || enemy == null
-                || war.CurrentWarEntry?.Enemies.Contains(enemy) != true || enemy.EnemyEliminated
+                || war.CurrentWarEntry?.Participants.Contains(enemy) != true || enemy.EnemyEliminated
                 || !EnemyContractUtility.HasEnemyContract(servant))
             {
                 Find.WindowStack.Add(new Dialog_MessageBox("目标不是本届仍参战的有效敌方从者，不能恢复或复活。"));
@@ -93,6 +94,11 @@ namespace MoonWorld
             AppendPawn(text, "从者", enemy.EnemyServant);
             Pawn servant = enemy.EnemyServant;
             Need_Prana prana = servant?.needs?.TryGetNeed<Need_Prana>();
+            int unboundDeadline = servant?.TryGetComp<CompServantState>()?.UnboundUntilTickAbs ?? -1;
+            text.Append("\n御主令咒资格：").Append(CommandSpellService.HasQualification(enemy.EnemyMaster))
+                .Append("；从者落单到期 Tick：").Append(unboundDeadline);
+            if (unboundDeadline >= 0)
+                text.Append("；剩余：").Append(System.Math.Max(0f, (unboundDeadline - GenTicks.TicksAbs) / 60000f).ToString("F2")).Append(" 天");
             text.Append("\n存在状态：").Append(servant?.TryGetComp<CompServantState>()?.PresenceState)
                 .Append("；魔力：").Append(prana == null ? "无" : prana.CurLevel.ToString("F1") + "/" + prana.MaxLevel.ToString("F1"))
                 .Append("\n场外供魔有效：").Append(EnemyContractUtility.IsResting(servant))

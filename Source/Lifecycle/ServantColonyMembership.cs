@@ -11,6 +11,15 @@ namespace MoonWorld
         // SetFaction would otherwise replace the PawnKind before rebuilding Needs.
         internal static Pawn JoiningServant { get; private set; }
 
+        internal static void SetFactionPreservingKind(Pawn pawn, Faction faction)
+        {
+            if (pawn.Faction == faction) return;
+            Pawn previous = JoiningServant;
+            JoiningServant = pawn;
+            try { pawn.SetFaction(faction); }
+            finally { JoiningServant = previous; }
+        }
+
         public static void Initialize(Pawn servant, bool newContract = false)
         {
             ServantSnapshot snapshot;

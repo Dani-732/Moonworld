@@ -11,20 +11,34 @@ namespace MoonWorld
             HolyGrailWarEntry entry = state.CurrentWarEntry;
             if (entry == null || state.warStartTick < 0 || !entry.RegularSummonUsed) return;
 
-            Pawn playerMaster = entry.DesignatedMaster;
-            if (playerMaster == null || playerMaster.Dead || playerMaster.Destroyed)
+            if (!entry.HasEnemyParticipants) return;
+            bool hostileAlive = IsHostileServant(entry.PlayerServant);
+            bool playerAlive = IsPlayerServant(entry.PlayerServant);
+            bool playerQualified = IsQualifiedPlayer(entry.DesignatedMaster);
+            foreach (var enemy in entry.Participants)
+            {
+                hostileAlive |= IsHostileServant(enemy.EnemyServant);
+                playerAlive |= IsPlayerServant(enemy.EnemyServant);
+                playerQualified |= IsQualifiedPlayer(enemy.EnemyMaster);
+                playerQualified |= IsQualifiedPlayer(enemy.OriginalMaster);
+            }
+            foreach (Pawn pawn in PawnsFinder.AllMapsAndWorld_Alive) playerQualified |= IsQualifiedPlayer(pawn);
+            if (!hostileAlive)
+            {
+                if (state.TrySetWarOutcome(WarOutcome.PlayerVictory))
+                    Messages.Message("圣杯战争胜利：本届敌对从者已全部退场。", entry.DesignatedMaster, MessageTypeDefOf.PositiveEvent, false);
+            }
+            else if (entry.PlayerServant != null && !playerAlive && !playerQualified)
             {
                 if (state.TrySetWarOutcome(WarOutcome.PlayerDefeat))
-                    Messages.Message("圣杯战争失败：玩家御主已失去参战资格。", playerMaster, MessageTypeDefOf.NegativeEvent, false);
-                return;
+                    Messages.Message("圣杯战争失败：己方已无存续从者或合格御主。", entry.DesignatedMaster, MessageTypeDefOf.NegativeEvent, false);
             }
-
-            if (!entry.HasEnemyParticipants) return;
-            foreach (var enemy in entry.Enemies)
-                if (!enemy.EnemyEliminated) return;
-            if (state.TrySetWarOutcome(WarOutcome.PlayerVictory))
-                Messages.Message("圣杯战争胜利：全部敌方阵营已失去御主资格。", entry.EnemyMaster, MessageTypeDefOf.PositiveEvent, false);
         }
+
+        internal static bool IsHostileServant(Pawn pawn) => UnboundServantService.Exists(pawn)
+            && pawn.Faction != null && pawn.Faction.HostileTo(Faction.OfPlayer);
+        private static bool IsPlayerServant(Pawn pawn) => UnboundServantService.Exists(pawn) && pawn.Faction == Faction.OfPlayer;
+        private static bool IsQualifiedPlayer(Pawn pawn) => CommandSpellService.HasQualification(pawn) && pawn.Faction == Faction.OfPlayer;
 
         public static bool IsWarOngoing()
         {

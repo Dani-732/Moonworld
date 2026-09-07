@@ -5,9 +5,10 @@ namespace MoonWorld
 {
     internal static class HolyGrailWarQuestService
     {
-        private const string WarDescription = "英灵与御主围绕圣杯展开战争。击败敌方阵营，守护接受邀请的御主。"
-            + "\n\n所有敌方阵营均失去御主资格才获得胜利：每一方御主死亡，或其从者死亡、湮灭时淘汰该方。己方指定御主死亡则为失败。"
-            + "敌方撤退、战败灵体化或工坊消失不会结束战争。";
+        private const string WarDescription = "英灵与御主围绕圣杯展开战争。"
+            + "\n\n本届敌对从者全部死亡或消散后获得胜利，场外和落单从者同样计入。"
+            + "御主死亡或失去令咒使从者失契，默认一天后消散；战败灵体、撤退和工坊失守不代表退场。"
+            + "有令咒但无从者的御主保留资格，等待重契约；己方无存续从者且无合格御主时失败。";
         internal static void Ensure(GameComponent_MoonWorld state)
         {
             HolyGrailWarEntry entry = state?.CurrentWarEntry;

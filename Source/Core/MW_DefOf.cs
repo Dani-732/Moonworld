@@ -10,6 +10,8 @@ namespace MoonWorld
         public static NeedDef MW_Prana;
         public static NeedDef MW_MasterPrana;
         public static StatDef MW_SeparatedSustainMultiplier;
+        public static StatDef MW_UnboundSurvivalDays;
+        public static HediffDef MW_TestUnboundSurvival;
         public static HediffDef MW_TestIndependentSustain;
         public static HediffDef MW_PranaShortage;
         public static HediffDef MW_SpiritDamage;
@@ -20,6 +22,8 @@ namespace MoonWorld
         public static TraitDef MW_MagusCircuit_Basic;
         public static TraitDef MW_CommandSpell;
         public static HediffDef MW_CommandSpellMark;
+        public static ThingDef MW_CommandSealOne, MW_CommandSealTwo, MW_CommandSealThree;
+        public static LetterDef MW_RecontractOffer;
         public static LetterDef MW_HolyGrailWarInvitation;
         public static QuestScriptDef MW_HolyGrailWarQuest;
         public static IncidentDef MW_HolyGrailWarEnemyServantRaid;

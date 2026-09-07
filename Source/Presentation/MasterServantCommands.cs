@@ -18,11 +18,10 @@ namespace MoonWorld
         {
             HolyGrailWarEntry entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
             if (entry == null) return null;
-            if (parent == entry.DesignatedMaster && entry.PlayerIdentity != null)
-                return "圣杯战争阵营：" + HolyGrailWarClassDef.For(entry.PlayerIdentity)?.label
-                    + "\n剩余敌对阵营：" + entry.Enemies.FindAll(e => !e.EnemyEliminated).Count + "/" + entry.Enemies.Count;
             var enemy = entry.FindEnemy(parent as Pawn);
-            if (enemy != null) return "圣杯战争阵营：" + enemy.Seat?.label + "（敌对）";
+            if (enemy != null)
+                return "圣杯战争席位：" + (enemy.CurrentMaster == parent || enemy.EnemyServant == parent ? enemy.Seat?.label : "暂无契约")
+                    + "\n存续敌对从者：" + entry.Participants.FindAll(p => WarOutcomeService.IsHostileServant(p.EnemyServant)).Count;
             return null;
         }
 
@@ -36,6 +35,12 @@ namespace MoonWorld
 
             Map map = master.Map;
             if (Prefs.DevMode)
+            {
+                yield return new Command_Action
+                {
+                    defaultLabel = "契约调试", defaultDesc = "按职阶选择失格、真正退场或重签候选检查。",
+                    icon = TexButton.Add, action = ContractDebugActions.Open, Order = -102f
+                };
                 yield return new Command_Action
                 {
                     defaultLabel = "工坊调试",
@@ -44,6 +49,7 @@ namespace MoonWorld
                     action = WorkshopDebugActions.Open,
                     Order = -101f
                 };
+            }
             Command_Target summon = new Command_Target
             {
                 defaultLabel = "召唤从者",

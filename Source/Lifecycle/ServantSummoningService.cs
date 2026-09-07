@@ -44,6 +44,7 @@ namespace MoonWorld
                     enemyPreparation.ValidatePrepared();
                     state.CommitRegularSummon();
                     state.CurrentWarEntry.SetEnemies(selected, enemyPreparation.Participants);
+                    state.CurrentWarEntry.RecordPlayerServant(generated);
                     enemyPreparation.Commit();
                     // Quest UI failure cannot roll back an already committed war and leave dangling participants.
                     try { HolyGrailWarQuestService.Ensure(state); }

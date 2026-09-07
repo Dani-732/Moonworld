@@ -110,7 +110,8 @@ internal static partial class SummoningTests
             enemy.EnemyServant.health.hediffSet.hediffs.Add(new Hediff_Injury { Severity = 2 });
             Check(!WorkshopRebuildService.TryRebuild(State, enemy, out reason, ignoreTime: true)
                 && reason.Contains("伤势") && enemy.WorkshopRebuildAtTickAbs == deadline, "injury or deadline overwritten");
-            enemy.EnemyServant.health.hediffSet.hediffs.Clear(); master.Dead = true; WarOutcomeService.Tick(State);
+            enemy.EnemyServant.health.hediffSet.hediffs.Clear(); master.Dead = true;
+            State.CurrentWarEntry.PlayerServant.Dead = true; WarOutcomeService.Tick(State);
             Check(!WorkshopRebuildService.TryRebuild(State, enemy, out reason, ignoreTime: true)
                 && reason.Contains("战争"), "ended war rebuilt");
         });

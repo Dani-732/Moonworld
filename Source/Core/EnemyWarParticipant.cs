@@ -9,6 +9,7 @@ namespace MoonWorld
         private ServantIdentityDef identity;
         private HolyGrailWarClassDef seat;
         private Pawn master, servant;
+        private Pawn lastContractMaster;
         private bool prepared, deployed;
         private int restStartTickAbs = -1;
         private int workshopRebuildAtTickAbs = -1;
@@ -18,14 +19,19 @@ namespace MoonWorld
         public PlanetTile LostWorkshopTile => lostWorkshopTile;
         public ServantIdentityDef EnemyIdentity => identity;
         public HolyGrailWarClassDef Seat => seat ?? HolyGrailWarClassDef.For(identity);
-        public Pawn EnemyMaster => master;
+        public Pawn OriginalMaster => master;
+        public Pawn CurrentMaster => servant != null && !servant.Dead && !servant.Destroyed
+            && servant.TryGetComp<CompServantState>()?.PresenceState != ServantPresenceState.Annihilated
+            ? ServantQuery.Instance.GetMaster(servant) : null;
+        public Pawn EnemyMaster => CurrentMaster ?? lastContractMaster ?? master;
+        internal void RecordRecontractMaster(Pawn pawn) { lastContractMaster = pawn; }
         public Pawn EnemyServant => servant;
         public bool EnemyPrepared => prepared;
         public bool EnemyDeployed => deployed;
         public bool HasEnemyParticipants => prepared || deployed;
         public int EnemyRestStartTickAbs => restStartTickAbs;
         public bool EnemyEliminated => HasEnemyParticipants &&
-            (master == null || master.Dead || master.Destroyed || servant == null || servant.Dead || servant.Destroyed
+            (servant == null || servant.Dead || servant.Destroyed
              || servant.TryGetComp<CompServantState>()?.PresenceState == ServantPresenceState.Annihilated);
         public EnemyWarParticipant() { }
         internal EnemyWarParticipant(ServantIdentityDef identity, Pawn master, Pawn servant,
@@ -37,7 +43,7 @@ namespace MoonWorld
         }
         internal void RecordEnemyDeployment(Pawn owner, Pawn pawn)
         {
-            if (owner != master || pawn != servant) throw new System.InvalidOperationException("出击参与者与阵营记录不符。");
+            if (owner != CurrentMaster || pawn != servant) throw new System.InvalidOperationException("出击参与者与阵营记录不符。");
             deployed = true; restStartTickAbs = -1;
         }
         internal void RecordEnemyDeparture(Pawn pawn)
@@ -54,6 +60,7 @@ namespace MoonWorld
         {
             Scribe_Defs.Look(ref identity, "identity"); Scribe_Defs.Look(ref seat, "seat");
             Scribe_References.Look(ref master, "master"); Scribe_References.Look(ref servant, "servant");
+            Scribe_References.Look(ref lastContractMaster, "lastContractMaster");
             Scribe_Values.Look(ref prepared, "prepared", false); Scribe_Values.Look(ref deployed, "deployed", false);
             Scribe_Values.Look(ref restStartTickAbs, "restStartTickAbs", -1);
             Scribe_Values.Look(ref workshopRebuildAtTickAbs, "workshopRebuildAtTickAbs", -1);

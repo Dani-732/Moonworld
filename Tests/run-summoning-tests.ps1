@@ -12,6 +12,9 @@ try {
         (Join-Path $projectRoot 'Source\Autonomy\WorkshopRetreatPolicy.cs') `
         (Join-Path $PSScriptRoot 'WorkshopRetreatTests.cs') `
         (Join-Path $PSScriptRoot 'SummoningTests.cs') `
+        (Join-Path $PSScriptRoot 'RecontractTests.cs') `
+        (Join-Path $projectRoot 'Source\Lifecycle\ServantRecontractService.cs') `
+        (Join-Path $projectRoot 'Source\Presentation\RecontractOffer.cs') `
         (Join-Path $projectRoot 'Source\Core\HolyGrailWarEntry.cs') `
         (Join-Path $projectRoot 'Source\Core\HolyGrailWarClass.cs') `
         (Join-Path $projectRoot 'Source\Core\HolyGrailWarClassDef.cs') `

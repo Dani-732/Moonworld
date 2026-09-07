@@ -264,6 +264,7 @@ namespace RimWorld
 }
 namespace MoonWorld
 {
+    public static class CommandSpellService { public static bool HasQualification(Pawn p) => p != null && !p.Dead && !p.Destroyed && p.Spells.Charges > 0; }
     public static class EnemyContractUtility
     {
         public static bool HasEnemyContract(Pawn p) => p != null && p.Faction?.Enemy == true

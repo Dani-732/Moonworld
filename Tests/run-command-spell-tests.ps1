@@ -5,6 +5,8 @@ $testOutput = Join-Path ([IO.Path]::GetTempPath()) ('MoonWorldSeals-' + [Guid]::
 try {
     & $compiler /nologo /target:exe /out:$testOutput `
         (Join-Path $PSScriptRoot 'CommandSpellTests.cs') `
+        (Join-Path $PSScriptRoot 'CommandSealSurgeryTests.cs') `
+        (Join-Path $projectRoot 'Source\Lifecycle\CommandSealSurgery.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\CommandSpellService.cs') `
         (Join-Path $projectRoot 'Source\Presentation\MasterCommandSpells.cs') `
         (Join-Path $projectRoot 'Source\Integration\Harmony_CommandSpellHealth.cs')

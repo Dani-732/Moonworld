@@ -67,7 +67,10 @@ namespace RimWorld.Planet
         public override int GetHashCode() => Id;
     }
     public class WorldObject { public virtual void Destroy() { } }
-    public class Caravan { }
+    public class Caravan {
+        public void AddPawn(Pawn p, bool addCarriedPawnToWorldPawnsIfAny) { p.Caravan = this; p.ParentHolder = this; }
+        public void RemovePawn(Pawn p) { if (p.Caravan == this) { p.Caravan = null; p.ParentHolder = null; } }
+    }
     public class TransportersArrivalAction { }
     public class SitePart { public SitePart(Site site, SitePartDef def, SitePartParams parms) { } }
     public class Site : WorldObject

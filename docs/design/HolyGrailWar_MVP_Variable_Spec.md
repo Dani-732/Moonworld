@@ -27,6 +27,14 @@
 
 ## 2. 数据归属原则
 
+合并交付补充：`CompServantState.recontractOfferSent`（bool，Scribe 同名键）只记录本次落单是否发过玩家事件，新的失契重置；它不代表资格、签约成功或消散期限。`HolyGrailWarEntry.playerParticipant` 深存原玩家职阶席位的运行记录，用于转入敌方后的休整和工坊协调；`playerServant` 保留原参与 Pawn 的兼容引用。`EnemyWarParticipant.master` 仍是开战御主，`lastContractMaster` 是最近成功重签的历史引用，`CurrentMaster` 必须从存续从者组件查询，不存第二份当前契约。`Site_WarWorkshop.ownerServant` 将工坊固定到职阶从者席位，`ownerMaster` 为当前工坊持有者，`originalOwnerMaster` 为原工坊历史；工坊不能反向决定主从契约。手术物品的实际剩余划数只由三个不同 ThingDef 表达，原版保存物品身份，标记成功移除后才可能创建物品。
+
+失契批次新增：`CompServantState.unboundUntilTickAbs`（int，Scribe 同名键，默认 -1）保存唯一落单消散绝对 Tick。失契时用原版 Stat `MW_UnboundSurvivalDays`（默认且最低 1）计算期限，重复检查/失败绑定/换图/读档不刷新；成功绑定清为 -1，再次失契重新计时。期限每 250 Tick 检查，包括场外、旅行和休眠容器，不另存剩余天数。正常魔力结算仍遵守原版暂停规则，但暂停不冻结落单寿命。调试 Hediff `MW_TestUnboundSurvival` 仅提供该 Stat 的两倍修正，无默认授予，不保存第二份期限，失契后增删不追改已定期限。
+
+`HolyGrailWarEntry.playerServant`（Pawn 引用，Scribe 同名键）记录本届首次参战的原玩家从者，失契后仍用于枚举本届参战者。旧档仅从指定御主的有效身份候选中无歧义恢复；无法识别时保持未知，不随意绑定或据此判玩家失败。它和敌方参战引用都是历史身份，不取代 `CompServantState.master`。真正死亡/湮灭才使从者退场，御主资格只由右手印记派生；没有任何当前敌对存续参战从者才胜利，有敌人且既无存续玩家从者、又无合资格玩家御主时失败。重签归属迁移和交互并入本次合并验收。
+
+`ChoiceLetter_Recontract.offeredDeadline` 是信件所属落单阶段的只读快照，通过原版 Scribe 保存，用于阻止旧信件处理后来再次失契的从者；不参与计时或延长生命，期限权威仍只有从者组件。
+
 同一事实只能有一个权威存储位置：
 
 | 事实类型 | 唯一归属 |
@@ -34,6 +42,7 @@
 | 战争开局时间 | `GameComponent` |
 | 本届事件指定的御主与常规召唤资格 | `GameComponent_MoonWorld.currentWarEntry` 深存 `HolyGrailWarEntry` |
 | 从者与御主的契约关系、灵体状态 | `CompServantState` |
+| 本次失契的绝对消散期限 | `CompServantState.unboundUntilTickAbs` |
 | 御主当前魔力 | `Need_MasterPrana` |
 | 御主回路天赋 | 回路 Trait 的 `DefModExtension` -> `MasterCircuitDef` |
 | 当前魔力 | `Need_Prana` |

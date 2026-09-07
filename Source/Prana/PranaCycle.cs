@@ -52,19 +52,22 @@ namespace MoonWorld
                     masters.Add(pawn);
                 }
                 ServantSnapshot snapshot;
-                if (!ServantQuery.Instance.TryGetSnapshot(pawn, out snapshot) || snapshot.master == null) continue;
+                if (!ServantQuery.Instance.TryGetSnapshot(pawn, out snapshot)) continue;
                 if (seenServants.Add(pawn)) servants.Add(pawn);
                 if (IsActive(snapshot.master) && seenMasters.Add(snapshot.master)) masters.Add(snapshot.master);
             }
             // Only registered participants join off-map settlement, not arbitrary world pawns.
             var entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
             if (entry != null)
-                foreach (var enemy in entry.Enemies)
+                foreach (var enemy in entry.Participants)
                 {
                     Pawn resting = enemy.EnemyServant;
                     if (IsActive(resting) && EnemyContractUtility.IsResting(resting) && seenServants.Add(resting))
                         servants.Add(resting);
                 }
+            foreach (Pawn pawn in UnboundServantService.KnownServants())
+                if (IsActive(pawn) && pawn.TryGetComp<CompServantState>()?.Master == null && seenServants.Add(pawn))
+                    servants.Add(pawn);
         }
 
         private static bool IsActive(Pawn pawn)
@@ -136,7 +139,8 @@ namespace MoonWorld
         {
             foreach (Pawn master in masters)
             {
-                if (!IsFreePlayer(master) || EnemyContractUtility.IsWarPawn(master)) continue;
+                if (!IsFreePlayer(master) || EnemyContractUtility.IsWarPawn(master)
+                    || !CommandSpellService.HasQualification(master)) continue;
                 Need_MasterPrana masterPrana = master.needs.TryGetNeed<Need_MasterPrana>();
                 MasterCircuitDef circuit = MasterCircuitUtility.GetCircuit(master);
                 if (masterPrana == null || circuit == null)
@@ -219,7 +223,7 @@ namespace MoonWorld
                 float multiplier = state.PresenceState == ServantPresenceState.Materialized ? 1f : profile.spiritUpkeepMultiplier;
                 ledger.Add(prana, -profile.materializedUpkeepPerDay * multiplier * intervalTicks / 60000f);
                 float threshold = ServantSustainPolicy.Threshold(servant, state.PresenceState);
-                UpdateShortageState(servant, ledger.LevelAfterPending(prana) < threshold, profile);
+                UpdateShortageState(servant, state.Master != null && ledger.LevelAfterPending(prana) < threshold, profile);
             }
         }
 

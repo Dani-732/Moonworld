@@ -11,14 +11,15 @@ namespace MoonWorld
     {
         internal static bool HasSurvivingOwner(Site_WarWorkshop site)
         {
-            EnemyWarParticipant entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.FindEnemy(site.OwnerMaster);
-            return entry != null && entry.EnemyMaster == site.OwnerMaster && !entry.EnemyEliminated;
+            EnemyWarParticipant entry = site.Participant;
+            return site.OwnerMaster != null && entry != null && entry.EnemyMaster == site.OwnerMaster && !entry.EnemyEliminated;
         }
 
         internal static bool TryPlaceDefenders(Site_WarWorkshop site)
         {
+            if (site.OwnerMaster == null) return true;
             if (site.RetreatOrdered) return true;
-            EnemyWarParticipant entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.FindEnemy(site.OwnerMaster);
+            EnemyWarParticipant entry = site.Participant;
             if (entry == null || site.OwnerMaster != entry.EnemyMaster) return true;
             Map map = site.Map;
             if (map == null) return false;
@@ -76,8 +77,9 @@ namespace MoonWorld
 
         internal static void ReturnDefendersToWorld(Site_WarWorkshop site)
         {
+            if (site.OwnerMaster == null) return;
             if (site.RetreatOrdered) return;
-            EnemyWarParticipant entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.FindEnemy(site.OwnerMaster);
+            EnemyWarParticipant entry = site.Participant;
             if (entry == null || site.OwnerMaster != entry.EnemyMaster) return;
             Return(entry.EnemyMaster, site.Map);
             Return(entry.EnemyServant, site.Map);
@@ -85,7 +87,7 @@ namespace MoonWorld
 
         internal static bool HasWithdrawingPawnOnMap(Site_WarWorkshop site)
         {
-            var enemy = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.FindEnemy(site.OwnerMaster);
+            var enemy = site.Participant;
             return enemy != null && (IsFreeOnMap(enemy.EnemyMaster, site.Map) || IsFreeOnMap(enemy.EnemyServant, site.Map));
         }
 
@@ -97,6 +99,7 @@ namespace MoonWorld
 
         internal static void OrderRetreat(Site_WarWorkshop site, EnemyWarParticipant enemy)
         {
+            if (site.OwnerMaster == null || site.OwnerMaster != enemy.CurrentMaster) return;
             Pawn master = enemy.EnemyMaster;
             if (IsFreeOnMap(master, site.Map) && master.Spawned && !(master.GetLord()?.LordJob is LordJob_WorkshopRetreat))
             {

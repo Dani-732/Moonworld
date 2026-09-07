@@ -17,10 +17,15 @@ namespace MoonWorld
         private Pawn master;
         private ServantPresenceState presenceState = ServantPresenceState.Materialized;
         private bool defeatResolutionInProgress;
+        private int unboundUntilTickAbs = -1;
+        private bool recontractOfferSent;
 
         public Pawn Master => master;
         public ServantPresenceState PresenceState => presenceState;
         public bool DefeatResolutionInProgress => defeatResolutionInProgress;
+        public int UnboundUntilTickAbs => unboundUntilTickAbs;
+        internal bool RecontractOfferSent => recontractOfferSent;
+        internal void MarkRecontractOfferSent() { recontractOfferSent = true; }
 
         public override void PostSpawnSetup(bool respawningAfterLoad)
         {
@@ -53,6 +58,19 @@ namespace MoonWorld
         public void Bind(Pawn newMaster)
         {
             master = newMaster;
+            if (newMaster != null) unboundUntilTickAbs = -1;
+        }
+
+        internal void BeginUnbound(int deadline)
+        {
+            master = null;
+            if (unboundUntilTickAbs < 0) { unboundUntilTickAbs = deadline; recontractOfferSent = false; }
+        }
+
+        internal void RestoreContract(Pawn previousMaster, int previousDeadline)
+        {
+            master = previousMaster;
+            unboundUntilTickAbs = previousDeadline;
         }
 
         public void SetPresence(ServantPresenceState newState)
@@ -87,6 +105,8 @@ namespace MoonWorld
             }
 
             string result = "存在状态：" + stateLabel;
+            if (master == null && unboundUntilTickAbs >= 0 && presenceState != ServantPresenceState.Annihilated)
+                result += "\n失契落单，消散剩余：" + System.Math.Max(0f, (unboundUntilTickAbs - GenTicks.TicksAbs) / 60000f).ToString("0.00") + " 天";
             var seat = HolyGrailWarClassDef.For(ServantIdentityUtility.GetIdentity(parent as Pawn));
             if (seat != null) result += "\n职阶：" + seat.label;
             if (master != null)
@@ -107,6 +127,8 @@ namespace MoonWorld
         {
             Scribe_References.Look(ref master, "master");
             Scribe_Values.Look(ref presenceState, "presenceState", ServantPresenceState.Materialized);
+            Scribe_Values.Look(ref unboundUntilTickAbs, "unboundUntilTickAbs", -1);
+            Scribe_Values.Look(ref recontractOfferSent, "recontractOfferSent", false);
         }
     }
 }

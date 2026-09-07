@@ -17,8 +17,36 @@ try {
         $mwTravel.SelectSingleNode('/Defs/HediffDef[defName="MW_TestIndependentSustain"]/stages/li/statFactors/MW_SeparatedSustainMultiplier').InnerText -ne '0.5') {
         throw 'Separated threshold must default to 2 with a debug-only native stat modifier fixture'
     }
-    foreach ($mwXmlFile in $mwXmlFiles) { [xml](Get-Content -LiteralPath $mwXmlFile.FullName -Raw) | Out-Null }
+    foreach ($mwXmlFile in $mwXmlFiles) {
+        [xml]$mwParsed = Get-Content -LiteralPath $mwXmlFile.FullName -Raw
+        foreach ($mwThing in $mwParsed.SelectNodes('/Defs/ThingDef/defName')) {
+            if ([char]::IsNumber($mwThing.InnerText[$mwThing.InnerText.Length - 1])) {
+                throw ('ThingDef name cannot end in a number: ' + $mwThing.InnerText)
+            }
+        }
+    }
+    [xml]$mwUnbound = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_UnboundSurvival.xml') -Raw
+    $mwSurvival = $mwUnbound.SelectSingleNode('/Defs/StatDef[defName="MW_UnboundSurvivalDays"]')
+    $mwSurvivalTest = $mwUnbound.SelectSingleNode('/Defs/HediffDef[defName="MW_TestUnboundSurvival"]')
+    if ($mwSurvival.defaultBaseValue -ne '1' -or $mwSurvival.minValue -ne '1' -or
+        $mwSurvivalTest.stages.li.statFactors.MW_UnboundSurvivalDays -ne '2' -or
+        $mwSurvivalTest.scenarioCanAdd -ne 'false' -or $mwSurvivalTest.duplicationAllowed -ne 'false') {
+        throw 'Unbound life must default to at least one day with a non-stacking debug stat modifier'
+    }
     [xml]$mwSeals = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_CommandSpells.xml') -Raw
+    [xml]$mwSurgery = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_CommandSealSurgery.xml') -Raw
+    $mwSurgeryBase = $mwSurgery.SelectSingleNode('/Defs/RecipeDef[@Name="MW_CommandSealSurgeryBase"]')
+    $mwSealItemBase = $mwSurgery.SelectSingleNode('/Defs/ThingDef[@Name="MW_ExtractedSealBase"]')
+    if ($mwSurgeryBase.ParentName -ne 'SurgeryFlesh' -or $mwSurgeryBase.anesthetize -ne 'true' -or
+        $mwSurgeryBase.appliedOnFixedBodyParts.li -ne 'Hand' -or $mwSealItemBase.stackLimit -ne '1' -or
+        $mwSealItemBase.tradeability -ne 'None') { throw 'Seal surgery must use native anesthesia, right-hand filtering and non-stacking items' }
+    foreach ($mwCharge in @('One','Two','Three')) {
+        if ($mwSurgery.SelectNodes("/Defs/ThingDef[defName='MW_CommandSeal$mwCharge']").Count -ne 1) { throw 'Seal charge item missing' }
+    }
+    if ($mwSurgery.SelectSingleNode('/Defs/RecipeDef[defName="MW_ExtractCommandSeal"]/workerClass').InnerText -ne 'MoonWorld.Recipe_ExtractCommandSeal' -or
+        $mwSurgery.SelectSingleNode('/Defs/RecipeDef[defName="MW_ImplantCommandSeal"]/workerClass').InnerText -ne 'MoonWorld.Recipe_ImplantCommandSeal') {
+        throw 'Dedicated seal workers missing'
+    }
     $mwMark = $mwSeals.SelectSingleNode('/Defs/HediffDef[defName="MW_CommandSpellMark"]')
     if ($mwMark.hediffClass -ne 'MoonWorld.Hediff_CommandSpell' -or $mwMark.initialSeverity -ne '0' -or
         $mwMark.maxSeverity -ne '3' -or $mwMark.countsAsAddedPartOrImplant -ne 'true' -or

@@ -7,6 +7,17 @@ namespace MoonWorld
 {
     public static class MoonWorldDebugActions
     {
+        [DebugAction("MoonWorld", "选中从者：切换落单存续延长测试能力", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
+        public static void ToggleUnboundSurvivalTest()
+        {
+            if (!TryGetSelectedServant(out Pawn servant)) return;
+            Hediff existing = servant.health.hediffSet.GetFirstHediffOfDef(MW_DefOf.MW_TestUnboundSurvival);
+            if (existing == null) servant.health.AddHediff(MW_DefOf.MW_TestUnboundSurvival);
+            else servant.health.RemoveHediff(existing);
+            Messages.Message("落单存续延长测试能力已" + (existing == null ? "添加" : "移除")
+                + "，仅影响下一次失契。", servant, MessageTypeDefOf.NeutralEvent, false);
+        }
+
         [DebugAction("MoonWorld", "选中从者：切换独立维持测试能力", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
         public static void ToggleIndependentSustainTest()
         {

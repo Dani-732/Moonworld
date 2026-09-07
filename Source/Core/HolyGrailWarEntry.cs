@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using RimWorld;
 using Verse;
 
 namespace MoonWorld
@@ -7,6 +8,8 @@ namespace MoonWorld
     public sealed class HolyGrailWarEntry : IExposable
     {
         private Pawn designatedMaster;
+        private Pawn playerServant;
+        private EnemyWarParticipant playerParticipant;
         private bool regularSummonUsed;
         private ServantIdentityDef playerIdentity;
         private ServantIdentityDef enemyIdentity;
@@ -30,13 +33,46 @@ namespace MoonWorld
                 return enemies;
             }
         }
+        public List<EnemyWarParticipant> Participants
+        {
+            get
+            {
+                if (playerParticipant == null && playerServant != null)
+                    playerParticipant = new EnemyWarParticipant(playerIdentity, designatedMaster, playerServant);
+                var result = new List<EnemyWarParticipant>(Enemies);
+                if (playerParticipant != null) result.Insert(0, playerParticipant);
+                return result;
+            }
+        }
         public EnemyWarParticipant FindEnemy(Pawn pawn)
-        { return pawn == null ? null : Enemies.Find(e => e.EnemyMaster == pawn || e.EnemyServant == pawn); }
+        {
+            if (pawn == null) return null;
+            var participants = Participants;
+            return participants.Find(e => e.EnemyServant == pawn)
+                ?? participants.Find(e => e.CurrentMaster == pawn)
+                ?? participants.Find(e => e.EnemyMaster == pawn)
+                ?? participants.Find(e => e.OriginalMaster == pawn);
+        }
         internal void SetEnemies(ServantIdentityDef player, List<EnemyWarParticipant> participants)
         { playerIdentity = player; enemies = participants; }
         private EnemyWarParticipant FirstEnemy => Enemies.Count == 0 ? null : Enemies[0];
 
         public Pawn DesignatedMaster => designatedMaster;
+        public Pawn PlayerServant => playerServant;
+        internal void RecordPlayerServant(Pawn pawn) { playerServant = pawn; playerParticipant = null; }
+        internal void ResolveLegacyPlayerServant()
+        {
+            if (playerServant != null || designatedMaster == null) return;
+            Pawn candidate = null;
+            foreach (Pawn pawn in PawnsFinder.AllMapsAndWorld_Alive)
+                if (ServantQuery.Instance.IsServant(pawn) && ServantQuery.Instance.GetMaster(pawn) == designatedMaster
+                    && (playerIdentity == null || ServantIdentityUtility.GetIdentity(pawn) == playerIdentity))
+                {
+                    if (candidate != null && candidate != pawn) return;
+                    candidate = pawn;
+                }
+            playerServant = candidate;
+        }
         public bool RegularSummonUsed => regularSummonUsed;
         public ServantIdentityDef PlayerIdentity => playerIdentity;
         // Compatibility accessors for old integrations; runtime operations resolve a participant explicitly.
@@ -96,6 +132,8 @@ namespace MoonWorld
         public void ExposeData()
         {
             Scribe_References.Look(ref designatedMaster, "designatedMaster");
+            Scribe_References.Look(ref playerServant, "playerServant");
+            Scribe_Deep.Look(ref playerParticipant, "playerParticipant");
             Scribe_Values.Look(ref regularSummonUsed, "regularSummonUsed", false);
             Scribe_Defs.Look(ref playerIdentity, "playerIdentity");
             Scribe_Defs.Look(ref enemyIdentity, "enemyIdentity");

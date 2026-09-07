@@ -9,6 +9,8 @@ namespace MoonWorld
     public sealed class Site_WarWorkshop : Site
     {
         private Pawn ownerMaster;
+        private Pawn ownerServant;
+        private Pawn originalOwnerMaster;
         private bool defendersPlaced;
         private int nextPlacementRetryTick;
         private bool servantDefeatedHere;
@@ -22,12 +24,39 @@ namespace MoonWorld
         public bool MasterEscaped => masterEscaped;
         public bool ServantEscaped => servantEscaped;
         public Pawn OwnerMaster => ownerMaster;
-        internal void SetOwner(Pawn master) { ownerMaster = master; }
+        internal void SetOwner(Pawn master, Pawn servant = null)
+        { ownerMaster = master; originalOwnerMaster = master; ownerServant = servant; }
+        internal void AbandonContractOwner()
+        {
+            if (originalOwnerMaster == null) originalOwnerMaster = ownerMaster;
+            _ = Participant;
+            ownerMaster = null;
+        }
+        internal EnemyWarParticipant Participant
+        {
+            get
+            {
+                var entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry;
+                if (entry == null) return null;
+                if (ownerServant == null)
+                    ownerServant = entry.Participants.Find(p => p.OriginalMaster == ownerMaster)?.EnemyServant;
+                return ownerServant == null ? null : entry.FindEnemy(ownerServant);
+            }
+        }
+        internal void TransferContractOwner(Pawn master, Pawn servant)
+        {
+            if (originalOwnerMaster == null) originalOwnerMaster = ownerMaster;
+            ownerMaster = master; ownerServant = servant;
+            retreatOrdered = servantDefeatedHere = masterEscaped = servantEscaped = false;
+            defendersPlaced = false;
+        }
 
         public override void ExposeData()
         {
             base.ExposeData();
             Scribe_References.Look(ref ownerMaster, "ownerMaster");
+            Scribe_References.Look(ref ownerServant, "ownerServant");
+            Scribe_References.Look(ref originalOwnerMaster, "originalOwnerMaster");
             Scribe_Values.Look(ref defendersPlaced, "defendersPlaced", false);
             Scribe_Values.Look(ref servantDefeatedHere, "servantDefeatedHere", false);
             Scribe_Values.Look(ref retreatOrdered, "retreatOrdered", false);
@@ -38,6 +67,7 @@ namespace MoonWorld
         public override string GetInspectString()
         {
             return base.GetInspectString() + "\n所属御主：" + (ownerMaster?.LabelShortCap ?? "未知")
+                + (originalOwnerMaster != null && originalOwnerMaster != ownerMaster ? "\n原工坊御主：" + originalOwnerMaster.LabelShortCap : "")
                 + (retreatOrdered ? "\n守军正在撤离。御主逃脱：" + (masterEscaped ? "是" : "否")
                     + "；从者逃脱：" + (servantEscaped ? "是" : "否") : "\n可派远行队进攻。工坊毁坏不等于阵营淘汰。");
         }
@@ -86,7 +116,7 @@ namespace MoonWorld
 
         public void NotifyServantDefeated(Pawn pawn)
         {
-            var enemy = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.FindEnemy(ownerMaster);
+            var enemy = Participant;
             if (!HasMap || pawn == null || !pawn.Spawned || pawn.Map != Map || enemy?.EnemyServant != pawn
                 || pawn.TryGetComp<CompServantState>()?.PresenceState != ServantPresenceState.DefeatedSpirit
                 || ownerMaster == null || !ownerMaster.Spawned || ownerMaster.Map != Map) return;
@@ -98,12 +128,12 @@ namespace MoonWorld
         {
             if (!HasMap || Destroyed) return;
             var war = Current.Game?.GetComponent<GameComponent_MoonWorld>();
-            var enemy = war?.CurrentWarEntry?.FindEnemy(ownerMaster);
+            var enemy = Participant;
             if (enemy == null) return;
             try
             {
                 if (!retreatOrdered && war.CurrentWarOutcome == WarOutcome.Ongoing && !enemy.EnemyEliminated
-                    && ownerMaster.Spawned && ownerMaster.Map == Map && !ownerMaster.IsPrisoner && !ownerMaster.IsSlave
+                    && ownerMaster != null && ownerMaster.Spawned && ownerMaster.Map == Map && !ownerMaster.IsPrisoner && !ownerMaster.IsSlave
                     && enemy.Seat?.RetreatPolicy.ShouldRetreat(this, ownerMaster, enemy.EnemyServant) == true)
                 {
                     retreatOrdered = true;
@@ -121,7 +151,7 @@ namespace MoonWorld
         public void NotifyPawnExited(Pawn pawn)
         {
             if (!retreatOrdered || !WorkshopRebuildService.IsFreeSurvivor(pawn)) return;
-            var enemy = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.FindEnemy(ownerMaster);
+            var enemy = Participant;
             if (enemy == null) return;
             if (pawn == ownerMaster) masterEscaped = true;
             if (pawn == enemy.EnemyServant) servantEscaped = true;

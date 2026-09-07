@@ -19,7 +19,8 @@ namespace MoonWorld
         {
             if (servant == null) return false;
             Pawn master = ServantQuery.Instance.GetMaster(servant);
-            return IsWarPawn(servant) && IsWarPawn(master) && servant.Faction == master.Faction;
+            return IsWarPawn(servant) && IsWarPawn(master) && servant.Faction == master.Faction
+                && CommandSpellService.HasQualification(master);
         }
 
         public static bool CanReceiveSupply(Pawn servant)

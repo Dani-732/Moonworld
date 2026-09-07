@@ -38,6 +38,23 @@ internal static class EnemyPranaTests
     }
     public static void Main()
     {
+        Test("unqualified enemy cannot receive fixed subsidy even with stale contract reference", () => {
+            master.Qualified = false; servant.needs.food.CurLevel = .2f; Cycle(); Near(servant.needs.Prana.CurLevel, 49.975f);
+        });
+        Test("unqualified player master cannot distribute surplus", () => {
+            master.Faction = servant.Faction = Faction.OfPlayer; master.Qualified = false;
+            servant.needs.food.CurLevel = .2f; Cycle(); Near(servant.needs.Prana.CurLevel, 49.975f);
+        });
+        Test("unbound world servant keeps upkeep without subsidy or old shortage defeat", () => {
+            Rest(); servant.State.Master = null; master.Dead = true; servant.needs.Prana.CurLevel = 0;
+            servant.health.hediffSet.hediffs.Add(new Hediff { def = MW_DefOf.MW_PranaShortage, ageTicks = 999999 });
+            Cycle(); Near(servant.needs.Prana.CurLevel, 0);
+            Check(servant.Defeats == 0 && servant.health.hediffSet.hediffs.Count == 0, "shortage bypassed lifetime");
+        });
+        Test("unbound map and world overlap pays upkeep once", () => {
+            servant.State.Master = null; servant.needs.food.CurLevel = .2f; Find.WorldPawns.Pawns.Add(servant);
+            Cycle(); Near(servant.needs.Prana.CurLevel, 49.975f);
+        });
         Test("all resting faction servants receive exactly one supply cycle", () => {
             Rest(); var entry = Current.Game.State.CurrentWarEntry;
             for (int i = 0; i < 5; i++)
@@ -255,7 +272,7 @@ namespace Verse
     public class Pawn
     {
         public bool Dead, Destroyed, IsPrisoner, IsSlave, Circuit, Servant, Suspended;
-        public bool Spawned = true;
+        public bool Spawned = true, Qualified = true;
         public Map MapHeld;
         public RimWorld.Planet.Caravan Caravan;
         public float SeparationStat = 2;
@@ -312,12 +329,23 @@ namespace RimWorld.Planet
 }
 namespace MoonWorld
 {
+    public static class CommandSpellService { public static bool HasQualification(Pawn p) => p != null && !p.Dead && !p.Destroyed && p.Qualified; }
+    internal static class UnboundServantService
+    {
+        internal static List<Pawn> KnownServants()
+        {
+            var all = new List<Pawn>(PawnsFinder.AllMapsCaravansAndTravellingTransporters_Alive);
+            all.AddRange(Find.WorldPawns.Pawns);
+            return all.FindAll(p => p.Servant && !p.Dead && !p.Destroyed);
+        }
+    }
     public class GameComponent_MoonWorld { public HolyGrailWarEntry CurrentWarEntry; }
     public class EnemyWarParticipant { public Pawn EnemyMaster, EnemyServant; public bool EnemyDeployed; public bool HasEnemyParticipants => EnemyDeployed; public int EnemyRestStartTickAbs = -1;
         public bool EnemyEliminated => EnemyMaster == null || EnemyMaster.Dead || EnemyMaster.Destroyed || EnemyServant == null || EnemyServant.Dead || EnemyServant.Destroyed; }
     public class HolyGrailWarEntry : EnemyWarParticipant
     {
         public List<EnemyWarParticipant> Additional = new List<EnemyWarParticipant>();
+        public List<EnemyWarParticipant> Participants => Enemies;
         public List<EnemyWarParticipant> Enemies { get { var list = new List<EnemyWarParticipant>(Additional); list.Add(this); return list; } }
         public EnemyWarParticipant FindEnemy(Pawn pawn) => Enemies.Find(e => e.EnemyMaster == pawn || e.EnemyServant == pawn);
     }

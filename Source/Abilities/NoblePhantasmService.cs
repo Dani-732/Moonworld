@@ -25,7 +25,7 @@ namespace MoonWorld
         {
             if (master == null || master.Dead || master.Destroyed || master.IsPrisoner || master.IsSlave
                 || (master.Faction != Faction.OfPlayer && !EnemyContractUtility.HasEnemyContract(servant))
-                || !MasterCircuitUtility.HasCircuit(master)) return "需要存活的有效御主。";
+                || !MasterCircuitUtility.HasCircuit(master) || !CommandSpellService.HasQualification(master)) return "需要存活的有效御主。";
             if (servant == null || servant.Dead || servant.Destroyed
                 || ServantQuery.Instance.GetMaster(servant) != master
                 || servant.TryGetComp<CompServantState>()?.PresenceState == ServantPresenceState.Annihilated)

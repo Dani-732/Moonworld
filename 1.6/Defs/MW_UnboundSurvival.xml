@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <StatDef>
+    <defName>MW_UnboundSurvivalDays</defName>
+    <label>落单存续天数</label>
+    <description>从者失契时确定本次消散期限，默认一天。能力、装备或状态可延长；失契后更换装备或读档不会刷新已经确定的期限。</description>
+    <defaultBaseValue>1</defaultBaseValue>
+    <minValue>1</minValue>
+    <toStringStyle>FloatTwo</toStringStyle>
+    <alwaysHide>true</alwaysHide>
+  </StatDef>
+  <HediffDef>
+    <defName>MW_TestUnboundSurvival</defName>
+    <label>测试能力：落单存续延长</label>
+    <description>下一次失契时的落单存续天数乘以二。不刷新已经确定的消散期限。</description>
+    <hediffClass>Verse.HediffWithComps</hediffClass>
+    <isBad>false</isBad>
+    <scenarioCanAdd>false</scenarioCanAdd>
+    <duplicationAllowed>false</duplicationAllowed>
+    <stages><li><statFactors><MW_UnboundSurvivalDays>2</MW_UnboundSurvivalDays></statFactors></li></stages>
+  </HediffDef>
+</Defs>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <ThingDef Name="MW_ExtractedSealBase" ParentName="ResourceBase" Abstract="True">
+    <description>经专用手术完整摘取的令咒印记。可通过专用植入手术转移实际剩余划数，不授予新的常规召唤机会。</description>
+    <graphicData><texPath>Things/Item/Health/HealthItem</texPath><graphicClass>Graphic_Single</graphicClass><color>(0.8,0.2,0.3)</color></graphicData>
+    <stackLimit>1</stackLimit>
+    <tradeability>None</tradeability>
+    <statBases><MaxHitPoints>50</MaxHitPoints><Mass>0.1</Mass><Flammability>1</Flammability><MarketValue>0</MarketValue></statBases>
+    <thingCategories><li>BodyParts</li></thingCategories>
+  </ThingDef>
+  <ThingDef ParentName="MW_ExtractedSealBase"><defName>MW_CommandSealOne</defName><label>令咒印记（一划）</label></ThingDef>
+  <ThingDef ParentName="MW_ExtractedSealBase"><defName>MW_CommandSealTwo</defName><label>令咒印记（二划）</label></ThingDef>
+  <ThingDef ParentName="MW_ExtractedSealBase"><defName>MW_CommandSealThree</defName><label>令咒印记（三划）</label></ThingDef>
+  <RecipeDef Name="MW_CommandSealSurgeryBase" ParentName="SurgeryFlesh" Abstract="True">
+    <workAmount>2000</workAmount>
+    <humanlikeOnly>true</humanlikeOnly>
+    <anesthetize>true</anesthetize>
+    <surgerySuccessChanceFactor>1</surgerySuccessChanceFactor>
+    <targetsBodyPart>true</targetsBodyPart>
+    <appliedOnFixedBodyParts><li>Hand</li></appliedOnFixedBodyParts>
+    <recipeUsers><li>Human</li></recipeUsers>
+    <skillRequirements><Medicine>6</Medicine></skillRequirements>
+  </RecipeDef>
+  <RecipeDef ParentName="MW_CommandSealSurgeryBase">
+    <defName>MW_ExtractCommandSeal</defName>
+    <label>专用摘取令咒</label>
+    <description>从实际倒地或麻醉的御主右手摘取印记。成功保留剩余划数；失败销毁印记。两种结果均使原御主失格。</description>
+    <jobString>摘取令咒。</jobString>
+    <workerClass>MoonWorld.Recipe_ExtractCommandSeal</workerClass>
+    <isViolation>true</isViolation>
+    <ingredients><li><filter><categories><li>Medicine</li></categories></filter><count>2</count></li></ingredients>
+    <fixedIngredientFilter><categories><li>Medicine</li></categories></fixedIngredientFilter>
+  </RecipeDef>
+  <RecipeDef ParentName="MW_CommandSealSurgeryBase">
+    <defName>MW_ImplantCommandSeal</defName>
+    <label>专用植入令咒</label>
+    <description>为有回路、右手完整且没有令咒的接受者植入一份摘取印记。保留剩余划数，失败消耗材料，不恢复常规召唤资格。</description>
+    <jobString>植入令咒。</jobString>
+    <workerClass>MoonWorld.Recipe_ImplantCommandSeal</workerClass>
+    <ingredients>
+      <li><filter><categories><li>Medicine</li></categories></filter><count>2</count></li>
+      <li><filter><thingDefs><li>MW_CommandSealOne</li><li>MW_CommandSealTwo</li><li>MW_CommandSealThree</li></thingDefs></filter><count>1</count></li>
+    </ingredients>
+    <fixedIngredientFilter><categories><li>Medicine</li></categories><thingDefs><li>MW_CommandSealOne</li><li>MW_CommandSealTwo</li><li>MW_CommandSealThree</li></thingDefs></fixedIngredientFilter>
+  </RecipeDef>
+</Defs>

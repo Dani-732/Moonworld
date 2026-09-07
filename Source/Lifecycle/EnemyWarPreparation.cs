@@ -85,7 +85,7 @@ namespace MoonWorld
             workshop = (Site_WarWorkshop)WorldObjectMaker.MakeWorldObject(MW_DefOf.MW_WarWorkshop);
             workshop.Tile = tile;
             workshop.SetFaction(Master.Faction);
-            workshop.SetOwner(Master);
+            workshop.SetOwner(Master, Servant);
             workshop.AddPart(new SitePart(workshop, MW_DefOf.MW_WarWorkshopPart, new SitePartParams()));
             Find.WorldObjects.Add(workshop);
             if (!workshop.Spawned) throw new InvalidOperationException("敌方工坊未成功加入世界地图。");

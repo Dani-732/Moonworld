@@ -72,12 +72,33 @@ internal static class RuntimeContractChecks
         if (mod.GetType("MoonWorld.GameComponent_MoonWorld").GetField("warStartTick") == null)
             throw new Exception("War start field removed");
         Assembly game = Assembly.LoadFrom(Path.Combine(directories[1], "Assembly-CSharp.dll"));
+        MethodInfo sealCompatibility = mod.GetType("MoonWorld.Harmony_CommandSealDefCompatibility", true).GetMethod("Prefix");
+        string[] sealNames = { "One", "Two", "Three" };
+        for (int i = 0; i < sealNames.Length; i++)
+        {
+            object[] sealArgs = { game.GetType("Verse.ThingDef", true), "MW_CommandSeal" + (i + 1) };
+            sealCompatibility.Invoke(null, sealArgs);
+            if ((string)sealArgs[1] != "MW_CommandSeal" + sealNames[i]) throw new Exception("Legacy seal name lost charges");
+            sealCompatibility.Invoke(null, sealArgs);
+            if ((string)sealArgs[1] != "MW_CommandSeal" + sealNames[i]) throw new Exception("Seal name migration is not idempotent");
+        }
+        foreach (object[] sealArgs in new[] {
+            new object[] { game.GetType("Verse.HediffDef", true), "MW_CommandSeal1" },
+            new object[] { game.GetType("Verse.ThingDef", true), "OtherMod_Thing1" },
+            new object[] { game.GetType("Verse.ThingDef", true), null } })
+        {
+            object before = sealArgs[1]; sealCompatibility.Invoke(null, sealArgs);
+            if (!Equals(before, sealArgs[1])) throw new Exception("Seal migration changed an unrelated definition");
+        }
         foreach (string[] pair in new[] {
             new[] { "MoonWorld.ScenPart_HolyGrailWar", "RimWorld.ScenPart" },
             new[] { "MoonWorld.IncidentWorker_HolyGrailWarInvitation", "RimWorld.IncidentWorker" },
             new[] { "MoonWorld.IncidentWorker_EnemyServantRaid", "RimWorld.IncidentWorker" },
             new[] { "MoonWorld.ChoiceLetter_HolyGrailWar", "Verse.ChoiceLetter" },
             new[] { "MoonWorld.Hediff_CommandSpell", "Verse.Hediff_Implant" },
+            new[] { "MoonWorld.Recipe_ExtractCommandSeal", "RimWorld.Recipe_Surgery" },
+            new[] { "MoonWorld.Recipe_ImplantCommandSeal", "RimWorld.Recipe_Surgery" },
+            new[] { "MoonWorld.ChoiceLetter_Recontract", "Verse.ChoiceLetter" },
             new[] { "MoonWorld.HolyGrailWarEntry", "Verse.IExposable" },
             new[] { "MoonWorld.EnemyWarParticipant", "Verse.IExposable" },
             new[] { "MoonWorld.HolyGrailWarClassDef", "Verse.Def" },

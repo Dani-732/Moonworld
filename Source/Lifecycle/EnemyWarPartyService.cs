@@ -21,16 +21,19 @@ namespace MoonWorld
                 return "请先完成本届玩家召唤，并等待当前部署结束。";
             if (map == null || !map.IsPlayerHome || !map.CanEverExit)
                 return "敌方突袭需要有出口的玩家基地。";
-            Pawn playerMaster = entry.DesignatedMaster;
-            if (playerMaster == null || playerMaster.Dead || playerMaster.Destroyed || !playerMaster.Spawned
-                || playerMaster.Map != map || playerMaster.Faction != Faction.OfPlayer
-                || playerMaster.IsPrisoner || playerMaster.IsSlave)
-                return "本届玩家御主必须存活、自由且位于该基地。";
-            foreach (var enemy in entry.Enemies)
+            bool playerPresent = IsPlayerTarget(entry.DesignatedMaster, map);
+            foreach (var participant in entry.Participants)
+                playerPresent |= IsPlayerTarget(participant.CurrentMaster, map)
+                    || (participant.CurrentMaster == null && IsPlayerTarget(participant.EnemyServant, map));
+            if (!playerPresent) return "本届玩家御主或落单从者必须位于该基地。";
+            foreach (var enemy in entry.Participants)
                 if (!enemy.EnemyEliminated && !WorkshopRebuildService.BlocksRaid(enemy)
                     && EnemyRestUtility.ReadinessRejection(enemy.EnemyServant) == null) return null;
             return "当前没有可出战的敌方阵营：可能正在出击、休整、撤离重建或已经淘汰。";
         }
+
+        private static bool IsPlayerTarget(Pawn pawn, Map map) => pawn != null && !pawn.Dead && !pawn.Destroyed
+            && pawn.Spawned && pawn.Map == map && pawn.Faction == Faction.OfPlayer && !pawn.IsPrisoner && !pawn.IsSlave;
 
         public static bool TryDeploy(Map map, IntVec3 cell, out string rejection)
         { return TryDeploy(map, cell, out rejection, out _); }
@@ -45,7 +48,7 @@ namespace MoonWorld
             { rejection = "请选择已探索且未被角色占用的可站立格。"; return false; }
             HolyGrailWarEntry entry = Current.Game.GetComponent<GameComponent_MoonWorld>().CurrentWarEntry;
             var ready = new List<EnemyWarParticipant>();
-            foreach (var enemy in entry.Enemies)
+            foreach (var enemy in entry.Participants)
                 if (!enemy.EnemyEliminated && !WorkshopRebuildService.BlocksRaid(enemy)
                     && EnemyRestUtility.ReadinessRejection(enemy.EnemyServant) == null) ready.Add(enemy);
             EnemyWarParticipant selected = ready.RandomElement();

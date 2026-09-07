@@ -34,6 +34,11 @@ namespace MoonWorld
                 rejection = "该角色没有魔力回路。";
                 return false;
             }
+            if (!CommandSpellService.HasQualification(master))
+            {
+                rejection = "御主缺少有效的右手令咒印记。";
+                return false;
+            }
             if (!ServantQuery.Instance.IsServant(servant))
             {
                 rejection = "目标不是 MoonWorld 从者。";
@@ -56,17 +61,32 @@ namespace MoonWorld
                 rejection = "从者缺少生命周期组件。";
                 return false;
             }
+            if (state.PresenceState == ServantPresenceState.Annihilated
+                || (state.Master == null && state.UnboundUntilTickAbs >= 0 && GenTicks.TicksAbs >= state.UnboundUntilTickAbs))
+            {
+                rejection = "从者已退场或落单存续期限已到。";
+                return false;
+            }
             if (state.Master != null && state.Master != master)
             {
                 rejection = "从者已与其他御主订立契约。";
                 return false;
             }
 
-            state.Bind(master);
-            state.SetPresence(ServantPresenceState.Materialized);
-            if (!enemy) ServantColonyMembership.Initialize(servant, newContract: true);
-            ServantPresenceEffects.Reconcile(servant);
-            return true;
+            Pawn previousMaster = state.Master;
+            int previousDeadline = state.UnboundUntilTickAbs;
+            try
+            {
+                state.Bind(master);
+                if (!enemy) ServantColonyMembership.Initialize(servant, newContract: true);
+                ServantPresenceEffects.Reconcile(servant);
+                return true;
+            }
+            catch
+            {
+                state.RestoreContract(previousMaster, previousDeadline);
+                throw;
+            }
         }
 
         public bool TryEnterVoluntarySpirit(Pawn master, Pawn servant)
@@ -287,6 +307,7 @@ namespace MoonWorld
                 && !master.IsPrisoner && !master.IsSlave
                 && !servant.IsPrisoner && !servant.IsSlave
                 && MasterCircuitUtility.HasCircuit(master)
+                && CommandSpellService.HasQualification(master)
                 && GetBoundState(master, servant) != null
                 && ((master.Faction == Faction.OfPlayer && servant.Faction == Faction.OfPlayer
                         && master.HostFaction == null && servant.HostFaction == null)

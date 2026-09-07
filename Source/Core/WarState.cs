@@ -31,12 +31,19 @@ namespace MoonWorld
             if (currentWarEntry == null && warStartTick >= 0)
                 currentWarEntry = new HolyGrailWarEntry(null, alreadySummoned: true);
             EnemyWarPreparation.ReconcileLoadedWar(this);
+            currentWarEntry?.ResolveLegacyPlayerServant();
+            UnboundServantService.Tick();
             HolyGrailWarQuestService.Ensure(this);
             HolyGrailWarQuestService.SyncOutcome(this, notify: false);
         }
 
         public override void GameComponentTick()
         {
+            if (Find.TickManager.TicksGame % 250 == 0)
+            {
+                UnboundServantService.Tick();
+            }
+            if (Find.TickManager.TicksGame % 2500 == 0) ServantRecontractService.Tick();
             WarOutcomeService.Tick(this);
             if (Find.TickManager.TicksGame % 2500 == 0) WorkshopRebuildService.Tick(this);
             int interval = Mathf.Max(1, MW_DefOf.MW_HolyGrailWarSettings.pranaUpdateIntervalTicks);

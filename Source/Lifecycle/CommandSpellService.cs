@@ -10,6 +10,11 @@ namespace MoonWorld
         public override string LabelInBrackets => Charges + " / " + CommandSpellService.MaximumCharges;
         public override bool ShouldRemove => Charges == 0 || !CommandSpellService.IsValidCarrier(pawn, Part);
         public override bool TryMergeWith(Hediff other) => other.def == def;
+        public override void PostRemoved()
+        {
+            base.PostRemoved();
+            UnboundServantService.NotifyMasterUnavailable(pawn);
+        }
     }
 
     public static class CommandSpellService
