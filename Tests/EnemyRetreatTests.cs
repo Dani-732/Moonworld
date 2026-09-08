@@ -13,6 +13,7 @@ internal static class EnemyRetreatTests
     private static int passed;
     private static void Setup()
     {
+        EnemyBattleService.Member = null;
         Map map = new Map(); master = new Pawn { Map = map }; servant = new Pawn { Map = map, Master = master, Servant = true };
         party = new LordJob_EnemyWarParty(); Lord lord = new Lord { LordJob = party }; party.lord = lord;
         lord.CurLordToil = party.CreateGraph().Toils[0]; servant.Lord = lord; master.Lord = lord;
@@ -30,6 +31,18 @@ internal static class EnemyRetreatTests
     }
     public static void Main()
     {
+        Test("mutual combat ignores master incapacity and uses servant targeting", () => {
+            EnemyBattleService.Member = servant; master.Downed = true;
+            Pawn target = Target(15); party.LordJobTick();
+            Check(!party.Retreating && party.GetPreferredTarget(servant) == target, "master decided servant battle");
+        });
+        Test("unbound mutual combat keeps assault duty without a master", () => {
+            EnemyBattleService.Member = servant; servant.Master = null; Current.Game.Entry.EnemyMaster = null;
+            Pawn target = Target(15); party.LordJobTick();
+            party.lord.CurLordToil.UpdateAllDuties();
+            Check(!party.Retreating && party.GetPreferredTarget(servant) == target
+                && servant.mindState.duty.def == MW_DefOf.MW_EnemyServantAssault, "unbound assault lost");
+        });
         Test("workshop master uses native exit toil without combat fallback", () => {
             var retreat = new LordJob_WorkshopRetreat(); var graph = retreat.CreateGraph();
             Check(!retreat.AddFleeToil && !retreat.CanAutoAddPawns && graph.Toils.Count == 1
@@ -254,6 +267,12 @@ namespace Verse.AI.Group
 }
 namespace MoonWorld
 {
+    internal static class EnemyBattleService
+    {
+        internal static Pawn Member;
+        internal static bool IsEngaged(Pawn pawn) => pawn != null && pawn == Member;
+        internal static bool IsMapBattleFor(Pawn pawn) => IsEngaged(pawn);
+    }
     public class Site_WarWorkshop { public bool RetreatOrdered; }
     public class GameComponent_MoonWorld { public HolyGrailWarEntry CurrentWarEntry => Current.Game.Entry; }
     public class HolyGrailWarEntry

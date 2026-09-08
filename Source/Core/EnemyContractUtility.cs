@@ -28,7 +28,8 @@ namespace MoonWorld
             Pawn master = ServantQuery.Instance.GetMaster(servant);
             return HasEnemyContract(servant) && master != null && !master.Dead && !master.Destroyed
                 && !master.IsPrisoner && !master.IsSlave && !servant.IsPrisoner && !servant.IsSlave
-                && !servant.Dead && !servant.Destroyed && (servant.Spawned || IsResting(servant))
+                && !servant.Dead && !servant.Destroyed
+                && (servant.Spawned || IsResting(servant) || EnemyBattleService.IsEngaged(servant))
                 && servant.TryGetComp<CompServantState>()?.PresenceState != ServantPresenceState.Annihilated;
         }
 

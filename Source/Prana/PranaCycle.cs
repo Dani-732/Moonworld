@@ -62,7 +62,8 @@ namespace MoonWorld
                 foreach (var enemy in entry.Participants)
                 {
                     Pawn resting = enemy.EnemyServant;
-                    if (IsActive(resting) && EnemyContractUtility.IsResting(resting) && seenServants.Add(resting))
+                    if (IsActive(resting) && (EnemyContractUtility.IsResting(resting) || EnemyBattleService.IsEngaged(resting))
+                        && seenServants.Add(resting))
                         servants.Add(resting);
                 }
             foreach (Pawn pawn in UnboundServantService.KnownServants())

@@ -66,7 +66,10 @@ namespace MoonWorld
 
         public override string GetInspectString()
         {
+            var battle = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.enemyBattle;
             return base.GetInspectString() + "\n所属御主：" + (ownerMaster?.LabelShortCap ?? "未知")
+                + (battle?.site == this ? "\n交战中：" + battle.attacker?.LabelShortCap + " / " + battle.defender?.LabelShortCap
+                    + "；已结算 " + battle.rounds + " 回合" : "")
                 + (originalOwnerMaster != null && originalOwnerMaster != ownerMaster ? "\n原工坊御主：" + originalOwnerMaster.LabelShortCap : "")
                 + (retreatOrdered ? "\n守军正在撤离。御主逃脱：" + (masterEscaped ? "是" : "否")
                     + "；从者逃脱：" + (servantEscaped ? "是" : "否") : "\n可派远行队进攻。工坊毁坏不等于阵营淘汰。");
@@ -91,12 +94,19 @@ namespace MoonWorld
         private void PlaceDefenders()
         {
             if (!HasMap || defendersPlaced || retreatOrdered) return;
-            defendersPlaced = WarWorkshopService.TryPlaceDefenders(this);
+            defendersPlaced = EnemyBattleService.AtSite(this)
+                ? EnemyBattleService.TryMaterialize(this) : WarWorkshopService.TryPlaceDefenders(this);
             nextPlacementRetryTick = Find.TickManager.TicksGame + 2500;
         }
 
         public override bool ShouldRemoveMapNow(out bool alsoRemoveWorldObject)
         {
+            if (EnemyBattleService.AtSite(this))
+            {
+                bool removeBattleMap = base.ShouldRemoveMapNow(out alsoRemoveWorldObject);
+                alsoRemoveWorldObject = false;
+                return removeBattleMap;
+            }
             // Preserve the running map while withdrawing pawns still need an actual exit.
             if (retreatOrdered && WarWorkshopService.HasWithdrawingPawnOnMap(this))
             { alsoRemoveWorldObject = false; return false; }
@@ -108,7 +118,7 @@ namespace MoonWorld
 
         public override void Notify_MyMapAboutToBeRemoved()
         {
-            if (!retreatOrdered) WarWorkshopService.ReturnDefendersToWorld(this);
+            if (!EnemyBattleService.BeforeMapRemoval(this) && !retreatOrdered) WarWorkshopService.ReturnDefendersToWorld(this);
             base.Notify_MyMapAboutToBeRemoved();
             defendersPlaced = false;
             if (!retreatOrdered) servantDefeatedHere = false;

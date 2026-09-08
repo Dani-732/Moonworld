@@ -35,7 +35,8 @@ namespace MoonWorld
             Pawn member = lord.ownedPawns.Count == 0 ? null : lord.ownedPawns[0];
             var entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.FindEnemy(member);
             if (entry == null || (!entry.EnemyDeployed && !(lord.Map.Parent is Site_WarWorkshop))) return;
-            if (entry.EnemyEliminated || entry.EnemyMaster.Downed || entry.EnemyMaster.IsPrisoner
+            if (entry.EnemyEliminated || (!EnemyBattleService.IsMapBattleFor(member)
+                    && (entry.EnemyMaster == null || entry.EnemyMaster.Downed || entry.EnemyMaster.IsPrisoner))
                 || entry.EnemyServant.IsPrisoner || ServantQuery.Instance.IsSpirit(entry.EnemyServant))
             {
                 lord.ReceiveMemo(RetreatMemo);
@@ -54,7 +55,8 @@ namespace MoonWorld
 
         public Pawn GetPreferredTarget(Pawn servant)
         {
-            if (Retreating || !servant.Spawned || !EnemyContractUtility.HasEnemyContract(servant)) return null;
+            if (Retreating || !servant.Spawned
+                || (!EnemyContractUtility.HasEnemyContract(servant) && !EnemyBattleService.IsMapBattleFor(servant))) return null;
             int tick = Find.TickManager.TicksGame;
             if (lastTargetScanTick < 0 || tick - lastTargetScanTick >= 250
                 || (preferredTarget != null && !EnemyTargetingPolicy.IsServantTarget(servant, preferredTarget)))
@@ -111,7 +113,7 @@ namespace MoonWorld
         {
             foreach (Pawn pawn in lord.ownedPawns)
             {
-                DutyDef duty = EnemyContractUtility.HasEnemyContract(pawn)
+                DutyDef duty = EnemyContractUtility.HasEnemyContract(pawn) || EnemyBattleService.IsEngaged(pawn)
                     ? MW_DefOf.MW_EnemyServantAssault : DutyDefOf.AssaultColony;
                 if (pawn.mindState.duty?.def == duty) continue;
                 pawn.mindState.duty = new PawnDuty(duty);

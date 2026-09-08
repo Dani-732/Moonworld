@@ -55,6 +55,7 @@ namespace MoonWorld
 
         private static void Place(Pawn pawn, Map map, List<Pawn> moved, bool servant)
         {
+            if (servant && EnemyBattleService.IsEngaged(pawn)) return;
             // Pawns on a raid map, in a caravan, captured or inside a transporter are never pulled out.
             if (pawn == null || pawn.Dead || pawn.Destroyed || pawn.Spawned || pawn.ParentHolder != null
                 || pawn.IsPrisoner || pawn.IsSlave || !EnemyContractUtility.IsWarPawn(pawn)

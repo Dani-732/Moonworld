@@ -101,6 +101,7 @@ internal static class RuntimeContractChecks
             new[] { "MoonWorld.ChoiceLetter_Recontract", "Verse.ChoiceLetter" },
             new[] { "MoonWorld.HolyGrailWarEntry", "Verse.IExposable" },
             new[] { "MoonWorld.EnemyWarParticipant", "Verse.IExposable" },
+            new[] { "MoonWorld.EnemyBattleSession", "Verse.IExposable" },
             new[] { "MoonWorld.HolyGrailWarClassDef", "Verse.Def" },
             new[] { "MoonWorld.ServantSummonPoolDef", "Verse.Def" },
             new[] { "MoonWorld.QuestPart_HolyGrailWar", "RimWorld.QuestPart" },

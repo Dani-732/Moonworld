@@ -13,6 +13,9 @@ try {
         (Join-Path $PSScriptRoot 'WorkshopRetreatTests.cs') `
         (Join-Path $PSScriptRoot 'SummoningTests.cs') `
         (Join-Path $PSScriptRoot 'RecontractTests.cs') `
+        (Join-Path $PSScriptRoot 'EnemyBattleTests.cs') `
+        (Join-Path $projectRoot 'Source\Core\EnemyBattleSession.cs') `
+        (Join-Path $projectRoot 'Source\Lifecycle\EnemyBattleService.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\ServantRecontractService.cs') `
         (Join-Path $projectRoot 'Source\Presentation\RecontractOffer.cs') `
         (Join-Path $projectRoot 'Source\Core\HolyGrailWarEntry.cs') `

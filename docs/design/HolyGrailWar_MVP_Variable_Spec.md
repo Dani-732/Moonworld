@@ -27,6 +27,14 @@
 
 ## 2. 数据归属原则
 
+敌方互攻的数据合同（2026-09-08）：`GameComponent_MoonWorld.enemyBattle` 深存一份 `EnemyBattleSession`，保存双方 Pawn、会话地点 Site、已结算回合 `rounds`、下一回合绝对 Tick `nextRoundTickAbs` 和是否已转入地图战斗 `onMap`。会话中的御主/派系引用只是开战时的校验快照，当前契约和敌对关系仍实时查询原组件与 Faction；变化即终止原会话，不写回旧归属。`enemyBattleNextStartTickAbs` 保存唯一全局互攻冷却，旧档默认为 -1；`warStartTick` 键及含义保留。
+
+调度默认一小时（2500 Tick）一回合，最多 6 回合；首场在开战一天后，结束后至少一天再匹配，同时遵守参与者既有独立休整时间。实体化、尚能行动且魔力不少于上限一半的当前敌对从者才可发起互攻，御主战斗能力不参与筛选；战败灵体不被强制实体化或补满以参加互攻。落单者仍按原绝对期限和断供规则处理。
+
+临时回合参数：双方交替先手，各次出手最多消耗实际库存 18 魔力，使用原版 Blunt 伤害入口施加 `3 + 实际耗魔 / 3` 基础伤害，护甲和原版健康回调照常生效。一方进入既有战败/死亡状态立即停止后续出手；低于有效维持线或上限 20%、健康不能继续行动、或满 6 回合时脱离。这些是本批可运行参数，不是已验收的最终平衡；不加入独立随机死亡率。
+
+地图介入只移动会话中的原 Pawn，位置在地图中心 18 格附近且连通地图边缘，御主继续场外；原攻击方工坊只生成留守御主。地图战斗暂停场外回合；正常卸图后沿用回合数及原 Need/Hediff，从下一小时继续，不补算玩家在图期间的场外伤害。战斗结束登记既有出击休整，不写工坊双人逃脱标记。已改属玩家、被俘、被装入容器或出现在其他地图的角色不被会话清理拉回场外。
+
 合并交付补充：`CompServantState.recontractOfferSent`（bool，Scribe 同名键）只记录本次落单是否发过玩家事件，新的失契重置；它不代表资格、签约成功或消散期限。`HolyGrailWarEntry.playerParticipant` 深存原玩家职阶席位的运行记录，用于转入敌方后的休整和工坊协调；`playerServant` 保留原参与 Pawn 的兼容引用。`EnemyWarParticipant.master` 仍是开战御主，`lastContractMaster` 是最近成功重签的历史引用，`CurrentMaster` 必须从存续从者组件查询，不存第二份当前契约。`Site_WarWorkshop.ownerServant` 将工坊固定到职阶从者席位，`ownerMaster` 为当前工坊持有者，`originalOwnerMaster` 为原工坊历史；工坊不能反向决定主从契约。手术物品的实际剩余划数只由三个不同 ThingDef 表达，原版保存物品身份，标记成功移除后才可能创建物品。
 
 失契批次新增：`CompServantState.unboundUntilTickAbs`（int，Scribe 同名键，默认 -1）保存唯一落单消散绝对 Tick。失契时用原版 Stat `MW_UnboundSurvivalDays`（默认且最低 1）计算期限，重复检查/失败绑定/换图/读档不刷新；成功绑定清为 -1，再次失契重新计时。期限每 250 Tick 检查，包括场外、旅行和休眠容器，不另存剩余天数。正常魔力结算仍遵守原版暂停规则，但暂停不冻结落单寿命。调试 Hediff `MW_TestUnboundSurvival` 仅提供该 Stat 的两倍修正，无默认授予，不保存第二份期限，失契后增删不追改已定期限。

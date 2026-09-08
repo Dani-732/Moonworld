@@ -17,6 +17,8 @@ namespace MoonWorld
         private HolyGrailWarEntry currentWarEntry;
         private WarOutcome warOutcome = WarOutcome.Ongoing;
         internal Quest warQuest;
+        internal EnemyBattleSession enemyBattle;
+        internal int enemyBattleNextStartTickAbs = -1;
 
         public HolyGrailWarEntry CurrentWarEntry => currentWarEntry;
         public WarOutcome CurrentWarOutcome => warOutcome;
@@ -35,6 +37,7 @@ namespace MoonWorld
             UnboundServantService.Tick();
             HolyGrailWarQuestService.Ensure(this);
             HolyGrailWarQuestService.SyncOutcome(this, notify: false);
+            if (enemyBattle != null) EnemyBattleService.Advance(this);
         }
 
         public override void GameComponentTick()
@@ -42,10 +45,15 @@ namespace MoonWorld
             if (Find.TickManager.TicksGame % 250 == 0)
             {
                 UnboundServantService.Tick();
+                if (enemyBattle != null) EnemyBattleService.Advance(this);
             }
             if (Find.TickManager.TicksGame % 2500 == 0) ServantRecontractService.Tick();
             WarOutcomeService.Tick(this);
-            if (Find.TickManager.TicksGame % 2500 == 0) WorkshopRebuildService.Tick(this);
+            if (Find.TickManager.TicksGame % 2500 == 0)
+            {
+                EnemyBattleService.Tick(this);
+                WorkshopRebuildService.Tick(this);
+            }
             int interval = Mathf.Max(1, MW_DefOf.MW_HolyGrailWarSettings.pranaUpdateIntervalTicks);
             if (Find.TickManager.TicksGame % interval == 0)
             {
@@ -82,6 +90,8 @@ namespace MoonWorld
             Scribe_Deep.Look(ref currentWarEntry, "currentWarEntry");
             Scribe_Values.Look(ref warOutcome, "warOutcome", WarOutcome.Ongoing);
             Scribe_References.Look(ref warQuest, "warQuest");
+            Scribe_Deep.Look(ref enemyBattle, "enemyBattle");
+            Scribe_Values.Look(ref enemyBattleNextStartTickAbs, "enemyBattleNextStartTickAbs", -1);
         }
 
         internal bool TrySetWarOutcome(WarOutcome outcome)

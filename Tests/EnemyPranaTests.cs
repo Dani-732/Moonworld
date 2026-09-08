@@ -11,6 +11,7 @@ internal static class EnemyPranaTests
     private static int passed;
     private static void Setup()
     {
+        EnemyBattleService.Member = null;
         Current.Game = new Game(); Find.WorldPawns.Pawns.Clear();
         Find.Maps.Clear(); Map map = new Map(); Find.Maps.Add(map);
         Faction faction = new Faction { def = MW_DefOf.MW_WarOpposition };
@@ -38,6 +39,19 @@ internal static class EnemyPranaTests
     }
     public static void Main()
     {
+        Test("offmap combat keeps one supply cycle while master is on another map", () => {
+            Rest(); EnemyBattleService.Member = servant;
+            master.Spawned = true; master.MapHeld = Find.Maps[0];
+            Find.Maps[0].mapPawns.AllPawnsSpawned.Add(master);
+            servant.State.PresenceState = ServantPresenceState.Materialized;
+            servant.needs.food.CurLevel = .2f;
+            Cycle(); Near(servant.needs.Prana.CurLevel, 50.975f);
+        });
+        Test("active battle reference cannot restore lost qualification supply", () => {
+            Rest(); EnemyBattleService.Member = servant; master.Qualified = false;
+            servant.State.Master = null;
+            Cycle(); Near(servant.needs.Prana.CurLevel, 49.99375f);
+        });
         Test("unqualified enemy cannot receive fixed subsidy even with stale contract reference", () => {
             master.Qualified = false; servant.needs.food.CurLevel = .2f; Cycle(); Near(servant.needs.Prana.CurLevel, 49.975f);
         });
@@ -329,6 +343,11 @@ namespace RimWorld.Planet
 }
 namespace MoonWorld
 {
+    internal static class EnemyBattleService
+    {
+        internal static Pawn Member;
+        internal static bool IsEngaged(Pawn pawn) => pawn != null && pawn == Member;
+    }
     public static class CommandSpellService { public static bool HasQualification(Pawn p) => p != null && !p.Dead && !p.Destroyed && p.Qualified; }
     internal static class UnboundServantService
     {

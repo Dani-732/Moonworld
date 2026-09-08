@@ -123,6 +123,7 @@ internal static partial class SummoningTests
     public static void Main()
     {
         RecontractScenarios();
+        EnemyBattleScenarios();
         RunWorkshopTests();
         Test("seven faction war only ends after all six servants cease existing", () => {
             SevenClasses(); PrepareEnemy(); var enemies = State.CurrentWarEntry.Enemies;
@@ -859,7 +860,7 @@ namespace Verse
         public static bool TryFindRandomEdgeCellWith(Predicate<IntVec3> valid, Map map, float chance, out IntVec3 result) => TryFindRandomCellNear(default(IntVec3), map, 0, valid, out result); }
     public enum DestroyMode { Vanish }
     public enum WipeMode { Vanish }
-    public class Pawn
+    public partial class Pawn
     {
         public Map MapHeld => Spawned ? Map : null;
         public bool Dead, Destroyed, IsPrisoner, IsSlave, Lodger, Servant, Downed, InMentalState, Suspended, Travel;
@@ -894,11 +895,12 @@ namespace Verse
     public class TraitSet { public List<Trait> allTraits = new List<Trait>(); public bool HasTrait(TraitDef d) => allTraits.Exists(t => t.def == d); public void GainTrait(Trait t) { allTraits.Add(t); } }
     public static class PawnExtensions { public static bool IsQuestLodger(this Pawn p) => p.Lodger; }
     public static class Log { public static void Error(string s) { } public static void Warning(string s) { } }
-    public static class Messages { public static void Message(string s, object kind, bool historical) { } public static void Message(string s, Pawn p, object kind, bool historical) { } }
+    public static class Messages { public static void Message(string s, object kind, bool historical) { } public static void Message(string s, object p, object kind, bool historical) { } }
     public static class DefDatabase<T> { public static List<T> AllDefsListForReading; }
     public class Def { public string defName, label; public virtual IEnumerable<string> ConfigErrors() { yield break; } }
     public static class GenCollection
     {
+        public static void Shuffle<T>(this List<T> list) { }
         public static Queue<int> Draws = new Queue<int>();
         public static List<int> Sizes = new List<int>();
         public static T RandomElement<T>(this List<T> list)
@@ -949,6 +951,7 @@ namespace Verse
     }
     public static class Scribe_References
     {
+        public static void Look<T>(ref T value, string key) where T : class { Scribe_Values.Look(ref value, key, (T)null); }
         public static void Look(ref Pawn value, string key) { Scribe_Values.Look(ref value, key, (Pawn)null); }
         public static void Look(ref RimWorld.Quest value, string key) { Scribe_Values.Look(ref value, key, (RimWorld.Quest)null); }
     }
@@ -978,7 +981,7 @@ namespace RimWorld
     public class IncidentWorker { protected virtual bool CanFireNowSub(IncidentParms p) => true; protected virtual bool TryExecuteWorker(IncidentParms p) => false; public bool TryExecute(IncidentParms p) => TryExecuteWorker(p); }
     public class NeedDef { }
     public class Need { public NeedDef def = new NeedDef(); public float CurLevel, MaxLevel = 100; }
-    public static class MessageTypeDefOf { public static object RejectInput = new object(), NeutralEvent = new object(), ThreatBig = new object(), NegativeEvent = new object(), PositiveEvent = new object(); }
+    public static class MessageTypeDefOf { public static object ThreatSmall = new object(), RejectInput = new object(), NeutralEvent = new object(), ThreatBig = new object(), NegativeEvent = new object(), PositiveEvent = new object(); }
     public enum FactionRelationKind { Hostile }
     public class Faction
     {
@@ -1048,10 +1051,10 @@ namespace MoonWorld
         public void Bind(Pawn p) { Master = p; if (p != null) UnboundUntilTickAbs = -1; }
         public void RestoreContract(Pawn p, int deadline) { Master = p; UnboundUntilTickAbs = deadline; }
     }
-    public class ServantQuery { public static ServantQuery Instance = new ServantQuery(); public bool IsServant(Pawn p) => p.Servant; public bool IsSpirit(Pawn p) => p?.State.PresenceState == ServantPresenceState.DefeatedSpirit; public Pawn GetMaster(Pawn p) => p?.State.Master; }
+    public class ServantQuery { public static ServantQuery Instance = new ServantQuery(); public bool IsMaterialized(Pawn p) => p?.State.PresenceState == ServantPresenceState.Materialized; public bool IsServant(Pawn p) => p.Servant; public bool IsSpirit(Pawn p) => p?.State.PresenceState == ServantPresenceState.DefeatedSpirit; public Pawn GetMaster(Pawn p) => p?.State.Master; }
     public static class ServantIdentityUtility { public static ServantIdentityDef GetIdentity(Pawn p) => p?.Identity; public static ServantResourceProfileDef GetProfile(Pawn p) => new ServantResourceProfileDef(); }
     public class ServantResourceProfileDef { public float materializedSustainThreshold = 30; }
-    public static class ServantSustainPolicy { public static float Threshold(Pawn p, ServantPresenceState state) => 60; }
+    public static class ServantSustainPolicy { public static float Threshold(Pawn p, ServantPresenceState state = ServantPresenceState.Materialized) => 60; }
     public static class ServantHealingPolicy { public static Hediff FindWorstCurableCondition(Pawn p) => null; }
     public class LordJob_EnemyWarParty { public bool Retreating; internal void BeginRetreat() { Retreating = true; } }
     public class LordJob_WorkshopRetreat { }
