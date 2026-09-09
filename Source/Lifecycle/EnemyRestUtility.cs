@@ -26,9 +26,9 @@ namespace MoonWorld
 
         public static string ReadinessRejection(Pawn servant) => ReadinessRejection(servant, false);
 
-        internal static string ReadinessRejection(Pawn servant, bool ignoreRestTime)
+        internal static string ReadinessRejection(Pawn servant, bool ignoreRestTime, bool ignoreReservation = false)
         {
-            if (EnemyBattleService.IsEngaged(servant)) return "该从者正在另一处交战，无法同时出击。";
+            if (!ignoreReservation && EnemyBattleService.IsEngaged(servant)) return "该从者正在交战或等候约战，无法同时出击。";
             if (!EnemyContractUtility.IsResting(servant))
                 return "敌方主从已退场、被俘、仍在地图或运输途中，不能再次出战。";
             if (!ignoreRestTime && TicksRemaining(servant) > 0)

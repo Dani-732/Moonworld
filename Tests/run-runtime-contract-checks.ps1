@@ -84,6 +84,30 @@ try {
         throw 'Workshop texture does not match verified native Outpost assets'
     }
     [xml]$mwAbility = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_NoblePhantasms.xml') -Raw
+    [xml]$mwEncounter = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_WarEncounter.xml') -Raw
+    $mwEncounterSite = $mwEncounter.SelectSingleNode('/Defs/WorldObjectDef[defName="MW_WarEncounter"]')
+    $mwEncounterBase = $mwEncounter.SelectSingleNode('/Defs/SitePartDef[@Name="MW_WarEncounterPartBase"]')
+    if ($mwEncounterSite.ParentName -ne 'StaticWorldObjectBase' -or $mwEncounterSite.worldObjectClass -ne 'MoonWorld.Site_WarEncounter' -or
+        $mwEncounterSite.canHaveMap -ne 'true' -or $mwEncounterBase.workerClass -ne 'SitePartWorker' -or
+        $mwEncounterBase.disallowsAutomaticDetectionTimerStart -ne 'true' -or
+        $mwEncounterBase.siteTexture -ne $mwNativePart.siteTexture -or $mwEncounterBase.expandingIconTexture -ne $mwNativePart.expandingIconTexture -or
+        $mwEncounter.SelectNodes('//GenStepDef | //pawnGroupMaker | //genSteps | //things | //loot').Count -ne 0) {
+        throw 'Encounter must be a native temporary Site without workshop generator, extra defenders or loot'
+    }
+    foreach ($mwPartName in @('MW_WarFieldBattlePart', 'MW_WarChallengePart')) {
+        if ($mwEncounter.SelectNodes("/Defs/SitePartDef[defName='$mwPartName' and @ParentName='MW_WarEncounterPartBase']").Count -ne 1) {
+            throw 'Encounter part inheritance missing'
+        }
+        foreach ($mwSourceXml in $mwXmlFiles) {
+            [xml]$mwCheckSteps = Get-Content -LiteralPath $mwSourceXml.FullName -Raw
+            if ($mwCheckSteps.SelectNodes("/Defs/GenStepDef[linkWithSite='$mwPartName']").Count -gt 0) {
+                throw 'Encounter must not link a building, loot or pawn gen step'
+            }
+        }
+    }
+    foreach ($mwComp in @('WorldObjectCompProperties_FormCaravan','WorldObjectCompProperties_TimedDetectionRaids','WorldObjectCompProperties_EnterCooldown')) {
+        if ($mwEncounterSite.SelectNodes("comps/li[@Class='$mwComp']").Count -ne 1) { throw "Encounter missing native component: $mwComp" }
+    }
     $mwBurst = $mwAbility.SelectSingleNode('/Defs/AbilityDef[defName="MW_TestPranaBurst"]')
     if ($mwBurst.gizmoClass -or $mwBurst.displayGizmoWhileUndrafted -ne 'true' -or $mwBurst.disableGizmoWhileUndrafted -ne 'false') {
         throw 'Test ability must use the native command and remain available undrafted'
@@ -120,6 +144,17 @@ try {
         throw 'Scenario or invitation Def linkage invalid'
     }
     $mwRaid = $mwEntry.SelectSingleNode('/Defs/IncidentDef[defName="MW_HolyGrailWarEnemyServantRaid"]')
+    $mwNaturalEncounter = $mwEntry.SelectSingleNode('/Defs/IncidentDef[defName="MW_HolyGrailWarEnemyEncounter"]')
+    if ($mwRaid.baseChance -ne '0' -or $mwNaturalEncounter.baseChance -ne '0.08' -or
+        $mwNaturalEncounter.workerClass -ne 'MoonWorld.IncidentWorker_WarEncounter' -or
+        $mwNaturalEncounter.earliestDay -ne '8' -or $mwNaturalEncounter.minRefireDays -ne '10' -or
+        $mwNaturalEncounter.targetTags.li -ne 'Map_PlayerHome' -or $mwNaturalEncounter.requireColonistsPresent -ne 'true') {
+        throw 'Natural encounter scheduling must keep the direct raid independently callable'
+    }
+    [xml]$mwProfiles = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_ServantProfiles.xml') -Raw
+    $mwEncounterSettings = $mwProfiles.SelectSingleNode('/Defs/Def[@Class="MoonWorld.MoonWorldSettingsDef" and defName="MW_HolyGrailWarSettings"]')
+    if ($mwEncounterSettings.enemyFieldBattleChance -ne '0.8' -or $mwEncounterSettings.enemyChallengeChance -ne '0.8' -or
+        $mwEncounterSettings.enemyWorkshopAttackPranaFraction -ne '0.8') { throw 'Encounter initial tuning missing' }
     if (($null -eq $mwRaid) -or ($mwRaid.workerClass -ne 'MoonWorld.IncidentWorker_EnemyServantRaid') -or ($mwRaid.targetTags.li -ne 'Map_PlayerHome') -or ($mwRaid.requireColonistsPresent -ne 'true')) {
         throw 'Enemy servant raid incident linkage invalid'
     }

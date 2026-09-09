@@ -4,6 +4,9 @@
     <defName>MW_HolyGrailWarSettings</defName>
     <pranaUpdateIntervalTicks>250</pranaUpdateIntervalTicks>
     <enemyPranaSupplyPerDay>240</enemyPranaSupplyPerDay>
+    <enemyFieldBattleChance>0.8</enemyFieldBattleChance>
+    <enemyChallengeChance>0.8</enemyChallengeChance>
+    <enemyWorkshopAttackPranaFraction>0.8</enemyWorkshopAttackPranaFraction>
   </Def>
   <Def Class="MoonWorld.ServantResourceProfileDef">
     <defName>MW_TestServantResources</defName>

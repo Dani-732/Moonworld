@@ -14,6 +14,13 @@ try {
         (Join-Path $PSScriptRoot 'SummoningTests.cs') `
         (Join-Path $PSScriptRoot 'RecontractTests.cs') `
         (Join-Path $PSScriptRoot 'EnemyBattleTests.cs') `
+        (Join-Path $PSScriptRoot 'EnemyChallengeTests.cs') `
+        (Join-Path $projectRoot 'Source\Core\EnemyChallengeSession.cs') `
+        (Join-Path $projectRoot 'Source\Lifecycle\EnemyChallengeService.cs') `
+        (Join-Path $projectRoot 'Source\Lifecycle\WarEncounterPolicy.cs') `
+        (Join-Path $projectRoot 'Source\Lifecycle\WarEncounterSiteUtility.cs') `
+        (Join-Path $projectRoot 'Source\Integration\Site_WarEncounter.cs') `
+        (Join-Path $projectRoot 'Source\Integration\IncidentWorker_WarEncounter.cs') `
         (Join-Path $projectRoot 'Source\Core\EnemyBattleSession.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\EnemyBattleService.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\ServantRecontractService.cs') `

@@ -79,7 +79,8 @@ namespace RimWorld.Planet
         public virtual void PostMapGenerate() { }
         protected virtual void TickInterval(int delta) { }
         public virtual void Notify_MyMapAboutToBeRemoved() { }
-        public virtual bool ShouldRemoveMapNow(out bool remove) { remove = true; return true; }
+        public virtual bool ShouldRemoveMapNow(out bool remove) { remove = true;
+            return Map == null || !Map.mapPawns.AllPawnsSpawned.Exists(p => p.Spawned && !p.Dead && p.Faction == Faction.OfPlayer); }
         public PlanetTile Tile; public int ID; public bool Destroyed; public Faction Faction;
         public bool Spawned => Find.WorldObjects.All.Contains(this);
         public void SetFaction(Faction faction) { Faction = faction; }
@@ -100,13 +101,20 @@ namespace RimWorld.Planet
     {
         public List<Site> All = new List<Site>(); public IEnumerable<WorldObject> AllWorldObjects => All; public bool FailAdd; public Action Callback;
         public void Add(Site site) { All.Add(site); Callback?.Invoke(); if (FailAdd) throw new Exception("partial site add"); }
+        public bool AnyWorldObjectAt(PlanetTile tile) => All.Exists(s => s.Tile == tile);
     }
-    public static class WorldObjectMaker { public static Site MakeWorldObject(WorldObjectDef def) => new Site_WarWorkshop(); }
+    public static class WorldObjectMaker { public static Site MakeWorldObject(WorldObjectDef def) =>
+        def == MW_DefOf.MW_WarEncounter ? (Site)new Site_WarEncounter() : new Site_WarWorkshop(); }
     public static class TileFinder
     {
         public static bool Fail;
         public static bool TryFindNewSiteTile(out PlanetTile tile, PlanetTile origin, float selectLandmarkChance, object layer)
         { tile = new PlanetTile { Id = origin.Id + 1 }; return !Fail; }
+        public static int LastMin, LastMax;
+        public static bool IsValidTileForNewSettlement(PlanetTile tile) => true;
+        public static bool TryFindPassableTileWithTraversalDistance(PlanetTile origin, int min, int max,
+            out PlanetTile tile, Predicate<PlanetTile> validator)
+        { LastMin = min; LastMax = max; tile = new PlanetTile { Id = origin.Id + 100 }; return !Fail && validator(tile); }
     }
 }
 namespace MoonWorld

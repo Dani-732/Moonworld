@@ -102,6 +102,9 @@ internal static class RuntimeContractChecks
             new[] { "MoonWorld.HolyGrailWarEntry", "Verse.IExposable" },
             new[] { "MoonWorld.EnemyWarParticipant", "Verse.IExposable" },
             new[] { "MoonWorld.EnemyBattleSession", "Verse.IExposable" },
+            new[] { "MoonWorld.EnemyChallengeSession", "Verse.IExposable" },
+            new[] { "MoonWorld.Site_WarEncounter", "RimWorld.Planet.Site" },
+            new[] { "MoonWorld.IncidentWorker_WarEncounter", "RimWorld.IncidentWorker" },
             new[] { "MoonWorld.HolyGrailWarClassDef", "Verse.Def" },
             new[] { "MoonWorld.ServantSummonPoolDef", "Verse.Def" },
             new[] { "MoonWorld.QuestPart_HolyGrailWar", "RimWorld.QuestPart" },
@@ -118,6 +121,14 @@ internal static class RuntimeContractChecks
                 throw new Exception("Invalid XML/Scribe entry type: " + pair[0]);
         }
         Type stateType = mod.GetType("MoonWorld.GameComponent_MoonWorld", true);
+        if (mod.GetType("MoonWorld.EnemyBattleSession", true).GetField("site", BindingFlags.Instance | BindingFlags.NonPublic).FieldType
+            != game.GetType("RimWorld.Planet.Site", true)) throw new Exception("Battle must accept legacy workshop and field Site references");
+        Type encounterType = mod.GetType("MoonWorld.Site_WarEncounter", true);
+        if (encounterType.GetMethod("GetFloatMenuOptions").DeclaringType != game.GetType("RimWorld.Planet.Site")
+            || encounterType.GetMethod("GetGizmos").DeclaringType != game.GetType("RimWorld.Planet.Site"))
+            throw new Exception("Encounter must inherit native caravan entry and reform");
+        if (stateType.GetField("enemyChallenge", BindingFlags.Instance | BindingFlags.NonPublic)?.FieldType
+            != mod.GetType("MoonWorld.EnemyChallengeSession", true)) throw new Exception("Challenge state missing");
         Type statType = game.GetType("RimWorld.StatDef", true);
         foreach (string field in new[] { "defaultBaseValue", "minValue", "toStringStyle", "alwaysHide" })
             if (statType.GetField(field) == null) throw new Exception("Native stat field missing: " + field);

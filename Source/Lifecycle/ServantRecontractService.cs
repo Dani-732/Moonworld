@@ -140,7 +140,7 @@ namespace MoonWorld
                         if (map == null || !CellFinder.TryFindRandomEdgeCellWith(c => c.Standable(map) && c.GetFirstPawn(map) == null,
                             map, 0f, out IntVec3 cell)) throw new InvalidOperationException("没有可接收原从者的地图边缘落点。");
                         Find.WorldPawns.RemovePawn(servant);
-                        GenSpawn.Spawn(servant, cell, map, servant.Rotation, WipeMode.Vanish, respawningAfterLoad: true);
+                        GenSpawn.Spawn(servant, cell, map, servant.Rotation, WipeMode.Vanish);
                         if (!servant.Spawned || servant.Map != map) throw new InvalidOperationException("原从者入场失败。");
                     }
                     RestoreNeeds(servant, servantNeeds);

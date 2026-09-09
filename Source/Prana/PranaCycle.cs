@@ -11,6 +11,9 @@ namespace MoonWorld
         public float enemyPranaSupplyPerDay = 240f;
         public int enemyRestDurationTicks = 180000;
         public float enemyRaidPranaFraction = 0.8f;
+        public float enemyFieldBattleChance = 0.8f;
+        public float enemyChallengeChance = 0.8f;
+        public float enemyWorkshopAttackPranaFraction = 0.8f;
     }
 
     public static class PranaCycleService

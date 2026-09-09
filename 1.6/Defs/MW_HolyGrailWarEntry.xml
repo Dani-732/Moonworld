@@ -44,6 +44,17 @@
     <category>ThreatSmall</category>
     <targetTags><li>Map_PlayerHome</li></targetTags>
     <workerClass>MoonWorld.IncidentWorker_EnemyServantRaid</workerClass>
+    <baseChance>0</baseChance>
+    <earliestDay>8</earliestDay>
+    <minRefireDays>10</minRefireDays>
+    <requireColonistsPresent>true</requireColonistsPresent>
+  </IncidentDef>
+  <IncidentDef>
+    <defName>MW_HolyGrailWarEnemyEncounter</defName>
+    <label>圣杯战争敌方行动</label>
+    <category>ThreatSmall</category>
+    <targetTags><li>Map_PlayerHome</li></targetTags>
+    <workerClass>MoonWorld.IncidentWorker_WarEncounter</workerClass>
     <baseChance>0.08</baseChance>
     <earliestDay>8</earliestDay>
     <minRefireDays>10</minRefireDays>

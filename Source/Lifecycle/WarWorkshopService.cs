@@ -68,7 +68,7 @@ namespace MoonWorld
                 throw new InvalidOperationException("工坊附近没有可通行且连通地图边缘的主从落点。");
             moved.Add(pawn);
             Find.WorldPawns.RemovePawn(pawn);
-            GenSpawn.Spawn(pawn, cell, map, pawn.Rotation, WipeMode.Vanish, respawningAfterLoad: true);
+            GenSpawn.Spawn(pawn, cell, map, pawn.Rotation, WipeMode.Vanish);
             if (!pawn.Spawned || pawn.Map != map) throw new InvalidOperationException("工坊角色未在预期地图落地。");
             if (servant)
                 LordMaker.MakeNewLord(pawn.Faction, new LordJob_EnemyWarParty(), map, new[] { pawn });

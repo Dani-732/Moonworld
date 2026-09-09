@@ -19,7 +19,7 @@ internal static partial class SummoningTests
         Current.Game = new Game();
         Find.LetterStack.LettersListForReading.Clear();
         Rand.Pass = true;
-        map = new Map(); master = new Pawn { Map = map }; cell = new IntVec3 { Valid = true };
+        map = new Map(); master = new Pawn { Map = map }; cell = new IntVec3 { Valid = true, Id = 2 };
         Find.TickManager.TicksGame = 1234;
         Find.WorldPawns.Pawns.Clear();
         PawnGenerator.Created.Clear(); Find.FactionManager = new FactionManager();
@@ -27,9 +27,13 @@ internal static partial class SummoningTests
         Find.WorldPawns.FailPass = false; Find.WorldObjects = new WorldObjectsHolder(); Find.QuestManager = new RimWorld.QuestManager(); TileFinder.Fail = false; HolyGrailWarContentBridge.Fail = false;
         MW_DefOf.MW_HolyGrailWarSettings.enemyRestDurationTicks = 180000;
         MW_DefOf.MW_HolyGrailWarSettings.enemyRaidPranaFraction = .8f;
+        MW_DefOf.MW_HolyGrailWarSettings.enemyFieldBattleChance = .8f;
+        MW_DefOf.MW_HolyGrailWarSettings.enemyChallengeChance = .8f;
+        MW_DefOf.MW_HolyGrailWarSettings.enemyWorkshopAttackPranaFraction = .8f;
         PawnGenerator.Last = null; PawnGenerator.Fail = 0; PawnGenerator.Callback = null;
         PawnGenerator.FailAt = 0; PawnGenerator.FailAfterValidation = false;
         GenSpawn.Fail = ServantLifecycleService.Fail = false;
+        GenSpawn.LastRespawning = false;
         GenSpawn.Callback = null; ServantLifecycleService.Callback = null;
         HolyGrailWarContentBridge.Calls = HolyGrailWarContentBridge.FailAt = 0;
         DefDatabase<ServantIdentityDef>.AllDefsListForReading = new List<ServantIdentityDef> {
@@ -124,6 +128,7 @@ internal static partial class SummoningTests
     {
         RecontractScenarios();
         EnemyBattleScenarios();
+        EnemyChallengeScenarios();
         RunWorkshopTests();
         Test("seven faction war only ends after all six servants cease existing", () => {
             SevenClasses(); PrepareEnemy(); var enemies = State.CurrentWarEntry.Enemies;
@@ -246,7 +251,8 @@ internal static partial class SummoningTests
             Check(Find.WorldObjects.All.Count == 1 && ((Site_WarWorkshop)Find.WorldObjects.All[0]).OwnerMaster == entry.EnemyMaster,
                 "site owner missing");
             Check(EnemyRestUtility.TicksRemaining(entry.EnemyServant) == 0 && Deploy(), "first raid incorrectly cooling down");
-            Check(GenSpawn.LastRespawning && PawnGenerator.Created.Count == 3, "raid regenerated content or pawn");
+            Check(!GenSpawn.LastRespawning && entry.EnemyServant.Position.Id != 0 && PawnGenerator.Created.Count == 3,
+                "raid used load restoration or lost its requested edge position");
         });
         Test("no world site tile rolls back entire summon", () => { Accept(); TileFinder.Fail = true; RejectUnspent(); });
         Test("partial site registration rolls back entire summon and can retry", () => {
@@ -739,7 +745,8 @@ internal static partial class SummoningTests
             Check(!enemy.Spawned && EnemyContractUtility.IsResting(enemy)
                 && State.CurrentWarEntry.EnemyRestStartTickAbs == since, "map unload lost pair or restarted rest");
             site.Map = new Map { IsPlayerHome = false }; site.PostMapGenerate();
-            Check(enemy.Map == site.Map && PawnGenerator.Created.Count == 3 && enemy.needs.Prana.CurLevel == 17, "reentry reset pawn");
+            Check(enemy.Map == site.Map && enemy.Position.Id != 0 && PawnGenerator.Created.Count == 3 && enemy.needs.Prana.CurLevel == 17,
+                "reentry reset pawn or position");
         });
         Test("workshop partial spawn and lord failures return same world pawns", () => {
             foreach (int failure in new[] { 0, 1, 2 }) {
@@ -823,6 +830,7 @@ namespace Verse
     {
         public List<Letter> LettersListForReading = new List<Letter>();
         public void ReceiveLetter(Letter letter) { LettersListForReading.Add(letter); }
+        public void ReceiveLetter(string label, string text, object def, Site site) { ReceiveLetter(new Letter()); }
         public void RemoveLetter(Letter letter) { letter.ArchivedOnly = true; LettersListForReading.Remove(letter); }
     }
     public static class LetterMaker
@@ -848,7 +856,8 @@ namespace Verse
         public void PassToWorld(Pawn p, RimWorld.Planet.PawnDiscardDecideMode mode)
         { if (!Pawns.Add(p)) throw new Exception("duplicate world pawn"); p.becameWorldPawnTickAbs = GenTicks.TicksAbs; if (FailPass) throw new Exception("world retention"); }
     }
-    public class Map { public object Parent; public IntVec3 Center => new IntVec3 { Valid = true }; public Reachability reachability = new Reachability(); public PlanetTile Tile = new PlanetTile(); public bool IsPlayerHome = true, CanEverExit = true; public Verse.AI.Group.LordManager lordManager = new Verse.AI.Group.LordManager(); }
+    public class MapPawns { public List<Pawn> AllPawnsSpawned = new List<Pawn>(); }
+    public class Map { public MapPawns mapPawns = new MapPawns(); public object Parent; public IntVec3 Center => new IntVec3 { Valid = true }; public Reachability reachability = new Reachability(); public PlanetTile Tile = new PlanetTile(); public bool IsPlayerHome = true, CanEverExit = true; public Verse.AI.Group.LordManager lordManager = new Verse.AI.Group.LordManager(); }
     public enum TraverseMode { PassDoors }
     public struct TraverseParms { public static TraverseParms For(TraverseMode mode) => new TraverseParms(); }
     public class Reachability { public bool CanReachMapEdge(IntVec3 cell, TraverseParms parms) => !Pawn.EdgeBlocked; }
@@ -870,7 +879,7 @@ namespace Verse
         public Jobs jobs = new Jobs();
         public object ParentHolder; public int becameWorldPawnTickAbs = -1;
         public string LabelShortCap => "测试御主"; public object Rotation; public Health health = new Health(); public Verse.AI.Group.Lord Lord;
-        public void DeSpawn() { Spawned = false; Map = null; if (Lord != null) { Lord.Pawn = null; Lord = null; } }
+        public void DeSpawn() { Map?.mapPawns.AllPawnsSpawned.Remove(this); Spawned = false; Map = null; if (Lord != null) { Lord.Pawn = null; Lord = null; } }
         public bool Spawned = true, IsColonistPlayerControlled = true, Circuit = true;
         public Faction Faction = Faction.OfPlayer;
         public Map Map;
@@ -939,8 +948,11 @@ namespace Verse
     {
         public static bool Fail; public static Action Callback;
         public static bool LastRespawning; public static void Spawn(Pawn p, IntVec3 c, Map m, object rotation, WipeMode mode, bool respawningAfterLoad) { LastRespawning = respawningAfterLoad; Spawn(p, c, m, mode); }
+        public static void Spawn(Pawn p, IntVec3 c, Map m, object rotation, WipeMode mode) { LastRespawning = false; Spawn(p, c, m, mode); }
         public static void Spawn(Pawn p, IntVec3 c, Map m, WipeMode mode)
-        { p.Spawned = true; p.Map = m; Callback?.Invoke(); if (Fail) throw new Exception("spawn"); }
+        { p.Map?.mapPawns.AllPawnsSpawned.Remove(p); p.Spawned = true; p.Map = m; p.Position = c;
+          if (!m.mapPawns.AllPawnsSpawned.Contains(p)) m.mapPawns.AllPawnsSpawned.Add(p);
+          Callback?.Invoke(); if (Fail) throw new Exception("spawn"); }
     }
     public enum LoadSaveMode { Inactive, Saving, LoadingVars, PostLoadInit }
     public static class Scribe { public static bool Loading; public static Dictionary<string, object> Data = new Dictionary<string, object>(); public static LoadSaveMode mode => Loading ? LoadSaveMode.LoadingVars : LoadSaveMode.Saving; }
@@ -978,6 +990,8 @@ namespace Verse
 namespace RimWorld
 {
     public class IncidentParms { public object target; }
+    public class IncidentDef { public IncidentWorker Worker = new IncidentWorker_EnemyServantRaid(); }
+    public static class LetterDefOf { public static object ThreatSmall = new object(); }
     public class IncidentWorker { protected virtual bool CanFireNowSub(IncidentParms p) => true; protected virtual bool TryExecuteWorker(IncidentParms p) => false; public bool TryExecute(IncidentParms p) => TryExecuteWorker(p); }
     public class NeedDef { }
     public class Need { public NeedDef def = new NeedDef(); public float CurLevel, MaxLevel = 100; }
@@ -1022,13 +1036,17 @@ namespace MoonWorld
         public static QuestScriptDef MW_HolyGrailWarQuest = new QuestScriptDef();
         public static TraitDef MW_CommandSpell = new TraitDef(), MW_MagusCircuit_Basic = new TraitDef(), MW_MageRank_Apprentice = new TraitDef();
         public static Settings MW_HolyGrailWarSettings = new Settings();
+        public static IncidentDef MW_HolyGrailWarEnemyServantRaid = new IncidentDef();
+        public static WorldObjectDef MW_WarEncounter = new WorldObjectDef();
+        public static SitePartDef MW_WarFieldBattlePart = new SitePartDef(), MW_WarChallengePart = new SitePartDef();
         public static FactionDef MW_WarOpposition = new FactionDef();
         public static FactionDef MW_WarOpposition_Saber = new FactionDef(), MW_WarOpposition_Archer = new FactionDef(),
             MW_WarOpposition_Lancer = new FactionDef(), MW_WarOpposition_Assassin = new FactionDef(),
             MW_WarOpposition_Caster = new FactionDef(), MW_WarOpposition_Rider = new FactionDef(), MW_WarOpposition_Berserker = new FactionDef();
         public static PawnKindDef MW_EnemyMaster = new PawnKindDef(); public static object MW_Prana = new object(); public static WorldObjectDef MW_WarWorkshop = new WorldObjectDef(); public static SitePartDef MW_WarWorkshopPart = new SitePartDef();
     }
-    public class Settings { public int pranaUpdateIntervalTicks = 250, enemyRestDurationTicks = 180000; public float enemyRaidPranaFraction = .8f; }
+    public class Settings { public int pranaUpdateIntervalTicks = 250, enemyRestDurationTicks = 180000;
+        public float enemyRaidPranaFraction = .8f, enemyFieldBattleChance = .8f, enemyChallengeChance = .8f, enemyWorkshopAttackPranaFraction = .8f; }
     public static class PranaCycleService { public static int Calls; public static void Execute(int ticks) { Calls++; } }
     public static class ServantColonyMembership { public static void ReconcileLoadedGame() { } public static void SetFactionPreservingKind(Pawn p, Faction f) { p.Faction = f; } }
     public static class ServantTravelAutonomy { public static bool HasTravelAssignment(Pawn p) => p.Travel; }

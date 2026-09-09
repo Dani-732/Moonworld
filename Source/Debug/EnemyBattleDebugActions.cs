@@ -19,6 +19,10 @@ namespace MoonWorld
                     bool started = EnemyBattleService.TryStart(war);
                     Show(war, started ? "已发起一场交战。" : "未发起：已有会话、没有合格的敌对从者或没有可用地点。");
                 }),
+                new FloatMenuOption("尝试发起野外交战", () => Show(war,
+                    EnemyBattleService.TryStart(war, true) ? "已发起野外交战。" : "没有可出战双方或可用野外地点。")),
+                new FloatMenuOption("尝试发起工坊进攻", () => Show(war,
+                    EnemyBattleService.TryStart(war, false) ? "已发起工坊进攻。" : "没有可出战双方、工坊或足够攻坚魔力。")),
                 new FloatMenuOption("跳过本回合等待并结算", () =>
                 {
                     var battle = war.enemyBattle;
@@ -43,7 +47,7 @@ namespace MoonWorld
             string text = battle == null ? "当前没有敌方互攻会话。" :
                 "进攻从者：" + battle.attacker?.LabelShortCap + " #" + battle.attacker?.thingIDNumber
                 + "\n防守从者：" + battle.defender?.LabelShortCap + " #" + battle.defender?.thingIDNumber
-                + "\n地点：工坊 #" + battle.site?.ID + "，地块 " + battle.site?.Tile
+                + "\n地点：" + (battle.site is Site_WarWorkshop ? "工坊" : "野外") + " #" + battle.site?.ID + "，地块 " + battle.site?.Tile
                 + "\n状态：" + (battle.onMap ? "地图真实战斗（场外回合暂停）" : "场外分段交战")
                 + "\n已结算回合：" + battle.rounds + " / " + EnemyBattleService.MaximumRounds
                 + "\n下次场外回合：" + System.Math.Max(0, battle.nextRoundTickAbs - GenTicks.TicksAbs) + " Tick"

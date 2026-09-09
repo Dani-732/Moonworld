@@ -9,7 +9,7 @@ internal static partial class SummoningTests
     private static EnemyBattleSession Battle()
     {
         SevenClasses(); PrepareEnemy();
-        Check(EnemyBattleService.TryStart(State), "battle did not start");
+        Check(EnemyBattleService.TryStart(State, false), "battle did not start");
         return State.enemyBattle;
     }
     private static void BattleRound(EnemyBattleSession battle)
@@ -27,6 +27,58 @@ internal static partial class SummoningTests
 
     private static void EnemyBattleScenarios()
     {
+        Test("field battle uses a temporary traversable site and preserves workshops", () => {
+            SevenClasses(); PrepareEnemy(); int sites = Find.WorldObjects.All.Count, pawns = PawnGenerator.Created.Count;
+            Check(EnemyBattleService.TryStart(State, true), "field start"); var battle = State.enemyBattle;
+            Check(battle.site is Site_WarEncounter && !battle.site.HasMap && Find.WorldObjects.All.Count == sites + 1
+                && PawnGenerator.Created.Count == pawns && RimWorld.Planet.TileFinder.LastMin == 1
+                && RimWorld.Planet.TileFinder.LastMax == 6, "field created wrong content");
+            battle.defender.State.PresenceState = ServantPresenceState.DefeatedSpirit; EnemyBattleService.Advance(State);
+            Check(State.enemyBattle == null && battle.site.Destroyed && Find.WorldObjects.All.Count == sites, "temporary cleanup touched workshops");
+        });
+        Test("field map unload resumes originals and field reference survives host fields", () => {
+            SevenClasses(); PrepareEnemy(); Check(EnemyBattleService.TryStart(State, true), "field start");
+            var battle = State.enemyBattle; BattleRound(battle); Map target = BattleMap(battle);
+            var visitor = new Pawn(); Enter(visitor, target);
+            Check(!battle.site.ShouldRemoveMapNow(out _), "occupied field removed"); visitor.DeSpawn();
+            Check(battle.site.ShouldRemoveMapNow(out bool removeSite) && !removeSite, "active field removed");
+            battle.site.Notify_MyMapAboutToBeRemoved(); battle.site.Map = null; WarEncounterSiteUtility.Cleanup(battle.site);
+            Check(!battle.site.Destroyed && !battle.onMap && target.mapPawns.AllPawnsSpawned.Count == 0, "field unload lost originals");
+            Scribe.Data.Clear(); battle.ExposeData(); Scribe.Loading = true;
+            var loaded = new EnemyBattleSession(); loaded.ExposeData(); Scribe.Loading = false; State.enemyBattle = loaded;
+            Check(loaded.site == battle.site && loaded.site is Site_WarEncounter, "field reference lost");
+            BattleRound(loaded); Check(loaded.rounds == 2 && loaded.attacker.needs.Prana.CurLevel == 64, "field restarted");
+        });
+        Test("field terminal while player remains keeps map until native removal", () => {
+            SevenClasses(); PrepareEnemy(); Check(EnemyBattleService.TryStart(State, true), "field start");
+            var battle = State.enemyBattle; Map target = BattleMap(battle); var visitor = new Pawn(); Enter(visitor, target);
+            battle.defender.State.PresenceState = ServantPresenceState.DefeatedSpirit; EnemyBattleService.Advance(State);
+            Check(State.enemyBattle == null && !battle.site.Destroyed && !battle.site.ShouldRemoveMapNow(out _), "player map destroyed");
+            visitor.DeSpawn(); battle.site.Notify_MyMapAboutToBeRemoved(); battle.site.Map = null;
+            WarEncounterSiteUtility.Cleanup(battle.site); Check(battle.site.Destroyed, "terminal field leaked");
+        });
+        Test("workshop attack requires eighty percent while field accepts fifty", () => {
+            SevenClasses(); PrepareEnemy();
+            foreach (var participant in State.CurrentWarEntry.Enemies) participant.EnemyServant.needs.Prana.CurLevel = 50;
+            Check(!EnemyBattleService.TryStart(State, false) && EnemyBattleService.TryStart(State, true), "action mana thresholds wrong");
+        });
+        Test("field tile failure does not silently create workshop battle", () => {
+            SevenClasses(); PrepareEnemy(); RimWorld.Planet.TileFinder.Fail = true;
+            Check(!EnemyBattleService.TryStart(State, true) && State.enemyBattle == null && Find.WorldObjects.All.Count == 6, "field fallback");
+        });
+        Test("battle map spawn ownership change preserves new master on same faction", () => {
+            var battle = Battle(); var successor = new Pawn { Faction = battle.attacker.Faction };
+            GenSpawn.Callback = () => battle.attacker.State.Master = successor;
+            Map target = BattleMap(battle); GenSpawn.Callback = null; EnemyBattleService.Advance(State);
+            Check(State.enemyBattle == null && battle.attacker.Spawned && battle.attacker.Map == target
+                && battle.attacker.State.Master == successor && State.CurrentWarEntry.FindEnemy(battle.attacker).EnemyRestStartTickAbs == -1,
+                "battle rollback abducted successor pawn");
+        });
+        Test("battle location callback cannot commit an ended war", () => {
+            SevenClasses(); PrepareEnemy(); Find.WorldObjects.Callback = () => State.TrySetWarOutcome(WarOutcome.PlayerVictory);
+            Check(!EnemyBattleService.TryStart(State, true) && State.enemyBattle == null && Find.WorldObjects.All.Count == 6,
+                "ended war created battle");
+        });
         Test("battle waits one day after actual war start", () => {
             SevenClasses(); PrepareEnemy(); EnemyBattleService.Tick(State);
             Check(State.enemyBattle == null, "started early");
@@ -66,7 +118,7 @@ internal static partial class SummoningTests
             var battle = Battle(); battle.defender.OnDamage = p => p.State.PresenceState = ServantPresenceState.DefeatedSpirit;
             BattleRound(battle);
             Check(State.enemyBattle == null && battle.attacker.DamageCalls == 0 && !battle.defender.Dead
-                && !battle.site.RetreatOrdered && !battle.site.BothEscaped, "defeat became death or workshop retreat");
+                && !((Site_WarWorkshop)battle.site).RetreatOrdered && !((Site_WarWorkshop)battle.site).BothEscaped, "defeat became death or workshop retreat");
         });
         Test("loss of qualification cancels battle without dealing damage or refreshing deadline", () => {
             var battle = Battle(); battle.attackerMaster.Spells.Charges = 0;
@@ -87,8 +139,9 @@ internal static partial class SummoningTests
             var battle = Battle(); BattleRound(battle); int count = PawnGenerator.Created.Count;
             Map battleMap = BattleMap(battle);
             Check(battle.onMap && battle.attacker.Map == battleMap && battle.defender.Map == battleMap
+                && battle.attacker.Position.Id != 0 && battle.defender.Position.Id != 0
                 && !battle.attackerMaster.Spawned && !battle.defenderMaster.Spawned && PawnGenerator.Created.Count == count,
-                "map deployment copied participants or spawned masters");
+                "map deployment copied participants, lost requested positions or spawned masters");
             Check(battle.attacker.needs.Prana.CurLevel == 82 && battle.attacker.DamageCalls == 1, "map reset resources");
             Find.TickManager.TicksGame += 10000; EnemyBattleService.Advance(State);
             Check(battle.rounds == 1 && battle.attacker.needs.Prana.CurLevel == 82, "offmap round ran on map");

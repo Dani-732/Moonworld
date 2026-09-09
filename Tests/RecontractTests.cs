@@ -136,8 +136,9 @@ internal static partial class SummoningTests
             PrepareEnemy(); var entry = State.CurrentWarEntry; entry.PlayerServant.Dead = true;
             Pawn target = Orphan(entry.EnemyServant); target.needs.Prana.CurLevel = 13;
             Check(ServantRecontractService.TryRecontract(master, target, true, out string reason), reason);
-            Check(target.Spawned && target.Map == map && target.needs.Prana.CurLevel == 13 && PawnGenerator.Created.Count == 3,
-                "arrival changed pawn or mana");
+            Check(target.Spawned && target.Map == map && target.Position.Id != 0
+                && target.needs.Prana.CurLevel == 13 && PawnGenerator.Created.Count == 3,
+                "arrival changed pawn, position or mana");
         });
         Test("arrival failure returns world pawn and leaves old deadline", () => {
             PrepareEnemy(); var entry = State.CurrentWarEntry; entry.PlayerServant.Dead = true;

@@ -1,4 +1,5 @@
 using RimWorld;
+using RimWorld.Planet;
 using Verse;
 
 namespace MoonWorld
@@ -8,13 +9,13 @@ namespace MoonWorld
     {
         internal Pawn attacker, defender, attackerMaster, defenderMaster;
         internal Faction attackerFaction, defenderFaction;
-        internal Site_WarWorkshop site;
+        internal Site site;
         internal int rounds, nextRoundTickAbs;
         internal bool onMap;
 
         public EnemyBattleSession() { }
 
-        internal EnemyBattleSession(Pawn attacker, Pawn defender, Site_WarWorkshop site)
+        internal EnemyBattleSession(Pawn attacker, Pawn defender, Site site)
         {
             this.attacker = attacker; this.defender = defender; this.site = site;
             attackerMaster = ServantQuery.Instance.GetMaster(attacker);

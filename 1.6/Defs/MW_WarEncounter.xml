@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <WorldObjectDef ParentName="StaticWorldObjectBase">
+    <defName>MW_WarEncounter</defName>
+    <label>圣杯战争交锋地点</label>
+    <description>从者在野外相遇或约定交锋的临时地点。</description>
+    <worldObjectClass>MoonWorld.Site_WarEncounter</worldObjectClass>
+    <canHaveMap>true</canHaveMap>
+    <comps>
+      <li Class="WorldObjectCompProperties_FormCaravan" />
+      <li Class="WorldObjectCompProperties_TimedDetectionRaids" />
+      <li Class="WorldObjectCompProperties_EnterCooldown" />
+    </comps>
+    <expandingIcon>true</expandingIcon>
+    <expandingIconPriority>70</expandingIconPriority>
+  </WorldObjectDef>
+  <SitePartDef Name="MW_WarEncounterPartBase" Abstract="True">
+    <workerClass>SitePartWorker</workerClass>
+    <siteTexture>World/WorldObjects/Sites/Outpost</siteTexture>
+    <expandingIconTexture>World/WorldObjects/Expanding/Sites/Outpost</expandingIconTexture>
+    <applyFactionColorToSiteTexture>true</applyFactionColorToSiteTexture>
+    <showFactionInInspectString>true</showFactionInInspectString>
+    <requiresFaction>true</requiresFaction>
+    <approachOrderString>前往{0}</approachOrderString>
+    <approachingReportString>正在前往{0}。</approachingReportString>
+    <arrivedLetterDef>NegativeEvent</arrivedLetterDef>
+    <disallowsAutomaticDetectionTimerStart>true</disallowsAutomaticDetectionTimerStart>
+  </SitePartDef>
+  <SitePartDef ParentName="MW_WarEncounterPartBase">
+    <defName>MW_WarFieldBattlePart</defName>
+    <label>从者野外交战</label>
+    <description>两名从者在此交锋。及时赶到可以介入战斗。</description>
+    <arrivedLetter>远行队已进入从者交锋的野外。双方的伤势和魔力沿用当前战况；双方未败退时撤出，交锋仍会继续。</arrivedLetter>
+  </SitePartDef>
+  <SitePartDef ParentName="MW_WarEncounterPartBase">
+    <defName>MW_WarChallengePart</defName>
+    <label>从者约战地点</label>
+    <description>敌方从者等待本届御主或从者前来应战。约战限期一天，逾期不自动触发基地突袭。</description>
+    <arrivedLetter>远行队已抵达约战地点。期限内本届御主或从者到场后，敌方原从者将现身交锋。</arrivedLetter>
+  </SitePartDef>
+</Defs>

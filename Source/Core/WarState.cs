@@ -18,6 +18,7 @@ namespace MoonWorld
         private WarOutcome warOutcome = WarOutcome.Ongoing;
         internal Quest warQuest;
         internal EnemyBattleSession enemyBattle;
+        internal EnemyChallengeSession enemyChallenge;
         internal int enemyBattleNextStartTickAbs = -1;
 
         public HolyGrailWarEntry CurrentWarEntry => currentWarEntry;
@@ -38,6 +39,7 @@ namespace MoonWorld
             HolyGrailWarQuestService.Ensure(this);
             HolyGrailWarQuestService.SyncOutcome(this, notify: false);
             if (enemyBattle != null) EnemyBattleService.Advance(this);
+            EnemyChallengeService.Tick(this);
         }
 
         public override void GameComponentTick()
@@ -46,6 +48,7 @@ namespace MoonWorld
             {
                 UnboundServantService.Tick();
                 if (enemyBattle != null) EnemyBattleService.Advance(this);
+                EnemyChallengeService.Tick(this);
             }
             if (Find.TickManager.TicksGame % 2500 == 0) ServantRecontractService.Tick();
             WarOutcomeService.Tick(this);
@@ -91,6 +94,7 @@ namespace MoonWorld
             Scribe_Values.Look(ref warOutcome, "warOutcome", WarOutcome.Ongoing);
             Scribe_References.Look(ref warQuest, "warQuest");
             Scribe_Deep.Look(ref enemyBattle, "enemyBattle");
+            Scribe_Deep.Look(ref enemyChallenge, "enemyChallenge");
             Scribe_Values.Look(ref enemyBattleNextStartTickAbs, "enemyBattleNextStartTickAbs", -1);
         }
 

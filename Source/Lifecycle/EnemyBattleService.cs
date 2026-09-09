@@ -10,10 +10,11 @@ namespace MoonWorld
     internal static class EnemyBattleService
     {
         internal const int RoundInterval = 2500, MaximumRounds = 6, BattleCooldown = 60000;
+        private static bool starting, materializing;
         private static GameComponent_MoonWorld War => Current.Game?.GetComponent<GameComponent_MoonWorld>();
-        internal static bool IsEngaged(Pawn pawn) => War?.enemyBattle?.Contains(pawn) == true;
-        internal static bool AtSite(Site_WarWorkshop site) => site != null && War?.enemyBattle?.site == site;
-        internal static bool IsMapBattleFor(Pawn pawn) => IsEngaged(pawn) && War.enemyBattle.onMap;
+        internal static bool IsEngaged(Pawn pawn) => War?.enemyBattle?.Contains(pawn) == true || EnemyChallengeService.IsReserved(pawn);
+        internal static bool AtSite(Site site) => site != null && War?.enemyBattle?.site == site;
+        internal static bool IsMapBattleFor(Pawn pawn) => War?.enemyBattle?.Contains(pawn) == true && War.enemyBattle.onMap;
 
         internal static void Tick(GameComponent_MoonWorld war)
         {
@@ -27,7 +28,15 @@ namespace MoonWorld
             TryStart(war);
         }
 
-        internal static bool TryStart(GameComponent_MoonWorld war)
+        internal static bool TryStart(GameComponent_MoonWorld war, bool? inField = null)
+        {
+            if (starting) return false;
+            starting = true;
+            try { return TryStartCore(war, inField); }
+            finally { starting = false; }
+        }
+
+        private static bool TryStartCore(GameComponent_MoonWorld war, bool? inField)
         {
             if (war == null || war.enemyBattle != null || war.CurrentWarOutcome != WarOutcome.Ongoing
                 || war.warStartTick < 0 || war.CurrentWarEntry == null) return false;
@@ -35,6 +44,7 @@ namespace MoonWorld
             foreach (var participant in war.CurrentWarEntry.Participants)
                 if (CanStart(participant)) candidates.Add(participant);
             candidates.Shuffle();
+            bool field = inField ?? Rand.Chance(WarEncounterPolicy.FieldBattleChance);
             foreach (var defender in candidates)
             {
                 Site_WarWorkshop site = WorkshopRebuildService.FindWorkshop(defender);
@@ -43,12 +53,22 @@ namespace MoonWorld
                 foreach (var attacker in candidates)
                 {
                     if (attacker == defender || !attacker.EnemyServant.HostileTo(defender.EnemyServant)) continue;
-                    var battle = new EnemyBattleSession(attacker.EnemyServant, defender.EnemyServant, site);
+                    if (!field && !WarEncounterPolicy.CanAttackWorkshop(attacker.EnemyServant)) continue;
+                    Site location = site;
+                    if (field)
+                    {
+                        location = WarEncounterSiteUtility.TryCreate(site.Tile, defender.EnemyServant.Faction, false);
+                        if (location == null) continue;
+                    }
+                    var battle = new EnemyBattleSession(attacker.EnemyServant, defender.EnemyServant, location);
+                    if (war.enemyBattle != null || war.CurrentWarOutcome != WarOutcome.Ongoing
+                        || !CanStart(attacker) || !CanStart(defender) || !attacker.EnemyServant.HostileTo(defender.EnemyServant))
+                    { WarEncounterSiteUtility.Cleanup(location); return false; }
                     war.enemyBattle = battle;
                     attacker.RecordEnemyDeployment(attacker.CurrentMaster, battle.attacker);
                     defender.RecordEnemyDeployment(defender.CurrentMaster, battle.defender);
                     Messages.Message("敌方从者 " + battle.attacker.LabelShortCap + " 与 " + battle.defender.LabelShortCap
-                        + " 正在工坊附近交战。", site, MessageTypeDefOf.ThreatSmall, false);
+                        + (field ? " 正在野外交战。" : " 正在工坊附近交战。"), location, MessageTypeDefOf.ThreatSmall, false);
                     return true;
                 }
             }
@@ -58,7 +78,7 @@ namespace MoonWorld
         private static bool CanStart(EnemyWarParticipant participant)
         {
             Pawn pawn = participant.EnemyServant;
-            if (!CanFight(pawn) || !WorkshopRebuildService.IsFreeSurvivor(pawn)
+            if (IsEngaged(pawn) || !CanFight(pawn) || !WorkshopRebuildService.IsFreeSurvivor(pawn)
                 || WorkshopRebuildService.BlocksRaid(participant) || EnemyRestUtility.TicksRemaining(pawn) > 0
                 || pawn.health.ShouldBeDead() || pawn.health.ShouldBeDowned()) return false;
             Need_Prana prana = pawn.needs?.TryGetNeed<Need_Prana>();
@@ -77,8 +97,9 @@ namespace MoonWorld
 
         private static bool Valid(EnemyBattleSession battle)
         {
-            return battle.site != null && !battle.site.Destroyed && !battle.site.RetreatOrdered
-                && battle.site.Participant?.EnemyServant == battle.defender
+            return battle.site != null && !battle.site.Destroyed
+                && (battle.site is Site_WarEncounter || (battle.site is Site_WarWorkshop workshop
+                    && !workshop.RetreatOrdered && workshop.Participant?.EnemyServant == battle.defender))
                 && CanFight(battle.attacker) && CanFight(battle.defender)
                 && battle.attacker.Faction == battle.attackerFaction && battle.defender.Faction == battle.defenderFaction
                 && ServantQuery.Instance.GetMaster(battle.attacker) == battle.attackerMaster
@@ -89,7 +110,7 @@ namespace MoonWorld
         internal static void Advance(GameComponent_MoonWorld war)
         {
             EnemyBattleSession battle = war.enemyBattle;
-            if (battle == null) return;
+            if (battle == null || materializing) return;
             if (war.CurrentWarOutcome != WarOutcome.Ongoing || !Valid(battle)) { Finish(war); return; }
             if (battle.onMap)
             {
@@ -139,31 +160,37 @@ namespace MoonWorld
         }
 
         // Called before normal workshop defenders are placed. Failure retains the session for retry.
-        internal static bool TryMaterialize(Site_WarWorkshop site)
+        internal static bool TryMaterialize(Site site)
         {
             if (!AtSite(site)) return false;
+            if (materializing) return false;
             var battle = War.enemyBattle;
             if (battle.onMap) return true;
             if (!Valid(battle)) { Finish(War); return false; }
             if (site.Map == null) return false;
             var moved = new List<Pawn>();
+            materializing = true;
             try
             {
-                Place(battle.attacker, site.Map, moved);
-                Place(battle.defender, site.Map, moved);
-                if (!Valid(battle)) throw new InvalidOperationException("Battle participants changed during deployment.");
+                Place(battle.attacker, site.Map, moved, battle);
+                Place(battle.defender, site.Map, moved, battle);
+                if (War.enemyBattle != battle || War.CurrentWarOutcome != WarOutcome.Ongoing || !Valid(battle)
+                    || !battle.attacker.Spawned || battle.attacker.Map != site.Map
+                    || !battle.defender.Spawned || battle.defender.Map != site.Map)
+                    throw new InvalidOperationException("Battle participants changed during deployment.");
                 battle.onMap = true;
                 return true;
             }
             catch (Exception ex)
             {
-                foreach (Pawn pawn in moved) ReturnToWorld(pawn, site.Map);
+                foreach (Pawn pawn in moved) ReturnParticipant(battle, pawn);
                 Log.Error("[MoonWorld] Enemy battle deployment failed; original pawns retained: " + ex);
                 return false;
             }
+            finally { materializing = false; }
         }
 
-        private static void Place(Pawn pawn, Map map, List<Pawn> moved)
+        private static void Place(Pawn pawn, Map map, List<Pawn> moved, EnemyBattleSession battle)
         {
             if (!WorkshopRebuildService.IsFreeSurvivor(pawn)) throw new InvalidOperationException("Battle pawn is not available.");
             if (!CellFinder.TryFindRandomCellNear(map.Center, map, 18,
@@ -172,12 +199,16 @@ namespace MoonWorld
                 throw new InvalidOperationException("No reachable battle cell near map center.");
             moved.Add(pawn);
             Find.WorldPawns.RemovePawn(pawn);
-            GenSpawn.Spawn(pawn, cell, map, pawn.Rotation, WipeMode.Vanish, respawningAfterLoad: true);
-            if (!pawn.Spawned || pawn.Map != map) throw new InvalidOperationException("Battle spawn failed.");
+            // These are live world-pawn transfers, not map-load restoration. The normal
+            // spawn path resets the pawn's pather to the requested cell.
+            GenSpawn.Spawn(pawn, cell, map, pawn.Rotation, WipeMode.Vanish);
+            if (!pawn.Spawned || pawn.Map != map || !Valid(battle) || War.enemyBattle != battle
+                || War.CurrentWarOutcome != WarOutcome.Ongoing)
+                throw new InvalidOperationException("Battle spawn or participant validation failed.");
             LordMaker.MakeNewLord(pawn.Faction, new LordJob_EnemyWarParty(), map, new[] { pawn });
         }
 
-        internal static bool BeforeMapRemoval(Site_WarWorkshop site)
+        internal static bool BeforeMapRemoval(Site site)
         {
             if (!AtSite(site)) return false;
             var war = War;
@@ -199,10 +230,11 @@ namespace MoonWorld
             return true;
         }
 
-        private static void ReturnToWorld(Pawn pawn, Map map)
+        internal static void ReturnToWorld(Pawn pawn, Map map)
         {
             if (pawn == null || pawn.Dead || pawn.Destroyed || pawn.IsPrisoner || pawn.IsSlave
-                || pawn.Faction == Faction.OfPlayer || !EnemyContractUtility.IsWarPawn(pawn)) return;
+                || pawn.Faction == Faction.OfPlayer || !EnemyContractUtility.IsWarPawn(pawn)
+                || pawn.TryGetComp<CompServantState>()?.PresenceState == ServantPresenceState.Annihilated) return;
             if (pawn.Spawned && map != null && pawn.Map == map)
             {
                 Lord lord = pawn.GetLord();
@@ -218,12 +250,13 @@ namespace MoonWorld
         {
             var battle = war.enemyBattle;
             if (battle == null) return;
+            war.enemyBattle = null;
             ReturnParticipant(battle, battle.attacker);
             ReturnParticipant(battle, battle.defender);
-            EnemyWarPartyService.RetainDepartedPawn(battle.attacker);
-            EnemyWarPartyService.RetainDepartedPawn(battle.defender);
-            war.enemyBattle = null;
+            RetainParticipant(battle, battle.attacker);
+            RetainParticipant(battle, battle.defender);
             war.enemyBattleNextStartTickAbs = GenTicks.TicksAbs + BattleCooldown;
+            WarEncounterSiteUtility.Cleanup(battle.site);
         }
 
         private static void ReturnParticipant(EnemyBattleSession battle, Pawn pawn)
@@ -233,6 +266,15 @@ namespace MoonWorld
             Faction originalFaction = pawn == battle.attacker ? battle.attackerFaction : battle.defenderFaction;
             if (pawn?.Faction == originalFaction && (currentMaster == null || currentMaster == originalMaster))
                 ReturnToWorld(pawn, battle.site?.Map);
+        }
+
+        private static void RetainParticipant(EnemyBattleSession battle, Pawn pawn)
+        {
+            Pawn originalMaster = pawn == battle.attacker ? battle.attackerMaster : battle.defenderMaster;
+            Faction originalFaction = pawn == battle.attacker ? battle.attackerFaction : battle.defenderFaction;
+            Pawn master = ServantQuery.Instance.GetMaster(pawn);
+            if (pawn?.Faction == originalFaction && (master == null || master == originalMaster))
+                EnemyWarPartyService.RetainDepartedPawn(pawn);
         }
     }
 }

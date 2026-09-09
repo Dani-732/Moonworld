@@ -52,34 +52,44 @@ namespace MoonWorld
                 if (!enemy.EnemyEliminated && !WorkshopRebuildService.BlocksRaid(enemy)
                     && EnemyRestUtility.ReadinessRejection(enemy.EnemyServant) == null) ready.Add(enemy);
             EnemyWarParticipant selected = ready.RandomElement();
+            if (!TryRedeployExisting(selected, map, cell, out rejection)) return false;
+            deployedServant = selected.EnemyServant;
+            return true;
+        }
+
+        internal static bool TryRedeployExisting(EnemyWarParticipant entry, Map map, IntVec3 cell, out string rejection,
+            Func<bool> reservationValid = null)
+        {
+            rejection = "原从者当前不可部署。";
+            if (generating || entry == null || map == null
+                || EnemyRestUtility.ReadinessRejection(entry.EnemyServant, reservationValid != null, reservationValid != null) != null
+                || (reservationValid != null && !reservationValid())) return false;
+            Pawn servant = entry.EnemyServant;
+            Pawn originalMaster = ServantQuery.Instance.GetMaster(servant);
+            Faction originalFaction = servant.Faction;
+            Func<bool> stillOwned = () => servant.Faction == originalFaction
+                && ServantQuery.Instance.GetMaster(servant) == originalMaster && EnemyContractUtility.HasEnemyContract(servant)
+                && !servant.Dead && !servant.Destroyed && !servant.IsPrisoner && !servant.IsSlave && !servant.Suspended
+                && Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarOutcome == WarOutcome.Ongoing
+                && (reservationValid == null || reservationValid());
+            Lord lord = null;
             generating = true;
             try
             {
-                if (!TryRedeployExisting(selected, map, cell, out rejection)) return false;
-                deployedServant = selected.EnemyServant;
-                return true;
-            }
-            finally { generating = false; }
-        }
-
-        private static bool TryRedeployExisting(EnemyWarParticipant entry, Map map, IntVec3 cell, out string rejection)
-        {
-            rejection = null;
-            Pawn servant = entry.EnemyServant;
-            Lord lord = null;
-            try
-            {
                 Find.WorldPawns.RemovePawn(servant);
-                GenSpawn.Spawn(servant, cell, map, servant.Rotation, WipeMode.Vanish, respawningAfterLoad: true);
+                GenSpawn.Spawn(servant, cell, map, servant.Rotation, WipeMode.Vanish);
                 if (!servant.Spawned || servant.Map != map || !servant.CanReachMapEdge()
-                    || !EnemyContractUtility.HasEnemyContract(servant)
-                    || ServantQuery.Instance.GetMaster(servant) != entry.EnemyMaster)
+                    || !stillOwned())
                     throw new InvalidOperationException("敌方再袭落点、撤退路线或契约无效。");
                 lord = LordMaker.MakeNewLord(servant.Faction, new LordJob_EnemyWarParty(), map, new[] { servant });
+                if (!stillOwned() || !servant.Spawned || servant.Map != map)
+                    throw new InvalidOperationException("敌方部署期间参与者或约战已改变。");
                 // Commit presence last; earlier failures must leave a resting spirit unchanged.
                 if (!ServantLifecycleService.Instance.TryPrepareEnemyRaid(servant, out rejection))
                     throw new InvalidOperationException(rejection);
-                entry.RecordEnemyDeployment(entry.EnemyMaster, servant);
+                if (!stillOwned() || !servant.Spawned || servant.Map != map)
+                    throw new InvalidOperationException("敌方部署提交前参与者或约战已改变。");
+                entry.RecordEnemyDeployment(originalMaster, servant);
                 return true;
             }
             catch (Exception ex)
@@ -88,25 +98,30 @@ namespace MoonWorld
                 {
                     // LordMaker can throw after registering a partially constructed lord.
                     Lord activeLord = lord ?? servant.GetLord();
-                    if (activeLord != null) map.lordManager.RemoveLord(activeLord);
+                    if (activeLord != null && activeLord == servant.GetLord()
+                        && activeLord.LordJob is LordJob_EnemyWarParty && servant.Map == map)
+                        map.lordManager.RemoveLord(activeLord);
                 }
                 finally
                 {
-                    if (servant.Spawned) servant.DeSpawn();
-                    if (!Find.WorldPawns.Contains(servant))
-                        Find.WorldPawns.PassToWorld(servant, PawnDiscardDecideMode.KeepForever);
+                    Pawn currentMaster = ServantQuery.Instance.GetMaster(servant);
+                    if (servant.Faction == originalFaction && (currentMaster == null || currentMaster == originalMaster))
+                        EnemyBattleService.ReturnToWorld(servant, map);
                 }
                 Log.Error("[MoonWorld] 敌方从者再袭部署失败: " + ex);
-                rejection = "敌方再袭失败，原从者已退回场外，保留契约与休整时间。";
+                rejection = "敌方部署失败；保留原从者与当前归属，可安全撤回的角色已退回场外。";
                 return false;
             }
+            finally { generating = false; }
         }
 
         public static void RetainDepartedPawn(Pawn pawn)
         {
             EnemyWarParticipant entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.FindEnemy(pawn);
             if (entry == null || (pawn != entry.EnemyMaster && pawn != entry.EnemyServant)
-                || pawn.Spawned || pawn.Dead || pawn.Destroyed || !EnemyContractUtility.IsWarPawn(pawn)) return;
+                || (pawn == entry.EnemyServant && entry.EnemyEliminated)
+                || !WorkshopRebuildService.IsFreeSurvivor(pawn) || pawn.Faction == Faction.OfPlayer
+                || !EnemyContractUtility.IsWarPawn(pawn)) return;
             // Pawn.ExitMap has already transferred it to WorldPawns and written its native timestamp.
             // Do not remove and re-add it here: that makes the rest clock mutable.
             if (Find.WorldPawns.Contains(pawn))

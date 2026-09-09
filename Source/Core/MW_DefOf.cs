@@ -31,6 +31,8 @@ namespace MoonWorld
         public static PawnKindDef MW_EnemyMaster;
         public static WorldObjectDef MW_WarWorkshop;
         public static SitePartDef MW_WarWorkshopPart;
+        public static WorldObjectDef MW_WarEncounter;
+        public static SitePartDef MW_WarFieldBattlePart, MW_WarChallengePart;
         public static DutyDef MW_EnemyServantAssault;
         public static PawnKindDef MW_TestServant;
         public static PawnKindDef MW_Artoria;
