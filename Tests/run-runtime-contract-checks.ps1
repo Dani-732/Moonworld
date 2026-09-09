@@ -147,9 +147,14 @@ try {
     $mwNaturalEncounter = $mwEntry.SelectSingleNode('/Defs/IncidentDef[defName="MW_HolyGrailWarEnemyEncounter"]')
     if ($mwRaid.baseChance -ne '0' -or $mwNaturalEncounter.baseChance -ne '0.08' -or
         $mwNaturalEncounter.workerClass -ne 'MoonWorld.IncidentWorker_WarEncounter' -or
-        $mwNaturalEncounter.earliestDay -ne '8' -or $mwNaturalEncounter.minRefireDays -ne '10' -or
+        $mwNaturalEncounter.earliestDay -ne '0' -or $mwNaturalEncounter.minRefireDays -ne '0.5' -or
         $mwNaturalEncounter.targetTags.li -ne 'Map_PlayerHome' -or $mwNaturalEncounter.requireColonistsPresent -ne 'true') {
         throw 'Natural encounter scheduling must keep the direct raid independently callable'
+    }
+    $mwFinal = $mwEntry.SelectSingleNode('/Defs/IncidentDef[defName="MW_HolyGrailWarFinalBattle"]')
+    if ($null -eq $mwFinal -or $mwFinal.workerClass -ne 'MoonWorld.IncidentWorker_WarFinalBattle' -or
+        $mwFinal.earliestDay -ne '10' -or $mwFinal.targetTags.li -ne 'Map_PlayerHome') {
+        throw 'Final battle incident linkage invalid'
     }
     [xml]$mwProfiles = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_ServantProfiles.xml') -Raw
     $mwEncounterSettings = $mwProfiles.SelectSingleNode('/Defs/Def[@Class="MoonWorld.MoonWorldSettingsDef" and defName="MW_HolyGrailWarSettings"]')

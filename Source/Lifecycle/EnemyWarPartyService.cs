@@ -115,6 +115,61 @@ namespace MoonWorld
             finally { generating = false; }
         }
 
+        internal static bool TryDeployFinalBattle(Map map, out string rejection)
+        {
+            rejection = ValidateRaid(map);
+            var war = Current.Game?.GetComponent<GameComponent_MoonWorld>();
+            if (rejection != null) return false;
+            if (war.enemyBattle != null || war.enemyChallenge != null)
+            { rejection = "当前已有其他交战或约战，不能重复部署圣杯决战。"; return false; }
+            var ready = new List<EnemyWarParticipant>();
+            foreach (var participant in war.CurrentWarEntry.Enemies)
+            {
+                if (participant.EnemyEliminated) continue;
+                if (WorkshopRebuildService.BlocksRaid(participant)
+                    || EnemyRestUtility.ReadinessRejection(participant.EnemyServant) != null)
+                { rejection = "仍存续的敌方从者尚未全部满足圣杯决战的健康、魔力、休整和占用条件。"; return false; }
+                ready.Add(participant);
+            }
+            if (ready.Count == 0) { rejection = "没有满足现有健康、魔力和休整条件的敌方从者。"; return false; }
+            var cells = new List<IntVec3>();
+            foreach (var participant in ready)
+            {
+                if (!CellFinder.TryFindRandomEdgeCellWith(c => c.InBounds(map) && c.Standable(map) && !c.Fogged(map)
+                    && c.GetFirstPawn(map) == null && !cells.Contains(c), map, 0f, out IntVec3 cell))
+                { rejection = "玩家基地边缘没有足够的可用落点。"; return false; }
+                cells.Add(cell);
+            }
+            var deployed = new List<EnemyWarParticipant>();
+            var previous = new Dictionary<EnemyWarParticipant, System.Tuple<bool, int>>();
+            try
+            {
+                for (int i = 0; i < ready.Count; i++)
+                {
+                    var participant = ready[i];
+                    previous[participant] = System.Tuple.Create(participant.EnemyDeployed, participant.EnemyRestStartTickAbs);
+                    if (!TryRedeployExisting(participant, map, cells[i], out rejection,
+                        () => war.CurrentWarOutcome == WarOutcome.Ongoing && war.enemyBattle == null && war.enemyChallenge == null
+                            && WarRhythmPolicy.FinalBattleDue(war))) throw new InvalidOperationException(rejection);
+                    deployed.Add(participant);
+                }
+                foreach (var participant in ready)
+                    if (!participant.EnemyServant.Spawned || participant.EnemyServant.Map != map)
+                        throw new InvalidOperationException("圣杯决战参与者未全部进入玩家基地。");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                foreach (var participant in deployed)
+                {
+                    EnemyBattleService.ReturnToWorld(participant.EnemyServant, map);
+                    if (previous.TryGetValue(participant, out var state)) participant.RestoreDeploymentState(state.Item1, state.Item2);
+                }
+                rejection = "圣杯决战部署失败，已保留未改变的原从者：" + ex.Message;
+                return false;
+            }
+        }
+
         public static void RetainDepartedPawn(Pawn pawn)
         {
             EnemyWarParticipant entry = Current.Game?.GetComponent<GameComponent_MoonWorld>()?.CurrentWarEntry?.FindEnemy(pawn);

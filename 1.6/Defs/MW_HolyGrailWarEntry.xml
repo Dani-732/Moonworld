@@ -45,8 +45,8 @@
     <targetTags><li>Map_PlayerHome</li></targetTags>
     <workerClass>MoonWorld.IncidentWorker_EnemyServantRaid</workerClass>
     <baseChance>0</baseChance>
-    <earliestDay>8</earliestDay>
-    <minRefireDays>10</minRefireDays>
+    <earliestDay>0</earliestDay>
+    <minRefireDays>0.5</minRefireDays>
     <requireColonistsPresent>true</requireColonistsPresent>
   </IncidentDef>
   <IncidentDef>
@@ -56,8 +56,19 @@
     <targetTags><li>Map_PlayerHome</li></targetTags>
     <workerClass>MoonWorld.IncidentWorker_WarEncounter</workerClass>
     <baseChance>0.08</baseChance>
-    <earliestDay>8</earliestDay>
-    <minRefireDays>10</minRefireDays>
+    <earliestDay>0</earliestDay>
+    <minRefireDays>0.5</minRefireDays>
+    <requireColonistsPresent>true</requireColonistsPresent>
+  </IncidentDef>
+  <IncidentDef>
+    <defName>MW_HolyGrailWarFinalBattle</defName>
+    <label>圣杯决战</label>
+    <category>ThreatBig</category>
+    <targetTags><li>Map_PlayerHome</li></targetTags>
+    <workerClass>MoonWorld.IncidentWorker_WarFinalBattle</workerClass>
+    <baseChance>0</baseChance>
+    <earliestDay>10</earliestDay>
+    <minRefireDays>999</minRefireDays>
     <requireColonistsPresent>true</requireColonistsPresent>
   </IncidentDef>
 </Defs>

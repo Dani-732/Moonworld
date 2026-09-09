@@ -44,7 +44,7 @@ namespace MoonWorld
         private static void Show(GameComponent_MoonWorld war, string prefix = null)
         {
             var battle = war.enemyBattle;
-            string text = battle == null ? "当前没有敌方互攻会话。" :
+            string text = "战争阶段：" + WarRhythmPolicy.PhaseLabel(war) + (battle == null ? "\n当前没有敌方互攻会话。" :
                 "进攻从者：" + battle.attacker?.LabelShortCap + " #" + battle.attacker?.thingIDNumber
                 + "\n防守从者：" + battle.defender?.LabelShortCap + " #" + battle.defender?.thingIDNumber
                 + "\n地点：" + (battle.site is Site_WarWorkshop ? "工坊" : "野外") + " #" + battle.site?.ID + "，地块 " + battle.site?.Tile
@@ -52,7 +52,7 @@ namespace MoonWorld
                 + "\n已结算回合：" + battle.rounds + " / " + EnemyBattleService.MaximumRounds
                 + "\n下次场外回合：" + System.Math.Max(0, battle.nextRoundTickAbs - GenTicks.TicksAbs) + " Tick"
                 + "\n进攻方魔力：" + battle.attacker?.needs?.TryGetNeed<Need_Prana>()?.CurLevel.ToString("0.##")
-                + "\n防守方魔力：" + battle.defender?.needs?.TryGetNeed<Need_Prana>()?.CurLevel.ToString("0.##");
+                + "\n防守方魔力：" + battle.defender?.needs?.TryGetNeed<Need_Prana>()?.CurLevel.ToString("0.##"));
             Find.WindowStack.Add(new Dialog_MessageBox((prefix == null ? "" : prefix + "\n\n") + text));
         }
     }

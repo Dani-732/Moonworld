@@ -19,11 +19,13 @@ internal static partial class SummoningTests
         Current.Game = new Game();
         Find.LetterStack.LettersListForReading.Clear();
         Rand.Pass = true;
-        map = new Map(); master = new Pawn { Map = map }; cell = new IntVec3 { Valid = true, Id = 2 };
+        map = new Map(); master = new Pawn { Map = map }; cell = new IntVec3 { Valid = true, Id = 2 }; Find.CurrentMap = map;
+        Find.Maps.Clear(); Find.Maps.Add(map);
         Find.TickManager.TicksGame = 1234;
         Find.WorldPawns.Pawns.Clear();
         PawnGenerator.Created.Clear(); Find.FactionManager = new FactionManager();
         CellFinder.Fail = Verse.AI.Group.LordMaker.Fail = Pawn.EdgeBlocked = false;
+        CellFinder.EdgeCalls = 0;
         Find.WorldPawns.FailPass = false; Find.WorldObjects = new WorldObjectsHolder(); Find.QuestManager = new RimWorld.QuestManager(); TileFinder.Fail = false; HolyGrailWarContentBridge.Fail = false;
         MW_DefOf.MW_HolyGrailWarSettings.enemyRestDurationTicks = 180000;
         MW_DefOf.MW_HolyGrailWarSettings.enemyRaidPranaFraction = .8f;
@@ -124,11 +126,82 @@ internal static partial class SummoningTests
         Check(enemy.State.Master == State.CurrentWarEntry.EnemyMaster && PawnGenerator.Created.Count == 3
             && State.warStartTick == 1234 && State.CurrentWarEntry.RegularSummonUsed, "failed raid changed pair or player settlement");
     }
+    private static void WarRhythmScenarios()
+    {
+        Test("war rhythm derives probing fierce and endgame from war start", () => {
+            PrepareEnemy(); State.warStartTick = 1000;
+            Find.TickManager.TicksGame = 1000 + 60000 * 2; Check(WarRhythmPolicy.Phase(State) == WarPhase.Probing, "probing boundary");
+            Find.TickManager.TicksGame = 1000 + 60000 * 3; Check(WarRhythmPolicy.Phase(State) == WarPhase.Fierce, "fierce boundary");
+            Find.TickManager.TicksGame = 1000 + 60000 * 7; Check(WarRhythmPolicy.Phase(State) == WarPhase.Endgame, "endgame boundary");
+            Check(WarRhythmPolicy.BattleCooldown(State) == 0, "endgame cooldown not removed");
+        });
+        Test("recon progress reveals servant then master then site without changing pawns", () => {
+            PrepareEnemy(); var participant = State.CurrentWarEntry.Enemies[0];
+            Check(!WarReconnaissanceService.KnowsServant(State, participant), "servant revealed too early");
+            WarReconnaissanceService.Advance(State, participant, WarReconnaissanceService.ServantReveal);
+            Check(WarReconnaissanceService.KnowsServant(State, participant) && !WarReconnaissanceService.KnowsMaster(State, participant), "servant reveal threshold wrong");
+            WarReconnaissanceService.Advance(State, participant, WarReconnaissanceService.MasterReveal - WarReconnaissanceService.ServantReveal);
+            Check(WarReconnaissanceService.KnowsMaster(State, participant) && !WarReconnaissanceService.KnowsSite(State, participant), "master reveal threshold wrong");
+            WarReconnaissanceService.Advance(State, participant, 100);
+            Check(WarReconnaissanceService.KnowsSite(State, participant) && participant.EnemyServant == State.CurrentWarEntry.EnemyServant
+                && PawnGenerator.Created.Count == 3, "site reveal changed war pawns");
+        });
+        Test("recon progress survives war state save round trip", () => {
+            PrepareEnemy(); var participant = State.CurrentWarEntry.Enemies[0];
+            WarReconnaissanceService.Advance(State, participant, WarReconnaissanceService.MasterReveal);
+            int before = WarReconnaissanceService.Progress(State, participant);
+            State.ExposeData(); Scribe.Loading = true; Current.Game = new Game(); State.ExposeData();
+            var loaded = Current.Game.State.CurrentWarEntry.Enemies[0];
+            Check(WarReconnaissanceService.Progress(Current.Game.State, loaded) == before
+                && WarReconnaissanceService.KnowsMaster(Current.Game.State, loaded), "recon progress lost on load");
+        });
+        Test("seeing servant and master unlocks each intelligence independently", () => {
+            PrepareEnemy(); var participant = State.CurrentWarEntry.Enemies[0];
+            Pawn servant = participant.EnemyServant, enemyMaster = participant.EnemyMaster;
+            servant.Spawned = true; servant.Map = map; servant.Position = new IntVec3 { Valid = true, Fog = true, Id = 3 };
+            servant.Faction = enemyMaster.Faction; map.mapPawns.AllPawnsSpawned.Add(servant);
+            WarReconnaissanceService.ObserveVisiblePawns(State);
+            Check(!WarReconnaissanceService.KnowsServant(State, participant), "fogged servant was treated as seen");
+            servant.Position = new IntVec3 { Valid = true, Id = 3 };
+            WarReconnaissanceService.ObserveVisiblePawns(State);
+            Check(WarReconnaissanceService.KnowsServant(State, participant)
+                && !WarReconnaissanceService.KnowsMaster(State, participant), "servant sighting did not unlock only servant");
+            map.mapPawns.AllPawnsSpawned.Remove(servant); servant.Spawned = false; servant.Map = null;
+            enemyMaster.Spawned = true; enemyMaster.Map = map; map.mapPawns.AllPawnsSpawned.Add(enemyMaster);
+            WarReconnaissanceService.ObserveVisiblePawns(State);
+            Check(WarReconnaissanceService.KnowsMaster(State, participant), "master sighting did not unlock master");
+        });
+        Test("final battle due only after day ten while war is ongoing", () => {
+            PrepareEnemy(); State.warStartTick = 1000;
+            Find.TickManager.TicksGame = 1000 + 60000 * 10 - 1;
+            Check(!WarRhythmPolicy.FinalBattleDue(State), "final battle fired early");
+            Find.TickManager.TicksGame++;
+            Check(WarRhythmPolicy.FinalBattleDue(State), "final battle did not become due");
+            State.TrySetWarOutcome(WarOutcome.PlayerVictory);
+            Check(!WarRhythmPolicy.FinalBattleDue(State), "final battle remained due after war end");
+        });
+        Test("final battle deploys every surviving enemy pawn at unique edge cells", () => {
+            SevenClasses(); PrepareEnemy(); State.warStartTick = 1000;
+            Find.TickManager.TicksGame = 1000 + 60000 * 10;
+            Check(MW_DefOf.MW_HolyGrailWarFinalBattle.Worker.TryExecute(new IncidentParms { target = map, forced = true }),
+                "final battle worker rejected ready roster");
+            var enemies = State.CurrentWarEntry.Enemies;
+            var positions = new HashSet<int>();
+            foreach (var enemy in enemies)
+            {
+                Check(enemy.EnemyServant.Spawned && enemy.EnemyServant.Map == map
+                    && positions.Add(enemy.EnemyServant.Position.Id), "final battle duplicated or omitted enemy pawn");
+            }
+            Check(State.finalBattleTriggered, "final battle trigger not persisted");
+        });
+    }
+
     public static void Main()
     {
         RecontractScenarios();
         EnemyBattleScenarios();
         EnemyChallengeScenarios();
+        WarRhythmScenarios();
         RunWorkshopTests();
         Test("seven faction war only ends after all six servants cease existing", () => {
             SevenClasses(); PrepareEnemy(); var enemies = State.CurrentWarEntry.Enemies;
@@ -806,9 +879,9 @@ namespace Verse
 {
     public interface IExposable { void ExposeData(); }
     public class GameComponent { public virtual void LoadedGame() { } public virtual void GameComponentTick() { } public virtual void ExposeData() { } }
-    public class Game { public GameComponent_MoonWorld State; public Game() { State = new GameComponent_MoonWorld(this); } public T GetComponent<T>() where T : class => State as T; }
+    public class Game { public GameComponent_MoonWorld State; public Map AnyPlayerHomeMap => Find.CurrentMap; public Game() { State = new GameComponent_MoonWorld(this); } public T GetComponent<T>() where T : class => State as T; }
     public static class Current { public static Game Game; }
-    public static class Find { public static LetterStack LetterStack = new LetterStack(); public static TickManager TickManager = new TickManager(); public static WorldPawns WorldPawns = new WorldPawns(); public static FactionManager FactionManager = new FactionManager(); public static WorldObjectsHolder WorldObjects = new WorldObjectsHolder(); public static RimWorld.QuestManager QuestManager = new RimWorld.QuestManager(); }
+    public static class Find { public static Map CurrentMap; public static List<Map> Maps = new List<Map>(); public static LetterStack LetterStack = new LetterStack(); public static TickManager TickManager = new TickManager(); public static WorldPawns WorldPawns = new WorldPawns(); public static FactionManager FactionManager = new FactionManager(); public static WorldObjectsHolder WorldObjects = new WorldObjectsHolder(); public static RimWorld.QuestManager QuestManager = new RimWorld.QuestManager(); }
     public class DiaOption
     {
         public string Label; public bool resolveTree; public Action action;
@@ -865,8 +938,8 @@ namespace Verse
         public Pawn GetFirstPawn(Map m) => Occupied ? new Pawn() : null;
         public static bool operator ==(IntVec3 a, IntVec3 b) => a.Id == b.Id; public static bool operator !=(IntVec3 a, IntVec3 b) => a.Id != b.Id;
         public override bool Equals(object o) => o is IntVec3 && this == (IntVec3)o; public override int GetHashCode() => Id; }
-    public static class CellFinder { public static bool Fail; public static bool TryFindRandomCellNear(IntVec3 c, Map m, int r, Predicate<IntVec3> valid, out IntVec3 result) { result = new IntVec3 { Valid = true, Id = 1 }; return !Fail && valid(result); }
-        public static bool TryFindRandomEdgeCellWith(Predicate<IntVec3> valid, Map map, float chance, out IntVec3 result) => TryFindRandomCellNear(default(IntVec3), map, 0, valid, out result); }
+    public static class CellFinder { public static bool Fail; public static int EdgeCalls; public static bool TryFindRandomCellNear(IntVec3 c, Map m, int r, Predicate<IntVec3> valid, out IntVec3 result) { result = new IntVec3 { Valid = true, Id = 1 }; return !Fail && valid(result); }
+        public static bool TryFindRandomEdgeCellWith(Predicate<IntVec3> valid, Map map, float chance, out IntVec3 result) { result = new IntVec3 { Valid = true, Id = ++EdgeCalls }; return !Fail && valid(result); } }
     public enum DestroyMode { Vanish }
     public enum WipeMode { Vanish }
     public partial class Pawn
@@ -989,10 +1062,10 @@ namespace Verse
 }
 namespace RimWorld
 {
-    public class IncidentParms { public object target; }
+    public class IncidentParms { public object target; public bool forced; }
     public class IncidentDef { public IncidentWorker Worker = new IncidentWorker_EnemyServantRaid(); }
     public static class LetterDefOf { public static object ThreatSmall = new object(); }
-    public class IncidentWorker { protected virtual bool CanFireNowSub(IncidentParms p) => true; protected virtual bool TryExecuteWorker(IncidentParms p) => false; public bool TryExecute(IncidentParms p) => TryExecuteWorker(p); }
+    public class IncidentWorker { public virtual float BaseChanceThisGame => 0f; protected virtual bool CanFireNowSub(IncidentParms p) => true; protected virtual bool TryExecuteWorker(IncidentParms p) => false; public bool TryExecute(IncidentParms p) => TryExecuteWorker(p); }
     public class NeedDef { }
     public class Need { public NeedDef def = new NeedDef(); public float CurLevel, MaxLevel = 100; }
     public static class MessageTypeDefOf { public static object ThreatSmall = new object(), RejectInput = new object(), NeutralEvent = new object(), ThreatBig = new object(), NegativeEvent = new object(), PositiveEvent = new object(); }
@@ -1037,6 +1110,7 @@ namespace MoonWorld
         public static TraitDef MW_CommandSpell = new TraitDef(), MW_MagusCircuit_Basic = new TraitDef(), MW_MageRank_Apprentice = new TraitDef();
         public static Settings MW_HolyGrailWarSettings = new Settings();
         public static IncidentDef MW_HolyGrailWarEnemyServantRaid = new IncidentDef();
+        public static IncidentDef MW_HolyGrailWarFinalBattle = new IncidentDef { Worker = new IncidentWorker_WarFinalBattle() };
         public static WorldObjectDef MW_WarEncounter = new WorldObjectDef();
         public static SitePartDef MW_WarFieldBattlePart = new SitePartDef(), MW_WarChallengePart = new SitePartDef();
         public static FactionDef MW_WarOpposition = new FactionDef();

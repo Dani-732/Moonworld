@@ -86,9 +86,12 @@ namespace MoonWorld
                 var text = new System.Text.StringBuilder("圣杯战争参战阵营：");
                 foreach (var faction in factions)
                 {
-                    text.Append("\n").Append(faction.SeatLabel).Append("：")
-                        .Append(faction.Master?.LabelShortCap ?? "无御主").Append("；").Append(faction.Status);
-                    if (faction.OriginalMaster != null && faction.OriginalMaster != faction.Master)
+                    text.Append("\n").Append(DescribeSeat(entry, faction)).Append("：")
+                        .Append(DescribeMaster(entry, faction)).Append("；").Append(faction.Status);
+                    var participant = entry?.Participants.Find(p => p.Seat == HolyGrailWarClassDef.Resolve(faction.Seat));
+                    var war = Current.Game?.GetComponent<GameComponent_MoonWorld>();
+                    if (faction.OriginalMaster != null && faction.OriginalMaster != faction.Master
+                        && (participant == null || WarReconnaissanceService.KnowsMaster(war, participant)))
                         text.Append("（开战御主：").Append(faction.OriginalMaster.LabelShortCap).Append("）");
                     if (faction.Qualified && quest != null && !quest.Historical
                         && entry?.FindEnemy(faction.Master)?.WorkshopRebuildPending == true)
@@ -96,6 +99,21 @@ namespace MoonWorld
                 }
                 return text.ToString();
             }
+        }
+
+        private static string DescribeMaster(HolyGrailWarEntry entry, HolyGrailWarFactionRecord faction)
+        {
+            var participant = entry?.Participants.Find(p => p.Seat == HolyGrailWarClassDef.Resolve(faction.Seat));
+            var war = Current.Game?.GetComponent<GameComponent_MoonWorld>();
+            return participant == null || WarReconnaissanceService.KnowsMaster(war, participant)
+                ? faction.Master?.LabelShortCap ?? "无御主" : "未知御主";
+        }
+
+        private static string DescribeSeat(HolyGrailWarEntry entry, HolyGrailWarFactionRecord faction)
+        {
+            var participant = entry?.Participants.Find(p => p.Seat == HolyGrailWarClassDef.Resolve(faction.Seat));
+            var war = Current.Game?.GetComponent<GameComponent_MoonWorld>();
+            return participant == null || WarReconnaissanceService.KnowsServant(war, participant) ? faction.SeatLabel : "未知阵营";
         }
 
         internal void Initialize(int startTick, HolyGrailWarEntry entry)

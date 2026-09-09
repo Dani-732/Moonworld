@@ -44,7 +44,7 @@ namespace MoonWorld
             foreach (var participant in war.CurrentWarEntry.Participants)
                 if (CanStart(participant)) candidates.Add(participant);
             candidates.Shuffle();
-            bool field = inField ?? Rand.Chance(WarEncounterPolicy.FieldBattleChance);
+            bool field = inField ?? Rand.Chance(WarRhythmPolicy.FieldBattleChance(war));
             foreach (var defender in candidates)
             {
                 Site_WarWorkshop site = WorkshopRebuildService.FindWorkshop(defender);
@@ -255,7 +255,7 @@ namespace MoonWorld
             ReturnParticipant(battle, battle.defender);
             RetainParticipant(battle, battle.attacker);
             RetainParticipant(battle, battle.defender);
-            war.enemyBattleNextStartTickAbs = GenTicks.TicksAbs + BattleCooldown;
+            war.enemyBattleNextStartTickAbs = GenTicks.TicksAbs + WarRhythmPolicy.BattleCooldown(war);
             WarEncounterSiteUtility.Cleanup(battle.site);
         }
 

@@ -48,6 +48,8 @@ namespace MoonWorld
         }
         internal void RecordEnemyDeparture(Pawn pawn)
         { if (pawn == servant && restStartTickAbs < 0) restStartTickAbs = GenTicks.TicksAbs; }
+        internal void RestoreDeploymentState(bool wasDeployed, int previousRestStart)
+        { deployed = wasDeployed; restStartTickAbs = previousRestStart; }
         internal void MarkPrepared() { prepared = true; }
         internal void ScheduleWorkshopRebuild(PlanetTile tile)
         {

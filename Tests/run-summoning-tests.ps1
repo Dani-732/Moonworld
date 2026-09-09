@@ -32,12 +32,16 @@ try {
         (Join-Path $projectRoot 'Source\Lifecycle\WarRosterPreparation.cs') `
         (Join-Path $projectRoot 'Source\Core\ServantSummonPoolDef.cs') `
         (Join-Path $projectRoot 'Source\Core\WarState.cs') `
+        (Join-Path $projectRoot 'Source\Core\WarReconnaissance.cs') `
+        (Join-Path $projectRoot 'Source\Lifecycle\WarRhythmPolicy.cs') `
+        (Join-Path $projectRoot 'Source\Lifecycle\WarFinalBattleService.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\WarOutcomeService.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\HolyGrailWarEntryService.cs') `
         (Join-Path $projectRoot 'Source\Core\EnemyContractUtility.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\EnemyWarPartyService.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\EnemyRestUtility.cs') `
         (Join-Path $projectRoot 'Source\Integration\IncidentWorker_EnemyServantRaid.cs') `
+        (Join-Path $projectRoot 'Source\Integration\IncidentWorker_WarFinalBattle.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\ServantSummoningService.cs') `
         (Join-Path $projectRoot 'Source\Quest\HolyGrailWarQuestPart.cs') `
         (Join-Path $projectRoot 'Source\Quest\HolyGrailWarQuestService.cs')

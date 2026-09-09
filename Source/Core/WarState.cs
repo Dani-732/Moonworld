@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Verse;
 using RimWorld;
@@ -20,6 +21,8 @@ namespace MoonWorld
         internal EnemyBattleSession enemyBattle;
         internal EnemyChallengeSession enemyChallenge;
         internal int enemyBattleNextStartTickAbs = -1;
+        internal bool finalBattleTriggered;
+        internal List<WarReconnaissanceRecord> reconnaissance = new List<WarReconnaissanceRecord>();
 
         public HolyGrailWarEntry CurrentWarEntry => currentWarEntry;
         public WarOutcome CurrentWarOutcome => warOutcome;
@@ -49,6 +52,7 @@ namespace MoonWorld
                 UnboundServantService.Tick();
                 if (enemyBattle != null) EnemyBattleService.Advance(this);
                 EnemyChallengeService.Tick(this);
+                WarReconnaissanceService.ObserveVisiblePawns(this);
             }
             if (Find.TickManager.TicksGame % 2500 == 0) ServantRecontractService.Tick();
             WarOutcomeService.Tick(this);
@@ -56,6 +60,7 @@ namespace MoonWorld
             {
                 EnemyBattleService.Tick(this);
                 WorkshopRebuildService.Tick(this);
+                WarFinalBattleService.Tick(this);
             }
             int interval = Mathf.Max(1, MW_DefOf.MW_HolyGrailWarSettings.pranaUpdateIntervalTicks);
             if (Find.TickManager.TicksGame % interval == 0)
@@ -96,6 +101,10 @@ namespace MoonWorld
             Scribe_Deep.Look(ref enemyBattle, "enemyBattle");
             Scribe_Deep.Look(ref enemyChallenge, "enemyChallenge");
             Scribe_Values.Look(ref enemyBattleNextStartTickAbs, "enemyBattleNextStartTickAbs", -1);
+            Scribe_Values.Look(ref finalBattleTriggered, "finalBattleTriggered", false);
+            Scribe_Collections.Look(ref reconnaissance, "reconnaissance", LookMode.Deep);
+            if (Scribe.mode == LoadSaveMode.PostLoadInit && reconnaissance == null)
+                reconnaissance = new List<WarReconnaissanceRecord>();
         }
 
         internal bool TrySetWarOutcome(WarOutcome outcome)

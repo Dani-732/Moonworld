@@ -27,6 +27,7 @@ namespace MoonWorld
         public static LetterDef MW_HolyGrailWarInvitation;
         public static QuestScriptDef MW_HolyGrailWarQuest;
         public static IncidentDef MW_HolyGrailWarEnemyServantRaid;
+        public static IncidentDef MW_HolyGrailWarFinalBattle;
         public static FactionDef MW_WarOpposition;
         public static PawnKindDef MW_EnemyMaster;
         public static WorldObjectDef MW_WarWorkshop;
