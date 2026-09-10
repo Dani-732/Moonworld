@@ -10,6 +10,7 @@ namespace MoonWorld
         internal Site_WarEncounter site;
         internal int expiresAtTickAbs;
         internal bool onMap;
+        internal int reportId = -1;
         public EnemyChallengeSession() { }
 
         internal EnemyChallengeSession(Pawn servant, Site_WarEncounter site)
@@ -28,6 +29,7 @@ namespace MoonWorld
             Scribe_References.Look(ref site, "site");
             Scribe_Values.Look(ref expiresAtTickAbs, "expiresAtTickAbs", 0);
             Scribe_Values.Look(ref onMap, "onMap", false);
+            Scribe_Values.Look(ref reportId, "reportId", -1);
         }
     }
 }

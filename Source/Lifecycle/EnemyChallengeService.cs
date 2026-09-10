@@ -36,6 +36,8 @@ namespace MoonWorld
                 if (war.enemyChallenge != offer || war.CurrentWarOutcome != WarOutcome.Ongoing || !Valid(offer)
                     || EnemyRestUtility.ReadinessRejection(offer.servant, false, true) != null)
                     throw new InvalidOperationException("约战从者在建立地点期间失效。");
+                WarReportRecord report = WarReportService.Start(war, WarReportKind.Challenge, offer.servant, null, offer.site);
+                offer.reportId = report?.id ?? -1;
                 Find.LetterStack.ReceiveLetter("敌方从者约战",
                     chosen.EnemyServant.LabelShortCap + " 在基地附近等候交锋。请在一天内派本届御主或从者到场。\n\n"
                     + "到场后正常交战；逾期则本次约战结束，不会因此固定触发基地突袭。敌方御主仍留守原据点。",
@@ -48,6 +50,7 @@ namespace MoonWorld
             }
             catch (Exception ex)
             {
+                WarReportService.Finish(war, offer.reportId, WarReportState.Cancelled, "约战建立失败");
                 if (war.enemyChallenge == offer) war.enemyChallenge = null;
                 WarEncounterSiteUtility.Cleanup(offer.site);
                 rejection = "约战未能建立：" + ex.Message;
@@ -85,25 +88,25 @@ namespace MoonWorld
         {
             var offer = war.enemyChallenge;
             if (offer == null || starting || deploying) return;
-            if (war.CurrentWarOutcome != WarOutcome.Ongoing || !Valid(offer)) { Finish(war); return; }
+            if (war.CurrentWarOutcome != WarOutcome.Ongoing || !Valid(offer)) { Finish(war, "约战参与者失效"); return; }
             Pawn pawn = offer.servant;
             if (offer.onMap)
             {
                 if (!pawn.Spawned || pawn.Map != offer.site.Map || ServantQuery.Instance.IsSpirit(pawn)
                     || !PlayerAttended(war, offer.site.Map)
-                    || (pawn.GetLord()?.LordJob as LordJob_EnemyWarParty)?.Retreating == true) Finish(war);
+                    || (pawn.GetLord()?.LordJob as LordJob_EnemyWarParty)?.Retreating == true) Finish(war, "约战地图交锋结束");
                 return;
             }
             // Expiration is absolute and is not extended by entering with unrelated colonists or failed deployment.
             if (GenTicks.TicksAbs >= offer.expiresAtTickAbs)
             {
                 Messages.Message("约战期限已过，敌方从者结束等待。", offer.site, MessageTypeDefOf.NeutralEvent, false);
-                Finish(war);
+                Finish(war, "约战期限结束", WarReportState.Expired);
                 return;
             }
-            if (!WorkshopRebuildService.IsFreeSurvivor(pawn)) { Finish(war); return; }
+            if (!WorkshopRebuildService.IsFreeSurvivor(pawn)) { Finish(war, "约战参与者离场"); return; }
             if (!PlayerAttended(war, offer.site.Map)) return;
-            if (EnemyRestUtility.ReadinessRejection(pawn, true, true) != null) { Finish(war); return; }
+            if (EnemyRestUtility.ReadinessRejection(pawn, true, true) != null) { Finish(war, "约战条件失效"); return; }
             if (!CellFinder.TryFindRandomCellNear(offer.site.Map.Center, offer.site.Map, 18,
                 c => c.Standable(offer.site.Map) && c.GetFirstPawn(offer.site.Map) == null
                     && offer.site.Map.reachability.CanReachMapEdge(c, TraverseParms.For(TraverseMode.PassDoors)), out IntVec3 cell)) return;
@@ -118,19 +121,21 @@ namespace MoonWorld
                         && PlayerAttended(war, encounterMap))) offer.onMap = true;
             }
             finally { deploying = false; }
-            if (war.enemyChallenge == offer && (!Valid(offer) || war.CurrentWarOutcome != WarOutcome.Ongoing)) Finish(war);
+            if (war.enemyChallenge == offer && (!Valid(offer) || war.CurrentWarOutcome != WarOutcome.Ongoing)) Finish(war, "约战参与者失效");
         }
 
         internal static void BeforeMapRemoval(Site site)
         {
-            if (AtSite(site) && War.enemyChallenge.onMap) Finish(War);
+            if (AtSite(site) && War.enemyChallenge.onMap) Finish(War, "约战地图离场");
             // An unrelated caravan visiting the empty location does not cancel or refresh the offer.
         }
 
-        private static void Finish(GameComponent_MoonWorld war)
+        private static void Finish(GameComponent_MoonWorld war, string result,
+            WarReportState reportState = WarReportState.Completed)
         {
             var offer = war.enemyChallenge;
             if (offer == null) return;
+            WarReportService.Finish(war, offer.reportId, reportState, result);
             war.enemyChallenge = null;
             Pawn pawn = offer.servant;
             Pawn master = ServantQuery.Instance.GetMaster(pawn);

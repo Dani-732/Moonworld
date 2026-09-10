@@ -1,4 +1,5 @@
 using RimWorld;
+using RimWorld.Planet;
 using Verse;
 
 namespace MoonWorld
@@ -24,7 +25,11 @@ namespace MoonWorld
             }
             Messages.Message("圣杯决战开始：所有敌方从者同时突袭玩家基地，彼此互为敌对目标。",
                 MessageTypeDefOf.ThreatBig, false);
-            if (war != null) war.finalBattleTriggered = true;
+            if (war != null)
+            {
+                war.finalBattleTriggered = true;
+                WarReportService.Start(war, WarReportKind.FinalBattle, null, null, map?.Parent as Site);
+            }
             return true;
         }
     }

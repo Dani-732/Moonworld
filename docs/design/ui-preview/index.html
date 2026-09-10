@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MoonWorld | 圣杯战争 UI 预览</title>
+  <style>
+    :root {
+      --void: #18060d;
+      --ink: #260711;
+      --wine: #641322;
+      --panel: #7b1420;
+      --panel-deep: #3c0610;
+      --gold: #b9892e;
+      --gold-bright: #f1d27a;
+      --cream: #f5ebd0;
+      --muted: #b9a78f;
+      --danger: #f20d21;
+      --amber: #c69a45;
+      --teal: #55c7b2;
+      --line: rgba(185, 137, 46, .48);
+      --shadow: rgba(0, 0, 0, .48);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      color: var(--cream);
+      background: var(--void);
+      font-family: Georgia, "Noto Serif SC", "Songti SC", serif;
+      letter-spacing: .02em;
+    }
+
+    button { font: inherit; }
+    .stage {
+      min-height: 100vh;
+      padding: 38px clamp(12px, 4vw, 64px);
+      background: #100912;
+    }
+
+    .war-window {
+      position: relative;
+      width: min(1420px, 100%);
+      min-height: 780px;
+      margin: auto;
+      overflow: hidden;
+      border: 1px solid var(--gold);
+      background: var(--ink);
+      box-shadow: 0 22px 70px var(--shadow), inset 0 0 0 5px rgba(185,137,46,.08);
+    }
+
+    .war-window::before, .war-window::after {
+      content: "";
+      position: absolute;
+      z-index: 0;
+      width: 88px;
+      height: 88px;
+      border: 1px solid var(--gold);
+      opacity: .7;
+      transform: rotate(45deg);
+      pointer-events: none;
+    }
+    .war-window::before { top: -55px; left: -55px; }
+    .war-window::after { right: -55px; bottom: -55px; }
+
+    .chrome { position: relative; z-index: 1; }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      min-height: 92px;
+      padding: 20px 30px 18px;
+      border-bottom: 1px solid var(--gold);
+      background: #160913;
+    }
+    .eyebrow {
+      margin-bottom: 6px;
+      color: var(--gold-bright);
+      font: 700 11px/1.2 Arial, sans-serif;
+      letter-spacing: .28em;
+      text-transform: uppercase;
+    }
+    h1 { margin: 0; font-size: clamp(22px, 3vw, 34px); font-weight: 600; letter-spacing: .12em; }
+    .top-meta { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; }
+    .seal, .phase {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 4px 11px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font: 700 12px/1.2 Arial, sans-serif;
+      letter-spacing: .06em;
+    }
+    .phase { color: var(--gold-bright); border-color: var(--gold); background: #30121c; }
+
+    .banner {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 130px minmax(0, 1fr);
+      align-items: center;
+      gap: 20px;
+      padding: 25px 30px 23px;
+      border-bottom: 1px solid var(--line);
+      background: #210c16;
+    }
+    .champion {
+      display: grid;
+      grid-template-columns: 68px 1fr;
+      gap: 15px;
+      align-items: center;
+      min-width: 0;
+    }
+    .champion.enemy { grid-template-columns: 1fr 68px; text-align: right; }
+    .crest {
+      display: grid;
+      place-items: center;
+      width: 68px;
+      height: 68px;
+      border: 1px solid var(--gold);
+      outline: 1px solid rgba(185,137,46,.28);
+      outline-offset: 4px;
+      color: var(--gold-bright);
+      font-size: 28px;
+      background: #160a11;
+      transform: rotate(45deg);
+    }
+    .crest span { transform: rotate(-45deg); }
+    .champion.enemy .crest { grid-column: 2; }
+    .champion.enemy .portrait-copy { grid-column: 1; grid-row: 1; }
+    .role { margin-bottom: 4px; color: var(--gold-bright); font-size: 17px; }
+    .name { font-size: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sub { margin-top: 4px; color: var(--muted); font: 12px/1.4 Arial, sans-serif; }
+    .hp { height: 8px; margin-top: 12px; border: 1px solid #7d292e; background: #17090d; }
+    .hp > i { display: block; width: 74%; height: 100%; background: var(--danger); }
+    .enemy .hp > i { width: 58%; margin-left: auto; background: #9d2b35; }
+    .grail {
+      display: grid;
+      place-items: center;
+      width: 102px;
+      height: 102px;
+      margin: auto;
+      color: var(--gold-bright);
+      border: 1px solid var(--gold);
+      background: #2c1019;
+      clip-path: polygon(50% 0, 90% 20%, 100% 50%, 90% 80%, 50% 100%, 10% 80%, 0 50%, 10% 20%);
+      font-size: 42px;
+      text-shadow: 0 0 16px rgba(241,210,122,.35);
+    }
+    .grail small { display: block; margin-top: -6px; font: 700 9px/1 Arial, sans-serif; letter-spacing: .18em; }
+
+    .body-grid {
+      display: grid;
+      grid-template-columns: 170px minmax(0, 1fr) 280px;
+      min-height: 586px;
+    }
+    .nav {
+      padding: 20px 13px;
+      border-right: 1px solid var(--line);
+      background: #160912;
+    }
+    .nav-title { margin: 0 9px 12px; color: var(--muted); font: 700 10px/1.2 Arial, sans-serif; letter-spacing: .2em; }
+    .tab {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      min-height: 44px;
+      margin: 4px 0;
+      padding: 0 12px;
+      border: 1px solid transparent;
+      color: var(--muted);
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+    }
+    .tab:hover, .tab.active { border-color: var(--gold); color: var(--gold-bright); background: #35131d; }
+    .tab b { width: 25px; color: var(--gold); font-size: 16px; }
+    .tab.active b { color: var(--gold-bright); }
+    .main { min-width: 0; padding: 23px 26px 34px; background: #24101a; }
+    .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+    .section-heading h2 { margin: 0; font-size: 23px; font-weight: 600; letter-spacing: .1em; }
+    .section-heading span { color: var(--muted); font: 11px/1.4 Arial, sans-serif; }
+    .rule { height: 1px; margin: 0 0 18px; background: var(--line); }
+    .event-strip {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 49px;
+      margin-bottom: 19px;
+      padding: 8px 13px;
+      border-left: 3px solid var(--danger);
+      background: #32121c;
+      color: var(--cream);
+      font-size: 13px;
+    }
+    .event-strip em { color: var(--danger); font-style: normal; font: 700 11px/1.2 Arial, sans-serif; letter-spacing: .1em; }
+    .roster { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 11px; }
+    .seat {
+      position: relative;
+      min-height: 126px;
+      padding: 13px 14px;
+      border: 1px solid var(--line);
+      background: #2b101a;
+      cursor: pointer;
+    }
+    .seat:hover, .seat.selected { border-color: var(--gold-bright); box-shadow: inset 3px 0 0 var(--gold-bright); }
+    .seat.player { border-color: var(--gold); background: #35121b; }
+    .seat-top { display: flex; justify-content: space-between; gap: 10px; color: var(--gold-bright); font-size: 15px; }
+    .seat-status { color: var(--teal); font: 700 10px/1.4 Arial, sans-serif; white-space: nowrap; }
+    .seat.enemy .seat-status { color: var(--danger); }
+    .seat-name { margin-top: 13px; font-size: 18px; }
+    .seat-master { margin-top: 5px; color: var(--muted); font: 12px/1.4 Arial, sans-serif; }
+    .seat-foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 13px; color: var(--muted); font: 10px/1.3 Arial, sans-serif; }
+    .meter { display: inline-block; width: 54px; height: 5px; margin-right: 5px; vertical-align: middle; border: 1px solid #6b4e26; background: #171016; }
+    .meter i { display: block; width: 34%; height: 100%; background: var(--amber); }
+    .meter.complete i { width: 100%; background: var(--teal); }
+    .detail {
+      min-width: 0;
+      padding: 22px 19px;
+      border-left: 1px solid var(--line);
+      background: #1a0c14;
+    }
+    .detail-label { color: var(--gold); font: 700 10px/1.2 Arial, sans-serif; letter-spacing: .2em; }
+    .detail h3 { margin: 10px 0 4px; font-size: 25px; font-weight: 600; }
+    .detail-role { color: var(--gold-bright); font-size: 14px; }
+    .detail-rule { height: 1px; margin: 18px 0; background: var(--line); }
+    .fact { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 9px; margin: 12px 0; font: 12px/1.45 Arial, sans-serif; }
+    .fact dt { color: var(--muted); }
+    .fact dd { margin: 0; color: var(--cream); }
+    .tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 17px; }
+    .tag { padding: 4px 7px; border: 1px solid var(--line); color: var(--muted); font: 10px/1.2 Arial, sans-serif; }
+    .tag.good { color: var(--teal); border-color: rgba(85,199,178,.6); }
+    .tag.warn { color: var(--amber); border-color: rgba(198,154,69,.6); }
+    .detail-action {
+      width: 100%;
+      margin-top: 25px;
+      padding: 10px;
+      border: 1px solid var(--gold);
+      color: var(--gold-bright);
+      background: #35121c;
+      cursor: pointer;
+    }
+    .detail-action:hover { background: #481621; }
+    .preview-note { margin: 14px auto 0; color: #826d76; text-align: center; font: 11px/1.4 Arial, sans-serif; }
+    .empty { padding: 35px 8px; color: var(--muted); text-align: center; border: 1px dashed var(--line); }
+    .intel-row, .battle-row, .site-row { padding: 14px; margin-bottom: 9px; border: 1px solid var(--line); background: #2b101a; }
+    .intel-head, .battle-head, .site-head { display: flex; justify-content: space-between; gap: 12px; color: var(--gold-bright); }
+    .intel-copy, .battle-copy, .site-copy { margin-top: 7px; color: var(--muted); font: 12px/1.5 Arial, sans-serif; }
+    .unlock-line { display: flex; gap: 6px; margin-top: 12px; }
+    .unlock { flex: 1; height: 6px; background: #160a11; border: 1px solid #604623; }
+    .unlock.on { background: var(--teal); border-color: var(--teal); }
+
+    @media (max-width: 1060px) {
+      .body-grid { grid-template-columns: 148px minmax(0, 1fr); }
+      .detail { grid-column: 1 / -1; border-top: 1px solid var(--line); border-left: 0; }
+      .detail h3 { display: inline-block; margin-right: 12px; }
+      .detail-rule { margin: 12px 0; }
+      .detail-content { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; }
+      .detail-action { margin-top: 7px; }
+    }
+    @media (max-width: 700px) {
+      .stage { padding: 10px; }
+      .war-window { min-height: 0; }
+      .topbar { align-items: flex-start; flex-direction: column; padding: 17px; }
+      .top-meta { justify-content: flex-start; }
+      .banner { grid-template-columns: 1fr; padding: 22px 17px; }
+      .grail { order: -1; width: 72px; height: 72px; font-size: 30px; }
+      .body-grid { grid-template-columns: 1fr; }
+      .nav { display: flex; overflow-x: auto; gap: 6px; padding: 10px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .nav-title { display: none; }
+      .tab { flex: 0 0 auto; width: auto; min-height: 38px; margin: 0; padding: 0 10px; }
+      .tab b { width: auto; margin-right: 6px; }
+      .main { padding: 19px 14px 25px; }
+      .roster { grid-template-columns: 1fr; }
+      .detail-content { grid-template-columns: 1fr; }
+      .detail { padding: 18px 14px 22px; }
+      .champion { grid-template-columns: 56px 1fr; gap: 12px; }
+      .champion.enemy { grid-template-columns: 1fr 56px; }
+      .crest { width: 56px; height: 56px; font-size: 23px; }
+      .name { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <section class="war-window" aria-label="圣杯战争 UI 预览">
+      <div class="chrome">
+        <header class="topbar">
+          <div>
+            <div class="eyebrow">MOONWORLD / HOLY GRAIL WAR</div>
+            <h1>圣杯战争记录板</h1>
+          </div>
+          <div class="top-meta">
+            <span class="phase">试探阶段</span>
+            <span class="seal">第 2 天 · 距决战 8 天</span>
+            <span class="seal">存续 6 / 7</span>
+          </div>
+        </header>
+
+        <section class="banner">
+          <div class="champion">
+            <div class="crest"><span>Ⅰ</span></div>
+            <div class="portrait-copy">
+              <div class="role">SABER · 玩家席位</div>
+              <div class="name">阿尔托莉雅</div>
+              <div class="sub">御主：卫宫士郎　令咒：2 / 3</div>
+              <div class="hp"><i></i></div>
+            </div>
+          </div>
+          <div class="grail" aria-hidden="true">✦<small>WAR</small></div>
+          <div class="champion enemy">
+            <div class="crest"><span>?</span></div>
+            <div class="portrait-copy">
+              <div class="role">未知席位 · 敌方</div>
+              <div class="name">身份未确认</div>
+              <div class="sub">御主：未知　情报进度：34%</div>
+              <div class="hp"><i></i></div>
+            </div>
+          </div>
+        </section>
+
+        <div class="body-grid">
+          <nav class="nav" aria-label="战争页面">
+            <div class="nav-title">ARCHIVE</div>
+            <button class="tab active" data-tab="overview"><b>◆</b>总览</button>
+            <button class="tab" data-tab="intel"><b>◇</b>情报</button>
+            <button class="tab" data-tab="battle"><b>⚔</b>战况</button>
+            <button class="tab" data-tab="bond"><b>☽</b>主从</button>
+            <button class="tab" data-tab="sites"><b>⌂</b>据点</button>
+          </nav>
+
+          <section class="main" id="main-content"></section>
+
+          <aside class="detail" id="detail-panel">
+            <div class="detail-label">SELECTED RECORD</div>
+            <h3>阿尔托莉雅</h3><span class="detail-role">Saber · 玩家席位</span>
+            <div class="detail-rule"></div>
+            <div class="detail-content">
+              <dl class="fact"><dt>契约</dt><dd>有效 · 卫宫士郎</dd></dl>
+              <dl class="fact"><dt>存在</dt><dd>物质化 · 待命</dd></dl>
+              <dl class="fact"><dt>魔力</dt><dd>78 / 100</dd></dl>
+              <dl class="fact"><dt>据点</dt><dd>玩家殖民地</dd></dl>
+            </div>
+            <div class="tag-row"><span class="tag good">契约有效</span><span class="tag good">身份已确认</span><span class="tag">可查看详情</span></div>
+            <button class="detail-action">在地图中选择从者</button>
+          </aside>
+        </div>
+      </div>
+    </section>
+    <p class="preview-note">静态视觉预览 · 示例数据仅用于确认布局与风格，不代表游戏内实际数值</p>
+  </main>
+
+  <script>
+    const pages = {
+      overview: {
+        title: '战争总览', meta: 'CURRENT WAR STATUS',
+        body: `<div class="event-strip"><em>ACTIVE</em><span>野外交战正在进行：未知席位 × Lancer　地点情报未确认</span></div>
+          <div class="section-heading"><h2>参战席位</h2><span>点击席位查看主从详情</span></div><div class="rule"></div>
+          <div class="roster">
+            <article class="seat player selected"><div class="seat-top"><span>Saber · 玩家</span><span class="seat-status">存续</span></div><div class="seat-name">阿尔托莉雅</div><div class="seat-master">御主：卫宫士郎 · 契约有效</div><div class="seat-foot"><span>据点：已知</span><span><i class="meter complete"><i></i></i>情报完整</span></div></article>
+            <article class="seat enemy"><div class="seat-top"><span>未知席位</span><span class="seat-status">交战中</span></div><div class="seat-name">未知从者</div><div class="seat-master">御主：未知 · 侦察进度 34%</div><div class="seat-foot"><span>地点：未确认</span><span><i class="meter"><i></i></i>从者已见</span></div></article>
+            <article class="seat enemy"><div class="seat-top"><span>Lancer</span><span class="seat-status">休整</span></div><div class="seat-name">库·丘林</div><div class="seat-master">御主：未知 · 契约状态未知</div><div class="seat-foot"><span>据点：未确认</span><span><i class="meter"><i></i></i>34%</span></div></article>
+            <article class="seat enemy"><div class="seat-top"><span>Caster</span><span class="seat-status">参战中</span></div><div class="seat-name">身份未确认</div><div class="seat-master">御主：已确认 · 情报进度 67%</div><div class="seat-foot"><span>据点：未确认</span><span><i class="meter"><i></i></i>67%</span></div></article>
+          </div>`
+      },
+      intel: {
+        title: '情报档案', meta: 'RECONNAISSANCE LEDGER',
+        body: `<div class="event-strip"><em>NOTICE</em><span>从者目击与御主目击分别解锁；未知字段不会被推测填充</span></div>
+          <div class="section-heading"><h2>敌方情报</h2><span>现场目击 · 侦察进度</span></div><div class="rule"></div>
+          <div class="intel-row"><div class="intel-head"><span>未知席位</span><span>34 / 100</span></div><div class="intel-copy">从者：已见 · 御主：未知 · 据点：未知</div><div class="unlock-line"><i class="unlock on"></i><i class="unlock"></i><i class="unlock"></i></div></div>
+          <div class="intel-row"><div class="intel-head"><span>Lancer · 库·丘林</span><span>34 / 100</span></div><div class="intel-copy">从者：侦察确认 · 御主：未知 · 据点：未知</div><div class="unlock-line"><i class="unlock on"></i><i class="unlock"></i><i class="unlock"></i></div></div>
+          <div class="intel-row"><div class="intel-head"><span>Caster</span><span>67 / 100</span></div><div class="intel-copy">从者：已见 · 御主：已见 · 据点：未知</div><div class="unlock-line"><i class="unlock on"></i><i class="unlock on"></i><i class="unlock"></i></div></div>`
+      },
+      battle: {
+        title: '当前战况', meta: 'LIVE ENCOUNTERS',
+        body: `<div class="section-heading"><h2>正在发生</h2><span>读取当前会话，不伪造历史</span></div><div class="rule"></div>
+          <div class="battle-row"><div class="battle-head"><span>野外交战　未知席位　VS　Lancer</span><span style="color:var(--danger)">第 3 回合</span></div><div class="battle-copy">地点：已生成临时地图 · 双方仍在场 · 下一回合：约 0:18</div></div>
+          <div class="battle-row"><div class="battle-head"><span>玩家约战</span><span style="color:var(--amber)">等待赴约</span></div><div class="battle-copy">地点：基地东侧 2 格 · 剩余期限：19 小时 · 普通殖民者不计入到场</div></div>
+          <div class="empty">暂无更多活动。战争历史将在后续版本单独加入。</div>`
+      },
+      bond: {
+        title: '主从档案', meta: 'MASTER / SERVANT CONTRACT',
+        body: `<div class="section-heading"><h2>主从关系</h2><span>契约与资格来自现有状态</span></div><div class="rule"></div>
+          <div class="battle-row"><div class="battle-head"><span>玩家席位 · Saber</span><span style="color:var(--teal)">契约有效</span></div><div class="battle-copy">御主：卫宫士郎　令咒：2 / 3　从者：阿尔托莉雅　存在：物质化</div></div>
+          <div class="battle-row"><div class="battle-head"><span>Lancer</span><span style="color:var(--amber)">御主未知</span></div><div class="battle-copy">从者身份已确认　契约御主、令咒数量和精确魔力未解锁</div></div>
+          <div class="battle-row"><div class="battle-head"><span>Caster</span><span style="color:var(--teal)">御主已确认</span></div><div class="battle-copy">从者身份仍未确认　可查看御主资格状态，不能反推从者身份</div></div>`
+      },
+      sites: {
+        title: '据点记录', meta: 'WORKSHOPS / ENCOUNTER SITES',
+        body: `<div class="section-heading"><h2>已知地点</h2><span>只显示玩家拥有或已侦察地点</span></div><div class="rule"></div>
+          <div class="site-row"><div class="site-head"><span>玩家殖民地</span><span style="color:var(--teal)">玩家据点</span></div><div class="site-copy">可进入地图 · 玩家席位 Saber · 供魔设施：可用</div></div>
+          <div class="site-row"><div class="site-head"><span>临时约战地点</span><span style="color:var(--amber)">期限内</span></div><div class="site-copy">基地东侧 2 格 · 无工坊所有权 · 无额外守军或战利品</div></div>
+          <div class="empty">还有 3 个地点尚未完成侦察。</div>`
+      }
+    };
+    const main = document.querySelector('#main-content');
+    const tabs = [...document.querySelectorAll('.tab')];
+    function render(name) {
+      const page = pages[name];
+      main.innerHTML = `<div class="section-heading"><h2>${page.title}</h2><span>${page.meta}</span></div>${page.body}`;
+      tabs.forEach(tab => tab.classList.toggle('active', tab.dataset.tab === name));
+    }
+    tabs.forEach(tab => tab.addEventListener('click', () => render(tab.dataset.tab)));
+    render('overview');
+  </script>
+</body>
+</html>

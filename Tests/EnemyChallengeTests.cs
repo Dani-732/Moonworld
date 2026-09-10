@@ -37,6 +37,9 @@ internal static partial class SummoningTests
             var offer = Challenge(); int count = PawnGenerator.Created.Count;
             Check(!offer.site.HasMap && !offer.servant.Spawned && !offer.master.Spawned
                 && offer.expiresAtTickAbs == GenTicks.TicksAbs + 60000, "offer state");
+            Check(State.reports.Count == 1 && State.reports[0].kind == WarReportKind.Challenge
+                && State.reports[0].IsActive && State.reports[0].actorA == offer.servant
+                && State.reports[0].site == offer.site, "challenge report missing");
             Check(TileFinder.LastMin == 1 && TileFinder.LastMax == 3, "challenge distance");
             Check(!EnemyChallengeService.TryStart(map, out _) && !Deploy()
                 && EnemyRestUtility.ReadinessRejection(offer.servant) != null
@@ -82,6 +85,8 @@ internal static partial class SummoningTests
                 && Find.WorldPawns.Contains(offer.servant) && PawnGenerator.Created.Count == count
                 && State.CurrentWarEntry.FindEnemy(offer.servant).EnemyRestStartTickAbs == GenTicks.TicksAbs,
                 "timeout raided, duplicated or omitted rest");
+            Check(State.reports.Count == 1 && State.reports[0].state == WarReportState.Expired
+                && State.reports[0].resultKey == "约战期限结束", "challenge expiry report missing");
         });
         Test("expiry with ordinary player on map preserves map until native unload", () => {
             var offer = Challenge(); var target = ChallengeMap(offer, new Pawn());
@@ -163,6 +168,9 @@ internal static partial class SummoningTests
             PrepareEnemy(); Rand.Pass = false;
             Check(new IncidentWorker_WarEncounter().TryExecute(new IncidentParms { target = map })
                 && State.enemyChallenge == null && State.CurrentWarEntry.EnemyServant.Spawned, "direct branch disabled");
+            Check(State.reports.Count == 1 && State.reports[0].kind == WarReportKind.DirectRaid
+                && State.reports[0].IsActive && State.reports[0].actorA == State.CurrentWarEntry.EnemyServant,
+                "direct raid report missing");
         });
         Test("direct worker can deploy other servant while challenge waits", () => {
             SevenClasses(); PrepareEnemy(); Check(EnemyChallengeService.TryStart(map, out _), "offer");

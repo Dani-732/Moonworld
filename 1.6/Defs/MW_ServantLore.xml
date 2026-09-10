@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <Def Class="MoonWorld.ServantLoreDef">
+    <defName>MW_Lore_Artoria</defName><identity>MW_GWW_ArtoriaIdentity</identity>
+    <displayName>阿尔托莉雅·潘德拉贡</displayName><epithet>不列颠的骑士王</epithet>
+    <origin>不列颠传说</origin><alignment>秩序·善</alignment><gender>女性</gender><heightWeight>154 cm / 42 kg</heightWeight>
+    <parameters>筋力 B　耐久 C　敏捷 C　魔力 B　幸运 B　宝具 A++</parameters>
+    <classSkills>对魔力：A　骑乘：B</classSkills><noblePhantasm>约束胜利之剑（Excalibur）</noblePhantasm>
+    <summary>以剑之从者现界的骑士王。高魔力和近战能力兼备，拥有强大的对军宝具。</summary>
+  </Def>
+  <Def Class="MoonWorld.ServantLoreDef">
+    <defName>MW_Lore_Emiya</defName><identity>MW_GWW_EmiyaIdentity</identity>
+    <displayName>卫宫士郎（红A）</displayName><epithet>守护人类的英灵</epithet>
+    <origin>《Fate/stay night》英灵记录</origin><alignment>中立·善</alignment><gender>男性</gender><heightWeight>187 cm / 78 kg</heightWeight>
+    <parameters>筋力 D　耐久 C　敏捷 C　魔力 B　幸运 E　宝具 无法评定</parameters>
+    <classSkills>对魔力：D　单独行动：B</classSkills><noblePhantasm>无限剑制（Unlimited Blade Works）</noblePhantasm>
+    <summary>弓之从者，擅长投影和远程战术；即使御主不在身边也能维持行动。</summary>
+  </Def>
+  <Def Class="MoonWorld.ServantLoreDef">
+    <defName>MW_Lore_CuChulainn</defName><identity>MW_GWW_CuChulainnIdentity</identity>
+    <displayName>库·丘林</displayName><epithet>赤枝骑士团的英雄</epithet>
+    <origin>爱尔兰神话</origin><alignment>秩序·中立</alignment><gender>男性</gender><heightWeight>185 cm / 70 kg</heightWeight>
+    <parameters>筋力 B　耐久 C　敏捷 A　魔力 C　幸运 E　宝具 B</parameters>
+    <classSkills>对魔力：C　避矢的加护：B</classSkills><noblePhantasm>刺穿死棘之枪（Gáe Bolg）</noblePhantasm>
+    <summary>以枪之从者现界的爱尔兰英雄，速度和近战压制力突出，擅长独自周旋。</summary>
+  </Def>
+  <Def Class="MoonWorld.ServantLoreDef">
+    <defName>MW_Lore_Medusa</defName><identity>MW_GWW_MedusaIdentity</identity>
+    <displayName>美杜莎</displayName><epithet>蛇发女妖</epithet>
+    <origin>希腊神话</origin><alignment>混沌·善</alignment><gender>女性</gender><heightWeight>172 cm / 57 kg</heightWeight>
+    <parameters>筋力 B　耐久 D　敏捷 A　魔力 B　幸运 E　宝具 A+</parameters>
+    <classSkills>对魔力：B　骑乘：A+</classSkills><noblePhantasm>他者封印·鲜血神殿（Blood Fort Andromeda）</noblePhantasm>
+    <summary>擅长高速移动、魔眼和结界的骑之从者。战斗表现依赖地形与准备时间。</summary>
+  </Def>
+  <Def Class="MoonWorld.ServantLoreDef">
+    <defName>MW_Lore_Medea</defName><identity>MW_GWW_MedeaIdentity</identity>
+    <displayName>美狄亚</displayName><epithet>科尔基斯的魔女</epithet>
+    <origin>希腊神话</origin><alignment>中立·善</alignment><gender>女性</gender><heightWeight>163 cm / 51 kg</heightWeight>
+    <parameters>筋力 E　耐久 D　敏捷 C　魔力 A　幸运 B　宝具 C</parameters>
+    <classSkills>阵地制作：A　道具制作：B</classSkills><noblePhantasm>万戒必破之符（Rule Breaker）</noblePhantasm>
+    <summary>以魔术为核心的魔之从者，能够制作工房和魔术礼装，长线准备能力强。</summary>
+  </Def>
+  <Def Class="MoonWorld.ServantLoreDef">
+    <defName>MW_Lore_Sasaki</defName><identity>MW_GWW_SasakiIdentity</identity>
+    <displayName>佐佐木小次郎</displayName><epithet>架空的剑客</epithet>
+    <origin>日本传说</origin><alignment>中立·恶</alignment><gender>男性</gender><heightWeight>186 cm / 83 kg</heightWeight>
+    <parameters>筋力 C　耐久 E　敏捷 A+　魔力 E　幸运 A　宝具 无</parameters>
+    <classSkills>气息遮断：D</classSkills><noblePhantasm>燕返</noblePhantasm>
+    <summary>以暗杀者职阶现界的剑客，单点决胜能力极高，但缺少传统意义上的宝具。</summary>
+  </Def>
+  <Def Class="MoonWorld.ServantLoreDef">
+    <defName>MW_Lore_Heracles</defName><identity>MW_GWW_HeraclesIdentity</identity>
+    <displayName>赫拉克勒斯</displayName><epithet>十二试炼的英雄</epithet>
+    <origin>希腊神话</origin><alignment>混沌·善</alignment><gender>男性</gender><heightWeight>253 cm / 311 kg</heightWeight>
+    <parameters>筋力 A　耐久 A　敏捷 A　魔力 A　幸运 B　宝具 A</parameters>
+    <classSkills>狂化：B</classSkills><noblePhantasm>十二试炼（God Hand）</noblePhantasm>
+    <summary>以狂战士职阶现界的半神英雄，具备极高的力量、耐久和多重战续能力。</summary>
+  </Def>
+</Defs>

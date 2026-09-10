@@ -12,6 +12,7 @@ namespace MoonWorld
         internal Site site;
         internal int rounds, nextRoundTickAbs;
         internal bool onMap;
+        internal int reportId = -1;
 
         public EnemyBattleSession() { }
 
@@ -38,6 +39,7 @@ namespace MoonWorld
             Scribe_Values.Look(ref rounds, "rounds", 0);
             Scribe_Values.Look(ref nextRoundTickAbs, "nextRoundTickAbs", 0);
             Scribe_Values.Look(ref onMap, "onMap", false);
+            Scribe_Values.Look(ref reportId, "reportId", -1);
         }
     }
 }

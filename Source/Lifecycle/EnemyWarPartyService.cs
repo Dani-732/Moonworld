@@ -181,7 +181,11 @@ namespace MoonWorld
             // Do not remove and re-add it here: that makes the rest clock mutable.
             if (Find.WorldPawns.Contains(pawn))
                 Find.WorldPawns.ForcefullyKeptPawns.Add(pawn);
-            if (pawn == entry.EnemyServant) entry.RecordEnemyDeparture(pawn);
+            if (pawn == entry.EnemyServant)
+            {
+                entry.RecordEnemyDeparture(pawn);
+                WarReportService.FinishForActor(Current.Game?.GetComponent<GameComponent_MoonWorld>(), pawn, "从者离场");
+            }
         }
     }
 }

@@ -34,6 +34,8 @@ namespace MoonWorld
             }
 
             Map map = master.Map;
+            Command_Action warUi = HolyGrailWarUi.CreateCommand();
+            if (warUi != null) yield return warUi;
             if (Prefs.DevMode)
             {
                 yield return new Command_Action

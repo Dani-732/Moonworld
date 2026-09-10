@@ -32,6 +32,7 @@ try {
         (Join-Path $projectRoot 'Source\Lifecycle\WarRosterPreparation.cs') `
         (Join-Path $projectRoot 'Source\Core\ServantSummonPoolDef.cs') `
         (Join-Path $projectRoot 'Source\Core\WarState.cs') `
+        (Join-Path $projectRoot 'Source\Core\WarReport.cs') `
         (Join-Path $projectRoot 'Source\Core\WarReconnaissance.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\WarRhythmPolicy.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\WarFinalBattleService.cs') `

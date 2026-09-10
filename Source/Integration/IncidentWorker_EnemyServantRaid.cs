@@ -1,4 +1,5 @@
 using RimWorld;
+using RimWorld.Planet;
 using Verse;
 
 namespace MoonWorld
@@ -24,6 +25,9 @@ namespace MoonWorld
                 Log.Warning("[MoonWorld] 敌方突袭事件未能部署：" + rejection);
                 return false;
             }
+            GameComponent_MoonWorld war = Current.Game?.GetComponent<GameComponent_MoonWorld>();
+            WarReportRecord report = WarReportService.Start(war, WarReportKind.DirectRaid, servant, null, map.Parent as Site);
+            // Direct raids have no session object; the report remains active until the pawn leaves or is eliminated.
             Messages.Message("敌方从者已从边缘突袭，御主仍留守场外。", servant, MessageTypeDefOf.ThreatBig, false);
             return true;
         }

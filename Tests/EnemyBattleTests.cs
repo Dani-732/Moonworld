@@ -88,6 +88,9 @@ internal static partial class SummoningTests
         Test("offmap battle creates no pawns or map and reserves both servants", () => {
             var battle = Battle(); int count = PawnGenerator.Created.Count;
             Check(!battle.site.HasMap && !battle.attacker.Spawned && !battle.defender.Spawned, "generated map");
+            Check(State.reports.Count == 1 && State.reports[0].kind == WarReportKind.WorkshopBattle
+                && State.reports[0].IsActive && State.reports[0].actorA == battle.attacker
+                && State.reports[0].actorB == battle.defender, "field report missing participants");
             Check(!EnemyBattleService.TryStart(State) && PawnGenerator.Created.Count == count, "duplicate battle");
             Check(EnemyRestUtility.ReadinessRejection(battle.attacker) != null
                 && EnemyRestUtility.ReadinessRejection(battle.defender) != null, "raid can steal participant");
@@ -110,6 +113,9 @@ internal static partial class SummoningTests
             }
             Check(State.enemyBattle == null && battle.rounds == 6 && !battle.attacker.Dead && !battle.defender.Dead,
                 "battle did not disengage");
+            Check(State.reports.Count == 1 && !State.reports[0].IsActive
+                && State.reports[0].rounds == 6 && State.reports[0].resultKey == "回合上限后撤退",
+                "battle report did not close with result");
             Check(State.CurrentWarEntry.FindEnemy(battle.attacker).EnemyRestStartTickAbs == GenTicks.TicksAbs,
                 "rest did not start");
             EnemyBattleService.Tick(State); Check(State.enemyBattle == null, "cooldown bypassed");

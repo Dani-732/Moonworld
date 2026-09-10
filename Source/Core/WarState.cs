@@ -23,6 +23,8 @@ namespace MoonWorld
         internal int enemyBattleNextStartTickAbs = -1;
         internal bool finalBattleTriggered;
         internal List<WarReconnaissanceRecord> reconnaissance = new List<WarReconnaissanceRecord>();
+        internal int nextReportId;
+        internal List<WarReportRecord> reports = new List<WarReportRecord>();
 
         public HolyGrailWarEntry CurrentWarEntry => currentWarEntry;
         public WarOutcome CurrentWarOutcome => warOutcome;
@@ -56,6 +58,7 @@ namespace MoonWorld
             }
             if (Find.TickManager.TicksGame % 2500 == 0) ServantRecontractService.Tick();
             WarOutcomeService.Tick(this);
+            if (Find.TickManager.TicksGame % 250 == 0) WarReportService.Reconcile(this);
             if (Find.TickManager.TicksGame % 2500 == 0)
             {
                 EnemyBattleService.Tick(this);
@@ -103,14 +106,25 @@ namespace MoonWorld
             Scribe_Values.Look(ref enemyBattleNextStartTickAbs, "enemyBattleNextStartTickAbs", -1);
             Scribe_Values.Look(ref finalBattleTriggered, "finalBattleTriggered", false);
             Scribe_Collections.Look(ref reconnaissance, "reconnaissance", LookMode.Deep);
+            Scribe_Values.Look(ref nextReportId, "nextReportId", 0);
+            Scribe_Collections.Look(ref reports, "reports", LookMode.Deep);
             if (Scribe.mode == LoadSaveMode.PostLoadInit && reconnaissance == null)
                 reconnaissance = new List<WarReconnaissanceRecord>();
+            if (Scribe.mode == LoadSaveMode.PostLoadInit && reports == null)
+                reports = new List<WarReportRecord>();
+            if (Scribe.mode == LoadSaveMode.PostLoadInit)
+            {
+                foreach (WarReportRecord report in reports)
+                    if (report != null && report.id >= nextReportId) nextReportId = report.id + 1;
+            }
         }
 
         internal bool TrySetWarOutcome(WarOutcome outcome)
         {
             if (warOutcome != WarOutcome.Ongoing || outcome == WarOutcome.Ongoing) return false;
             warOutcome = outcome;
+            WarReportService.FinishAll(this, WarReportState.Completed,
+                outcome == WarOutcome.PlayerVictory ? "玩家赢得圣杯战争" : "玩家退出圣杯战争");
             HolyGrailWarQuestService.SyncOutcome(this, notify: true);
             return true;
         }

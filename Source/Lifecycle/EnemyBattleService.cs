@@ -65,6 +65,10 @@ namespace MoonWorld
                         || !CanStart(attacker) || !CanStart(defender) || !attacker.EnemyServant.HostileTo(defender.EnemyServant))
                     { WarEncounterSiteUtility.Cleanup(location); return false; }
                     war.enemyBattle = battle;
+                    WarReportRecord report = WarReportService.Start(war,
+                        field ? WarReportKind.FieldBattle : WarReportKind.WorkshopBattle,
+                        battle.attacker, battle.defender, battle.site);
+                    battle.reportId = report?.id ?? -1;
                     attacker.RecordEnemyDeployment(attacker.CurrentMaster, battle.attacker);
                     defender.RecordEnemyDeployment(defender.CurrentMaster, battle.defender);
                     Messages.Message("敌方从者 " + battle.attacker.LabelShortCap + " 与 " + battle.defender.LabelShortCap
@@ -111,20 +115,20 @@ namespace MoonWorld
         {
             EnemyBattleSession battle = war.enemyBattle;
             if (battle == null || materializing) return;
-            if (war.CurrentWarOutcome != WarOutcome.Ongoing || !Valid(battle)) { Finish(war); return; }
+            if (war.CurrentWarOutcome != WarOutcome.Ongoing || !Valid(battle)) { Finish(war, "参与者或战争状态失效"); return; }
             if (battle.onMap)
             {
                 if (battle.site.HasMap && battle.attacker.Spawned && battle.defender.Spawned
                     && battle.attacker.Map == battle.site.Map && battle.defender.Map == battle.site.Map
                     && (battle.attacker.GetLord()?.LordJob as LordJob_EnemyWarParty)?.Retreating != true
                     && (battle.defender.GetLord()?.LordJob as LordJob_EnemyWarParty)?.Retreating != true) return;
-                Finish(war);
+                Finish(war, "地图战斗结束");
                 return;
             }
             // Site placement owns retries while a map is being generated or spawn hooks fail.
             if (battle.site.HasMap) return;
             if (!WorkshopRebuildService.IsFreeSurvivor(battle.attacker)
-                || !WorkshopRebuildService.IsFreeSurvivor(battle.defender)) { Finish(war); return; }
+                || !WorkshopRebuildService.IsFreeSurvivor(battle.defender)) { Finish(war, "参与者离场"); return; }
             if (GenTicks.TicksAbs < battle.nextRoundTickAbs) return;
             // Advance before damage callbacks: a partially resolved round must never be replayed.
             battle.nextRoundTickAbs = GenTicks.TicksAbs + RoundInterval;
@@ -135,11 +139,11 @@ namespace MoonWorld
                 Strike(attackerFirst ? battle.attacker : battle.defender, attackerFirst ? battle.defender : battle.attacker);
                 if (Valid(battle)) Strike(attackerFirst ? battle.defender : battle.attacker, attackerFirst ? battle.attacker : battle.defender);
                 if (!Valid(battle) || battle.rounds >= MaximumRounds || ShouldWithdraw(battle.attacker)
-                    || ShouldWithdraw(battle.defender)) Finish(war);
+                    || ShouldWithdraw(battle.defender)) Finish(war, battle.rounds >= MaximumRounds ? "回合上限后撤退" : "一方达到撤退条件");
             }
             catch (Exception ex)
             {
-                Finish(war);
+                Finish(war, "回合结算异常中止");
                 Log.Error("[MoonWorld] Enemy battle stopped after round failure: " + ex);
             }
         }
@@ -166,7 +170,7 @@ namespace MoonWorld
             if (materializing) return false;
             var battle = War.enemyBattle;
             if (battle.onMap) return true;
-            if (!Valid(battle)) { Finish(War); return false; }
+            if (!Valid(battle)) { Finish(War, "地图介入前参与者失效"); return false; }
             if (site.Map == null) return false;
             var moved = new List<Pawn>();
             materializing = true;
@@ -226,7 +230,7 @@ namespace MoonWorld
                 battle.onMap = false;
                 battle.nextRoundTickAbs = GenTicks.TicksAbs + RoundInterval;
             }
-            else Finish(war);
+            else Finish(war, "地图离场后交战结束");
             return true;
         }
 
@@ -246,10 +250,11 @@ namespace MoonWorld
                 Find.WorldPawns.PassToWorld(pawn, PawnDiscardDecideMode.KeepForever);
         }
 
-        private static void Finish(GameComponent_MoonWorld war)
+        private static void Finish(GameComponent_MoonWorld war, string result = "交战结束")
         {
             var battle = war.enemyBattle;
             if (battle == null) return;
+            WarReportService.Finish(war, battle.reportId, WarReportState.Completed, result, battle.rounds);
             war.enemyBattle = null;
             ReturnParticipant(battle, battle.attacker);
             ReturnParticipant(battle, battle.defender);
