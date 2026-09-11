@@ -98,6 +98,11 @@ namespace MoonWorld
         public bool TryEnterVoluntarySpirit(Pawn master, Pawn servant, out string rejection)
         {
             rejection = null;
+            if (HolyGrailEndingService.IsPermanentlyMaterialized(servant))
+            {
+                rejection = "该从者已通过圣杯获得永久实体，不能再灵体化。";
+                return false;
+            }
             CompServantState state = GetBoundState(master, servant);
             if (state == null)
             {
@@ -196,6 +201,7 @@ namespace MoonWorld
 
         public bool TryResolveDefeat(Pawn servant, Hediff triggeringHediff = null)
         {
+            if (HolyGrailEndingService.IsPermanentlyMaterialized(servant)) return false;
             CompServantState state = servant == null ? null : servant.TryGetComp<CompServantState>();
             if (state == null || state.PresenceState != ServantPresenceState.Materialized || state.DefeatResolutionInProgress)
             {

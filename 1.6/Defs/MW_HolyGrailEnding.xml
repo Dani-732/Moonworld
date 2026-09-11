@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <TraitDef>
+    <defName>MW_HolyGrailMaterialized</defName>
+    <commonality>0</commonality>
+    <degreeDatas>
+      <li>
+        <label>&lt;color=#FFD84A&gt;圣杯实体化&lt;/color&gt;</label>
+        <description>圣杯赋予了这名从者不依赖御主供魔的永久肉身。该从者不能再灵体化，并作为殖民地的永久成员生活。</description>
+      </li>
+    </degreeDatas>
+  </TraitDef>
+
+  <ThingDef ParentName="BuildingBase">
+    <defName>MW_HolyGrail</defName>
+    <label>圣杯</label>
+    <description>圣杯战争胜者的黄金奇迹。安装后可实现一次愿望；在愿望兑现后，圣杯将随之消失。</description>
+    <thingClass>MoonWorld.Building_HolyGrail</thingClass>
+    <noRightClickDraftAttack>true</noRightClickDraftAttack>
+    <minifiedDef>MinifiedThing</minifiedDef>
+    <canGenerateDefaultDesignator>false</canGenerateDefaultDesignator>
+    <thingCategories>
+      <li>BuildingsMisc</li>
+    </thingCategories>
+    <altitudeLayer>Building</altitudeLayer>
+    <passability>PassThroughOnly</passability>
+    <fillPercent>0.35</fillPercent>
+    <pathCost>20</pathCost>
+    <rotatable>false</rotatable>
+    <canOverlapZones>false</canOverlapZones>
+    <useHitPoints>true</useHitPoints>
+    <statBases>
+      <MaxHitPoints>1000</MaxHitPoints>
+      <WorkToBuild>1</WorkToBuild>
+      <Mass>25</Mass>
+      <Flammability>0</Flammability>
+      <Beauty>5000</Beauty>
+      <MarketValue>500000</MarketValue>
+    </statBases>
+    <building>
+      <isInert>true</isInert>
+      <alwaysUninstallable>true</alwaysUninstallable>
+      <ai_chillDestination>false</ai_chillDestination>
+    </building>
+    <graphicData>
+      <texPath>Things/Item/Relic/RelicInertCup</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>(1.4,1.4)</drawSize>
+      <color>(255,220,35)</color>
+      <colorTwo>(255,255,180)</colorTwo>
+      <onGroundRandomRotateAngle>0</onGroundRandomRotateAngle>
+    </graphicData>
+  </ThingDef>
+
+  <ThoughtDef>
+    <defName>MW_HolyGrailGratitude</defName>
+    <thoughtClass>Thought_MemorySocial</thoughtClass>
+    <durationDays>999999</durationDays>
+    <stackLimit>1</stackLimit>
+    <stackLimitForSameOtherPawn>1</stackLimitForSameOtherPawn>
+    <validWhileDespawned>true</validWhileDespawned>
+    <lerpOpinionToZeroAfterDurationPct>1</lerpOpinionToZeroAfterDurationPct>
+    <stages>
+      <li>
+        <label>以圣杯授予了实体</label>
+        <baseOpinionOffset>1000</baseOpinionOffset>
+      </li>
+    </stages>
+  </ThoughtDef>
+</Defs>

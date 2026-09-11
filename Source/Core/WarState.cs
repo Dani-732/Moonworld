@@ -25,6 +25,11 @@ namespace MoonWorld
         internal List<WarReconnaissanceRecord> reconnaissance = new List<WarReconnaissanceRecord>();
         internal int nextReportId;
         internal List<WarReportRecord> reports = new List<WarReportRecord>();
+        internal bool holyGrailRewardGranted;
+        internal bool holyGrailRewardSpawned;
+        internal bool holyGrailWishMade;
+        internal bool holyGrailMaterializationGranted;
+        internal int holyGrailServantDeadlineTickAbs = -1;
 
         public HolyGrailWarEntry CurrentWarEntry => currentWarEntry;
         public WarOutcome CurrentWarOutcome => warOutcome;
@@ -43,6 +48,7 @@ namespace MoonWorld
             UnboundServantService.Tick();
             HolyGrailWarQuestService.Ensure(this);
             HolyGrailWarQuestService.SyncOutcome(this, notify: false);
+            if (warOutcome == WarOutcome.PlayerVictory) HolyGrailEndingService.OnVictory(this);
             if (enemyBattle != null) EnemyBattleService.Advance(this);
             EnemyChallengeService.Tick(this);
         }
@@ -55,6 +61,7 @@ namespace MoonWorld
                 if (enemyBattle != null) EnemyBattleService.Advance(this);
                 EnemyChallengeService.Tick(this);
                 WarReconnaissanceService.ObserveVisiblePawns(this);
+                HolyGrailEndingService.Tick(this);
             }
             if (Find.TickManager.TicksGame % 2500 == 0) ServantRecontractService.Tick();
             WarOutcomeService.Tick(this);
@@ -108,6 +115,11 @@ namespace MoonWorld
             Scribe_Collections.Look(ref reconnaissance, "reconnaissance", LookMode.Deep);
             Scribe_Values.Look(ref nextReportId, "nextReportId", 0);
             Scribe_Collections.Look(ref reports, "reports", LookMode.Deep);
+            Scribe_Values.Look(ref holyGrailRewardGranted, "holyGrailRewardGranted", false);
+            Scribe_Values.Look(ref holyGrailRewardSpawned, "holyGrailRewardSpawned", false);
+            Scribe_Values.Look(ref holyGrailWishMade, "holyGrailWishMade", false);
+            Scribe_Values.Look(ref holyGrailMaterializationGranted, "holyGrailMaterializationGranted", false);
+            Scribe_Values.Look(ref holyGrailServantDeadlineTickAbs, "holyGrailServantDeadlineTickAbs", -1);
             if (Scribe.mode == LoadSaveMode.PostLoadInit && reconnaissance == null)
                 reconnaissance = new List<WarReconnaissanceRecord>();
             if (Scribe.mode == LoadSaveMode.PostLoadInit && reports == null)
@@ -126,6 +138,7 @@ namespace MoonWorld
             WarReportService.FinishAll(this, WarReportState.Completed,
                 outcome == WarOutcome.PlayerVictory ? "玩家赢得圣杯战争" : "玩家退出圣杯战争");
             HolyGrailWarQuestService.SyncOutcome(this, notify: true);
+            if (outcome == WarOutcome.PlayerVictory) HolyGrailEndingService.OnVictory(this);
             return true;
         }
     }

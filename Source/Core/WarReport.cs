@@ -171,7 +171,7 @@ namespace MoonWorld
         {
             if (pawn == null) return "未知从者";
             EnemyWarParticipant participant = war?.CurrentWarEntry?.FindEnemy(pawn);
-            bool player = participant != null && war.CurrentWarEntry.Participants.IndexOf(participant) == 0;
+            bool player = participant != null && war.CurrentWarEntry.IsPlayerParticipant(participant);
             return player || participant != null && WarReconnaissanceService.KnowsServant(war, participant)
                 ? pawn.LabelShortCap : "未知从者";
         }

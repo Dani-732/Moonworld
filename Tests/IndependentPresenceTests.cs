@@ -101,6 +101,7 @@ namespace Verse
 namespace RimWorld { public class Faction { public static Faction OfPlayer = new Faction(); } }
 namespace MoonWorld
 {
+    public static class HolyGrailEndingService { public static bool IsPermanentlyMaterialized(Pawn pawn) => false; }
     public static class CommandSpellService { public static bool HasQualification(Pawn p) => p != null && !p.Dead && !p.Destroyed && p.Qualified; }
     public class Site_WarWorkshop
     {

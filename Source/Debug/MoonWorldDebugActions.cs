@@ -87,6 +87,45 @@ namespace MoonWorld
                 Messages.Message("敌方突袭事件当前无法执行，请检查召唤、御主位置和本届部署状态。", MessageTypeDefOf.RejectInput, false);
         }
 
+        [DebugAction("MoonWorld/圣杯结局", "授予玩家圣杯胜利并投放圣杯", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
+        public static void GrantHolyGrailVictory()
+        {
+            GameComponent_MoonWorld state = Current.Game?.GetComponent<GameComponent_MoonWorld>();
+            if (state?.CurrentWarEntry == null)
+            {
+                Messages.Message("本届圣杯战争尚未开始。", MessageTypeDefOf.RejectInput, false);
+                return;
+            }
+            if (state.CurrentWarOutcome == WarOutcome.Ongoing)
+                state.TrySetWarOutcome(WarOutcome.PlayerVictory);
+            else if (state.CurrentWarOutcome != WarOutcome.PlayerVictory)
+            {
+                Messages.Message("本届战争已经以失败结束，不能再授予圣杯。", MessageTypeDefOf.RejectInput, false);
+                return;
+            }
+            HolyGrailEndingService.OnVictory(state);
+            Messages.Message("已授予圣杯胜利；圣杯会以可安装物品降临在御主所在地图。", MessageTypeDefOf.PositiveEvent, false);
+        }
+
+        [DebugAction("MoonWorld/圣杯结局", "查看圣杯结局状态", actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
+        public static void InspectHolyGrailEnding()
+        {
+            GameComponent_MoonWorld state = Current.Game?.GetComponent<GameComponent_MoonWorld>();
+            if (state == null)
+            {
+                Messages.Message("未找到 MoonWorld 战争状态。", MessageTypeDefOf.RejectInput, false);
+                return;
+            }
+            int remaining = state.holyGrailServantDeadlineTickAbs < 0 ? -1
+                : Mathf.Max(0, state.holyGrailServantDeadlineTickAbs - GenTicks.TicksAbs);
+            Find.WindowStack.Add(new Dialog_MessageBox("圣杯结局状态："
+                + "\n奖励已授予：" + state.holyGrailRewardGranted
+                + "\n圣杯已投放：" + state.holyGrailRewardSpawned
+                + "\n愿望已使用：" + state.holyGrailWishMade
+                + "\n已许愿实体化：" + state.holyGrailMaterializationGranted
+                + "\n从者消散倒计时：" + (remaining < 0 ? "无" : (remaining / 60000f).ToString("0.00") + " 天")));
+        }
+
         [DebugAction("MoonWorld/敌方测试", "在鼠标处部署本届突袭从者", actionType = DebugActionType.ToolMap, allowedGameStates = AllowedGameStates.PlayingOnMap)]
         public static void DeployEnemyWarParty()
         {

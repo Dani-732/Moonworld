@@ -59,7 +59,7 @@ namespace MoonWorld
                 || (!EnemyContractUtility.HasEnemyContract(servant) && !EnemyBattleService.IsMapBattleFor(servant))) return null;
             int tick = Find.TickManager.TicksGame;
             if (lastTargetScanTick < 0 || tick - lastTargetScanTick >= 250
-                || (preferredTarget != null && !EnemyTargetingPolicy.IsServantTarget(servant, preferredTarget)))
+                || (preferredTarget != null && !EnemyTargetingPolicy.IsPriorityTarget(servant, preferredTarget)))
             {
                 preferredTarget = EnemyTargetingPolicy.FindPreferredTarget(servant);
                 lastTargetScanTick = tick;
@@ -69,8 +69,12 @@ namespace MoonWorld
 
         public override bool ValidateAttackTarget(Pawn searcher, Thing target)
         {
-            return GetPreferredTarget(searcher) == null
-                || (target is Pawn pawn && EnemyTargetingPolicy.IsServantTarget(searcher, pawn));
+            Pawn preferred = GetPreferredTarget(searcher);
+            if (preferred == null) return true;
+            if (!(target is Pawn pawn)) return false;
+            return EnemyTargetingPolicy.IsServantTarget(searcher, preferred)
+                ? EnemyTargetingPolicy.IsServantTarget(searcher, pawn)
+                : EnemyTargetingPolicy.IsMasterTarget(searcher, pawn);
         }
 
         private void TryUseTestNoblePhantasm(Pawn servant)

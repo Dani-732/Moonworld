@@ -33,6 +33,7 @@ namespace MoonWorld
 
         public static float Threshold(Pawn servant, ServantPresenceState presence)
         {
+            if (HolyGrailEndingService.IsPermanentlyMaterialized(servant)) return 0f;
             ServantResourceProfileDef profile = ServantIdentityUtility.GetProfile(servant);
             if (profile == null || presence == ServantPresenceState.Annihilated) return 0f;
             float baseline = presence == ServantPresenceState.Materialized

@@ -171,6 +171,26 @@ internal static partial class SummoningTests
             WarReconnaissanceService.ObserveVisiblePawns(State);
             Check(WarReconnaissanceService.KnowsMaster(State, participant), "master sighting did not unlock master");
         });
+        Test("seeing an enemy away from home still unlocks intelligence", () => {
+            PrepareEnemy(); var participant = State.CurrentWarEntry.Enemies[0];
+            Map encounter = new Map { IsPlayerHome = false };
+            Pawn observer = new Pawn { Spawned = true, Map = encounter, Faction = Faction.OfPlayer };
+            Pawn servant = participant.EnemyServant;
+            servant.Spawned = true; servant.Map = encounter; servant.Position = new IntVec3 { Valid = true, Id = 7 };
+            encounter.mapPawns.AllPawnsSpawned.Add(observer);
+            encounter.mapPawns.AllPawnsSpawned.Add(servant);
+            Find.Maps.Add(encounter);
+            WarReconnaissanceService.ObserveVisiblePawns(State);
+            Check(WarReconnaissanceService.KnowsServant(State, participant), "off-home sighting was ignored");
+        });
+        Test("missing player participant never promotes first enemy to known", () => {
+            PrepareEnemy(); var entry = State.CurrentWarEntry; var participant = entry.Enemies[0];
+            entry.RecordPlayerServant(null);
+            Check(!entry.IsPlayerParticipant(participant), "enemy became player participant");
+            Check(!WarReconnaissanceService.KnowsServant(State, participant)
+                && !WarReconnaissanceService.KnowsMaster(State, participant)
+                && !WarReconnaissanceService.KnowsSite(State, participant), "enemy intelligence leaked through list order");
+        });
         Test("final battle due only after day ten while war is ongoing", () => {
             PrepareEnemy(); State.warStartTick = 1000;
             Find.TickManager.TicksGame = 1000 + 60000 * 10 - 1;

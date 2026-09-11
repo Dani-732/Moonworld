@@ -156,6 +156,20 @@ try {
         $mwFinal.earliestDay -ne '10' -or $mwFinal.targetTags.li -ne 'Map_PlayerHome') {
         throw 'Final battle incident linkage invalid'
     }
+    [xml]$mwGrailEnding = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_HolyGrailEnding.xml') -Raw
+    $mwGrail = $mwGrailEnding.SelectSingleNode('/Defs/ThingDef[defName="MW_HolyGrail"]')
+    $mwGrailThought = $mwGrailEnding.SelectSingleNode('/Defs/ThoughtDef[defName="MW_HolyGrailGratitude"]')
+    if ($null -eq $mwGrail -or $mwGrail.ParentName -ne 'BuildingBase' -or
+        $mwGrail.thingClass -ne 'MoonWorld.Building_HolyGrail' -or $mwGrail.minifiedDef -ne 'MinifiedThing' -or
+        $mwGrail.canGenerateDefaultDesignator -ne 'false' -or $mwGrail.building.alwaysUninstallable -ne 'true' -or
+        $mwGrail.statBases.Beauty -ne '5000' -or $mwGrail.statBases.MarketValue -ne '500000' -or
+        $mwGrail.graphicData.texPath -ne 'Things/Item/Relic/RelicInertCup') {
+        throw 'Holy Grail must remain an installable, bright vanilla-relic variant with authored value'
+    }
+    if ($null -eq $mwGrailThought -or $mwGrailThought.thoughtClass -ne 'Thought_MemorySocial' -or
+        $mwGrailThought.durationDays -ne '999999' -or $mwGrailThought.stages.li.baseOpinionOffset -ne '1000') {
+        throw 'Holy Grail materialization gratitude definition invalid'
+    }
     [xml]$mwProfiles = Get-Content (Join-Path $projectRoot '1.6\Defs\MW_ServantProfiles.xml') -Raw
     $mwEncounterSettings = $mwProfiles.SelectSingleNode('/Defs/Def[@Class="MoonWorld.MoonWorldSettingsDef" and defName="MW_HolyGrailWarSettings"]')
     if ($mwEncounterSettings.enemyFieldBattleChance -ne '0.8' -or $mwEncounterSettings.enemyChallengeChance -ne '0.8' -or

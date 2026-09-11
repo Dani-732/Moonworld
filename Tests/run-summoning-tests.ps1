@@ -5,6 +5,7 @@ $testOutput = Join-Path ([IO.Path]::GetTempPath()) ('MoonWorldSummoning-' + [Gui
 try {
     & $compiler /nologo /target:exe /out:$testOutput `
         (Join-Path $PSScriptRoot 'WarStartupHost.cs') `
+        (Join-Path $PSScriptRoot 'HolyGrailEndingTestShim.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\EnemyWarPreparation.cs') `
         (Join-Path $projectRoot 'Source\Integration\Site_WarWorkshop.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\WarWorkshopService.cs') `

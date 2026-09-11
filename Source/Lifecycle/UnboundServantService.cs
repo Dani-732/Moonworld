@@ -33,12 +33,13 @@ namespace MoonWorld
         {
             if (master == null || CommandSpellService.HasQualification(master)) return;
             foreach (Pawn servant in KnownServants())
-                if (servant.TryGetComp<CompServantState>()?.Master == master) Release(servant);
+                if (!HolyGrailEndingService.IsPermanentlyMaterialized(servant)
+                    && servant.TryGetComp<CompServantState>()?.Master == master) Release(servant);
         }
 
         internal static void Release(Pawn servant)
         {
-            if (!Exists(servant)) return;
+            if (!Exists(servant) || HolyGrailEndingService.IsPermanentlyMaterialized(servant)) return;
             CompServantState state = servant.TryGetComp<CompServantState>();
             if (state == null) return;
             bool changed = state.Master != null || state.UnboundUntilTickAbs < 0;
@@ -66,6 +67,12 @@ namespace MoonWorld
             {
                 CompServantState state = servant.TryGetComp<CompServantState>();
                 if (state == null) continue;
+                if (HolyGrailEndingService.IsPermanentlyMaterialized(servant))
+                {
+                    Hediff shortage = servant.health?.hediffSet.GetFirstHediffOfDef(MW_DefOf.MW_PranaShortage);
+                    if (shortage != null) servant.health.RemoveHediff(shortage);
+                    continue;
+                }
                 if (!CommandSpellService.HasQualification(state.Master)) Release(servant);
                 if (state.Master == null && state.UnboundUntilTickAbs >= 0
                     && GenTicks.TicksAbs >= state.UnboundUntilTickAbs)

@@ -173,11 +173,41 @@ namespace MoonWorld
             ServantLoreUi.Label(new Rect(header.x, header.y + 48f, width, 22f), ServantLoreUi.ClassLabel(identity) + (string.IsNullOrEmpty(lore?.epithet) ? "" : "　·　" + lore.epithet), headingStyle);
 
             Rect scrollRect = new Rect(inRect.x + 14f, header.yMax + 10f, width, inRect.height - header.height - 24f);
-            float contentHeight = lore == null ? 400f : 760f;
-            Widgets.BeginScrollView(scrollRect, ref scroll, new Rect(0f, 0f, width - 26f, contentHeight));
-            Rect content = new Rect(0f, 0f, width - 26f, contentHeight);
+            float contentWidth = width - 26f;
+            float contentHeight = ContentHeight(lore, contentWidth);
+            Widgets.BeginScrollView(scrollRect, ref scroll, new Rect(0f, 0f, contentWidth, contentHeight));
+            Rect content = new Rect(0f, 0f, contentWidth, contentHeight);
             DrawContent(content, lore);
             Widgets.EndScrollView();
+        }
+
+        private float ContentHeight(ServantLoreDef lore, float contentWidth)
+        {
+            if (lore == null) return 400f;
+            float valueWidth = Mathf.Max(80f, contentWidth - 153f);
+            float height = 264f + 30f + 3f * 43f + 4f + 16f;
+            height += SectionHeight(valueWidth, lore.epithet, lore.origin, lore.gender, lore.alignment, lore.heightWeight) + 12f;
+            height += SectionHeight(valueWidth, lore.parameters) + 12f;
+            height += SectionHeight(valueWidth, lore.classSkills) + 12f;
+            height += SectionHeight(valueWidth, lore.noblePhantasm) + 12f;
+            height += SectionHeight(valueWidth, lore.summary) + 14f;
+            height += 30f + FactHeight(valueWidth, "实体化") + FactHeight(valueWidth, "已契约");
+            if (ownServant && pawn?.needs?.TryGetNeed<Need_Prana>() != null)
+                height += FactHeight(valueWidth, "100 / 100");
+            return Mathf.Max(400f, height + 55f);
+        }
+
+        private static float SectionHeight(float valueWidth, params string[] values)
+        {
+            float height = 28f;
+            foreach (string value in values)
+                if (!string.IsNullOrEmpty(value)) height += FactHeight(valueWidth, value);
+            return height;
+        }
+
+        private static float FactHeight(float valueWidth, string value)
+        {
+            return Mathf.Max(28f, Text.CalcHeight(value ?? "未知", valueWidth)) + 7f;
         }
 
         private void DrawContent(Rect rect, ServantLoreDef lore)

@@ -5,6 +5,7 @@ $testOutput = Join-Path ([IO.Path]::GetTempPath()) ('MoonWorldUnbound-' + [Guid]
 try {
     & $compiler /nologo /target:exe /out:$testOutput `
         (Join-Path $PSScriptRoot 'UnboundServantTests.cs') `
+        (Join-Path $PSScriptRoot 'HolyGrailEndingTestShim.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\CompServantState.cs') `
         (Join-Path $projectRoot 'Source\Lifecycle\UnboundServantService.cs') `
         (Join-Path $projectRoot 'Source\Integration\Harmony_MasterDeath.cs')

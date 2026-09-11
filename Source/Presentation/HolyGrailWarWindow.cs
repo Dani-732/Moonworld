@@ -76,7 +76,7 @@ namespace MoonWorld
         private static readonly Texture2D EmptyTex = SolidColorMaterials.NewSolidColorTexture(new Color(0.08f, 0.035f, 0.06f));
 
         private HolyGrailWarPage page;
-        private Vector2 scroll;
+        private readonly Vector2[] pageScroll = new Vector2[5];
         private EnemyWarParticipant selected;
         private GUIStyle titleStyle, headingStyle, labelStyle, mutedStyle, tinyStyle, cardStyle, buttonStyle;
 
@@ -99,8 +99,8 @@ namespace MoonWorld
             base.PreOpen();
             BuildStyles();
             GameComponent_MoonWorld war = GetWar();
-            selected = war?.CurrentWarEntry?.Participants.Count > 0
-                ? war.CurrentWarEntry.Participants[0] : null;
+            selected = PlayerParticipant(war) ?? (war?.CurrentWarEntry?.Participants.Count > 0
+                ? war.CurrentWarEntry.Participants[0] : null);
         }
 
         private void BuildStyles()
@@ -170,29 +170,38 @@ namespace MoonWorld
 
         private void DrawHeader(Rect rect, GameComponent_MoonWorld war)
         {
-            Rect title = new Rect(rect.x, rect.y, rect.width * 0.43f, 28f);
+            bool compact = rect.width < 900f;
+            float titleFraction = compact ? 0.34f : 0.43f;
+            Rect title = new Rect(rect.x, rect.y, rect.width * titleFraction, 28f);
             UiLabel(title, "圣杯战争记录板", titleStyle);
-            UiLabel(new Rect(title.x, title.y + 29f, title.width, 24f), "MOONWORLD  /  HOLY GRAIL WAR", mutedStyle);
+            if (!compact)
+                UiLabel(new Rect(title.x, title.y + 29f, title.width, 24f), "MOONWORLD  /  HOLY GRAIL WAR", mutedStyle);
 
             string phase = WarRhythmPolicy.PhaseLabel(war);
             string countdown = WarRhythmPolicy.FinalBattleDue(war) ? "圣杯决战已到期" : "距第十天决战 " + DaysUntilFinalBattle(war).ToString("0.0") + " 天";
-            Rect meta = new Rect(rect.x + rect.width * 0.43f, rect.y + 2f, rect.width * 0.57f, 38f);
-            DrawPill(new Rect(meta.x, meta.y, 92f, 28f), phase, GoldBright, Wine);
-            DrawPill(new Rect(meta.x + 102f, meta.y, 128f, 28f), WarDay(war), Cream, WineDeep);
-            DrawPill(new Rect(meta.x + 238f, meta.y, 148f, 28f), countdown, Muted, WineDeep);
-            DrawPill(new Rect(meta.x + 394f, meta.y, 100f, 28f), AliveCount(war) + " / " + war.CurrentWarEntry.Participants.Count, Teal, WineDeep);
+            Rect meta = new Rect(rect.x + rect.width * titleFraction, rect.y + 2f, rect.width * (1f - titleFraction), 38f);
+            float gap = 8f;
+            int columns = compact ? 3 : 4;
+            float width = (meta.width - gap * (columns - 1)) / columns;
+            DrawPill(new Rect(meta.x, meta.y, width, 28f), phase, GoldBright, Wine);
+            DrawPill(new Rect(meta.x + width + gap, meta.y, width, 28f), WarDay(war), Cream, WineDeep);
+            if (!compact)
+                DrawPill(new Rect(meta.x + (width + gap) * 2f, meta.y, width, 28f), countdown, Muted, WineDeep);
+            DrawPill(new Rect(meta.x + (width + gap) * (columns - 1), meta.y, width, 28f), AliveCount(war) + " / " + war.CurrentWarEntry.Participants.Count, Teal, WineDeep);
         }
 
         private void DrawBody(Rect rect, GameComponent_MoonWorld war)
         {
             float navWidth = 145f;
-            float detailWidth = Mathf.Clamp(rect.width * 0.245f, 225f, 275f);
+            bool showDetail = rect.width >= 840f;
+            float detailWidth = showDetail ? Mathf.Clamp(rect.width * 0.245f, 225f, 275f) : 0f;
             Rect nav = new Rect(rect.x, rect.y, navWidth, rect.height);
             Rect detail = new Rect(rect.xMax - detailWidth, rect.y, detailWidth, rect.height);
-            Rect main = new Rect(nav.xMax + 12f, rect.y, rect.width - navWidth - detailWidth - 24f, rect.height);
+            Rect main = new Rect(nav.xMax + 12f, rect.y,
+                rect.width - navWidth - detailWidth - (showDetail ? 24f : 12f), rect.height);
             DrawNavigation(nav);
             DrawPage(main, war);
-            DrawDetail(detail, war);
+            if (showDetail) DrawDetail(detail, war);
         }
 
         private void DrawNavigation(Rect rect)
@@ -243,6 +252,8 @@ namespace MoonWorld
             float height = PageHeight(war);
             Rect scrollRect = new Rect(content.x, content.y, content.width, content.height);
             float viewWidth = Mathf.Max(80f, content.width - 32f);
+            int pageIndex = (int)page;
+            Vector2 scroll = pageScroll[pageIndex];
             Widgets.BeginScrollView(scrollRect, ref scroll, new Rect(0f, 0f, viewWidth, height));
             Rect inner = new Rect(0f, 0f, viewWidth, height);
             switch (page)
@@ -254,6 +265,7 @@ namespace MoonWorld
                 default: DrawOverview(inner, war); break;
             }
             Widgets.EndScrollView();
+            pageScroll[pageIndex] = scroll;
         }
 
         private float PageHeight(GameComponent_MoonWorld war)
@@ -356,7 +368,7 @@ namespace MoonWorld
             DrawCardBackground(rect, report.IsActive);
             string left = report.kind == WarReportKind.FinalBattle ? "所有敌方从者" : WarReportService.ParticipantLabel(war, report.actorA);
             string right = report.actorB == null ? "玩家基地" : WarReportService.ParticipantLabel(war, report.actorB);
-            string location = report.site == null ? "位置未记录" : "地点 " + report.site.Tile;
+            string location = ReportLocation(war, report);
             string when = "第 " + Math.Max(0f, (report.startedAtTickAbs - war.warStartTick) / (float)GenDate.TicksPerDay).ToString("0.0") + " 天";
             UiLabel(new Rect(rect.x + 12f, rect.y + 9f, rect.width - 150f, 22f),
                 WarReportService.KindLabel(report.kind) + "　" + left + (report.kind == WarReportKind.FinalBattle ? " VS " + right : report.actorB == null ? "" : " VS " + right), headingStyle);
@@ -374,7 +386,7 @@ namespace MoonWorld
             float y = 57f;
             foreach (EnemyWarParticipant participant in war.CurrentWarEntry.Participants)
             {
-                bool player = participant == war.CurrentWarEntry.Participants[0];
+                bool player = war.CurrentWarEntry.IsPlayerParticipant(participant);
                 bool knowsServant = player || WarReconnaissanceService.KnowsServant(war, participant);
                 bool knowsMaster = player || WarReconnaissanceService.KnowsMaster(war, participant);
                 string seat = knowsServant ? participant.Seat?.label ?? "未知席位" : "未知席位";
@@ -396,7 +408,7 @@ namespace MoonWorld
             float y = 57f;
             foreach (EnemyWarParticipant participant in war.CurrentWarEntry.Participants)
             {
-                bool player = participant == war.CurrentWarEntry.Participants[0];
+                bool player = war.CurrentWarEntry.IsPlayerParticipant(participant);
                 if (!player && !WarReconnaissanceService.KnowsSite(war, participant)) continue;
                 foreach (WorldObject worldObject in Find.WorldObjects.AllWorldObjects)
                 {
@@ -426,8 +438,8 @@ namespace MoonWorld
             Widgets.DrawBox(rect, 1);
             GUI.color = Color.white;
             UiLabel(new Rect(rect.x + 12f, rect.y + 10f, rect.width - 24f, 18f), "SELECTED RECORD", mutedStyle);
-            EnemyWarParticipant participant = selected ?? war.CurrentWarEntry.Participants[0];
-            bool player = participant == war.CurrentWarEntry.Participants[0];
+            EnemyWarParticipant participant = selected ?? PlayerParticipant(war) ?? war.CurrentWarEntry.Participants[0];
+            bool player = war.CurrentWarEntry.IsPlayerParticipant(participant);
             bool knowsServant = player || WarReconnaissanceService.KnowsServant(war, participant);
             bool knowsMaster = player || WarReconnaissanceService.KnowsMaster(war, participant);
             string servant = knowsServant ? participant.EnemyServant?.LabelShortCap ?? "未知从者" : "未知从者";
@@ -561,7 +573,7 @@ namespace MoonWorld
             string defender = DescribeServant(war, battle.defender);
             UiLabel(new Rect(rect.x + 12f, rect.y + 10f, rect.width - 100f, 22f), attacker + "  VS  " + defender, headingStyle);
             UiLabel(new Rect(rect.xMax - 88f, rect.y + 10f, 76f, 22f), "第 " + battle.rounds + " 回合", tinyStyle);
-            UiLabel(new Rect(rect.x + 12f, rect.y + 39f, rect.width - 24f, 22f), "地点：" + (battle.site == null ? "未确认" : battle.site.Tile.ToString()) + "　地图：" + (battle.onMap ? "已生成" : "场外回合"), labelStyle);
+            UiLabel(new Rect(rect.x + 12f, rect.y + 39f, rect.width - 24f, 22f), "地点：" + BattleLocation(war, battle) + "　地图：" + (battle.onMap ? "已生成" : "场外回合"), labelStyle);
             UiLabel(new Rect(rect.x + 12f, rect.y + 68f, rect.width - 24f, 22f), "双方真实伤势、装备和魔力继续由从者状态与原版检查器提供。", mutedStyle);
         }
 
@@ -572,7 +584,7 @@ namespace MoonWorld
             GUI.color = Amber;
             UiLabel(new Rect(rect.xMax - 108f, rect.y + 10f, 96f, 22f), "等待赴约", tinyStyle);
             GUI.color = Color.white;
-            UiLabel(new Rect(rect.x + 12f, rect.y + 39f, rect.width - 24f, 22f), "发起者：" + challenge.servant?.LabelShortCap + "　地点：" + challenge.site?.Tile, labelStyle);
+            UiLabel(new Rect(rect.x + 12f, rect.y + 39f, rect.width - 24f, 22f), "发起者：" + DescribeServant(war, challenge.servant) + "　地点：" + (challenge.site == null ? "未确认" : challenge.site.Tile.ToString()), labelStyle);
             float days = Math.Max(0f, (challenge.expiresAtTickAbs - GenTicks.TicksAbs) / (float)GenDate.TicksPerDay);
             UiLabel(new Rect(rect.x + 12f, rect.y + 68f, rect.width - 24f, 22f), "剩余期限：" + days.ToString("0.0") + " 天　普通殖民者不计入到场。", mutedStyle);
         }
@@ -649,7 +661,7 @@ namespace MoonWorld
         private static string DescribeServant(GameComponent_MoonWorld war, Pawn pawn)
         {
             EnemyWarParticipant participant = war.CurrentWarEntry.FindEnemy(pawn);
-            bool player = participant != null && war.CurrentWarEntry.Participants.IndexOf(participant) == 0;
+            bool player = participant != null && war.CurrentWarEntry.IsPlayerParticipant(participant);
             return participant == null || player || WarReconnaissanceService.KnowsServant(war, participant) ? pawn?.LabelShortCap ?? "未知从者" : "未知从者";
         }
 
@@ -687,5 +699,34 @@ namespace MoonWorld
 
         private static string WorkshopStatus(EnemyWarParticipant participant)
         { return participant.WorkshopRebuildPending ? "等待重建" : participant.EnemyDeployed ? "从者出击" : "正常"; }
+
+        private static EnemyWarParticipant PlayerParticipant(GameComponent_MoonWorld war)
+        {
+            return war?.CurrentWarEntry?.Participants.Find(war.CurrentWarEntry.IsPlayerParticipant);
+        }
+
+        private static bool KnowsParticipantSite(GameComponent_MoonWorld war, Pawn pawn)
+        {
+            EnemyWarParticipant participant = war?.CurrentWarEntry?.FindEnemy(pawn);
+            return participant != null && (war.CurrentWarEntry.IsPlayerParticipant(participant)
+                || WarReconnaissanceService.KnowsSite(war, participant));
+        }
+
+        private static string BattleLocation(GameComponent_MoonWorld war, EnemyBattleSession battle)
+        {
+            if (battle?.site == null) return "未确认";
+            return KnowsParticipantSite(war, battle.attacker) || KnowsParticipantSite(war, battle.defender)
+                ? battle.site.Tile.ToString() : "未确认";
+        }
+
+        private static string ReportLocation(GameComponent_MoonWorld war, WarReportRecord report)
+        {
+            if (report?.site == null) return "位置未记录";
+            if (report.kind == WarReportKind.Challenge || report.kind == WarReportKind.DirectRaid
+                || report.kind == WarReportKind.FinalBattle)
+                return "地点 " + report.site.Tile;
+            return KnowsParticipantSite(war, report.actorA) || KnowsParticipantSite(war, report.actorB)
+                ? "地点 " + report.site.Tile : "交战地点未确认";
+        }
     }
 }

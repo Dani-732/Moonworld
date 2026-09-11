@@ -29,6 +29,12 @@ internal static class EnemyRetreatTests
         Pawn pawn = new Pawn { Map = servant.Map, Enemy = false, Servant = isServant, Position = new IntVec3 { X = x } };
         servant.Map.mapPawns.AllPawnsSpawned.Add(pawn); return pawn;
     }
+    private static Pawn MasterTarget(int x)
+    {
+        Pawn pawn = Target(x, false);
+        Current.Game.Entry.PlayerMaster = pawn;
+        return pawn;
+    }
     public static void Main()
     {
         Test("mutual combat ignores master incapacity and uses servant targeting", () => {
@@ -66,9 +72,21 @@ internal static class EnemyRetreatTests
             servant.Spirit = true; party.LordJobTick(); Check(party.Retreating, "own defeat ignored");
         });
         Test("far servant takes priority over nearby master", () => {
-            Pawn human = Target(3, false), hero = Target(90);
-            Check(party.GetPreferredTarget(servant) == hero && !party.ValidateAttackTarget(servant, human), "nearest human won");
+            Pawn masterTarget = MasterTarget(3), hero = Target(90);
+            Check(party.GetPreferredTarget(servant) == hero && !party.ValidateAttackTarget(servant, masterTarget), "nearby master won");
             Check(party.ValidateAttackTarget(servant, hero), "servant rejected");
+        });
+        Test("master takes priority over ordinary target when no servant exists", () => {
+            Pawn human = Target(2, false), masterTarget = MasterTarget(20);
+            Check(party.GetPreferredTarget(servant) == masterTarget && !party.ValidateAttackTarget(servant, human)
+                && party.ValidateAttackTarget(servant, masterTarget), "master priority missing");
+        });
+        Test("invalid master releases native fallback", () => {
+            Pawn masterTarget = MasterTarget(20); masterTarget.Downed = true;
+            Pawn human = Target(2, false); servant.FallbackTarget = human;
+            new JobGiver_EnemyServantAssault().TestGive(servant);
+            Check(party.GetPreferredTarget(servant) == null && servant.mindState.enemyTarget == human,
+                "invalid master blocked fallback");
         });
         Test("closest eligible servant selected among several", () => {
             Target(40); Pawn close = Target(20); Check(party.GetPreferredTarget(servant) == close, "wrong servant");
@@ -119,13 +137,20 @@ internal static class EnemyRetreatTests
                 && master.mindState.duty.def == DutyDefOf.AssaultColony, "wrong duty");
         });
         Test("test burst targets servant instead of closer master", () => {
-            Target(2, false); Pawn hero = Target(20);
+            MasterTarget(2); Pawn hero = Target(20);
             servant.Identity.noblePhantasms.Add(new AbilityDef()); servant.abilities.Ability = new Ability_NoblePhantasm { CanCast = true };
             Find.TickManager.TicksGame = 250; party.LordJobTick();
             Check(servant.abilities.Ability.Casts == 1 && servant.abilities.Ability.LastTarget.Cell.X == hero.Position.X, "burst targeted human");
         });
+        Test("test burst targets master instead of closer ordinary pawn", () => {
+            Target(2, false); Pawn masterTarget = MasterTarget(20);
+            servant.Identity.noblePhantasms.Add(new AbilityDef()); servant.abilities.Ability = new Ability_NoblePhantasm { CanCast = true };
+            Find.TickManager.TicksGame = 250; party.LordJobTick();
+            Check(servant.abilities.Ability.Casts == 1 && servant.abilities.Ability.LastTarget.Cell.X == masterTarget.Position.X,
+                "burst skipped master priority");
+        });
         Test("out of range servant prevents opportunistic burst on master", () => {
-            Target(2, false); Target(60);
+            MasterTarget(2); Target(60);
             servant.Identity.noblePhantasms.Add(new AbilityDef()); servant.abilities.Ability = new Ability_NoblePhantasm { CanCast = true };
             Find.TickManager.TicksGame = 250; party.LordJobTick();
             Check(servant.abilities.Ability.Casts == 0, "burst bypassed servant priority");
@@ -277,12 +302,15 @@ namespace MoonWorld
     public class GameComponent_MoonWorld { public HolyGrailWarEntry CurrentWarEntry => Current.Game.Entry; }
     public class HolyGrailWarEntry
     {
-        public Pawn EnemyMaster, EnemyServant; public bool EnemyDeployed, EnemyEliminated;
+        public Pawn EnemyMaster, EnemyServant, PlayerMaster; public bool EnemyDeployed, EnemyEliminated;
         public HolyGrailWarEntry Other;
         public HolyGrailWarEntry FindEnemy(Pawn pawn) => pawn == EnemyMaster || pawn == EnemyServant ? this : Other?.FindEnemy(pawn);
+        public bool IsCurrentMaster(Pawn pawn) => pawn != null
+            && (pawn == EnemyMaster || pawn == PlayerMaster || Other?.IsCurrentMaster(pawn) == true);
     }
     public static class EnemyContractUtility { public static bool HasEnemyContract(Pawn p) => p.Enemy && p.Master != null; }
     public class ServantQuery { public static ServantQuery Instance = new ServantQuery(); public Pawn GetMaster(Pawn p) => p.Master; public bool IsSpirit(Pawn p) => p.Spirit;
+        public bool IsServant(Pawn p) => p.Servant;
         public bool IsMaterialized(Pawn p) => p.Servant && !p.Spirit; }
     public class ServantIdentityDef { public List<AbilityDef> noblePhantasms = new List<AbilityDef>(); }
     public static class ServantIdentityUtility { public static ServantIdentityDef GetIdentity(Pawn p) => p.Identity; }

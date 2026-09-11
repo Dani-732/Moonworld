@@ -44,6 +44,12 @@ namespace MoonWorld
                 return result;
             }
         }
+        public bool IsPlayerParticipant(EnemyWarParticipant participant)
+        {
+            if (participant == null) return false;
+            if (playerParticipant != null) return participant == playerParticipant;
+            return playerServant != null && participant.EnemyServant == playerServant;
+        }
         public EnemyWarParticipant FindEnemy(Pawn pawn)
         {
             if (pawn == null) return null;
@@ -52,6 +58,15 @@ namespace MoonWorld
                 ?? participants.Find(e => e.CurrentMaster == pawn)
                 ?? participants.Find(e => e.EnemyMaster == pawn)
                 ?? participants.Find(e => e.OriginalMaster == pawn);
+        }
+
+        // Original and last masters are kept for history and cleanup, not as live combat targets.
+        public bool IsCurrentMaster(Pawn pawn)
+        {
+            if (pawn == null) return false;
+            foreach (EnemyWarParticipant participant in Participants)
+                if (participant.CurrentMaster == pawn) return true;
+            return false;
         }
         internal void SetEnemies(ServantIdentityDef player, List<EnemyWarParticipant> participants)
         { playerIdentity = player; enemies = participants; }

@@ -203,6 +203,7 @@ namespace MoonWorld
 
         private static bool CanReceiveMasterSupply(Pawn servant, Need_Prana prana)
         {
+            if (HolyGrailEndingService.IsPermanentlyMaterialized(servant)) return false;
             if (!IsFreePlayer(servant)) return false;
             CompServantState state = servant?.TryGetComp<CompServantState>();
             return prana != null
@@ -216,6 +217,12 @@ namespace MoonWorld
         {
             foreach (Pawn servant in servants)
             {
+                if (HolyGrailEndingService.IsPermanentlyMaterialized(servant))
+                {
+                    Hediff oldShortage = servant.health?.hediffSet.GetFirstHediffOfDef(MW_DefOf.MW_PranaShortage);
+                    if (oldShortage != null) servant.health.RemoveHediff(oldShortage);
+                    continue;
+                }
                 ServantResourceProfileDef profile = ServantIdentityUtility.GetProfile(servant);
                 Need_Prana prana = servant.needs.TryGetNeed<Need_Prana>();
                 CompServantState state = servant.TryGetComp<CompServantState>();

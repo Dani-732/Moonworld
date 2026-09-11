@@ -21,8 +21,11 @@ namespace MoonWorld
         public static TraitDef MW_MageRank_Apprentice;
         public static TraitDef MW_MagusCircuit_Basic;
         public static TraitDef MW_CommandSpell;
+        public static TraitDef MW_HolyGrailMaterialized;
         public static HediffDef MW_CommandSpellMark;
         public static ThingDef MW_CommandSealOne, MW_CommandSealTwo, MW_CommandSealThree;
+        public static ThingDef MW_HolyGrail;
+        public static ThoughtDef MW_HolyGrailGratitude;
         public static LetterDef MW_RecontractOffer;
         public static LetterDef MW_HolyGrailWarInvitation;
         public static QuestScriptDef MW_HolyGrailWarQuest;

@@ -62,28 +62,28 @@ namespace MoonWorld
         internal static int Progress(GameComponent_MoonWorld war, EnemyWarParticipant participant)
         {
             if (war == null || participant == null) return 0;
-            if (war.CurrentWarEntry?.Participants.IndexOf(participant) == 0) return SiteReveal;
+            if (war.CurrentWarEntry?.IsPlayerParticipant(participant) == true) return SiteReveal;
             return Find(war, participant).Progress;
         }
 
         internal static bool KnowsServant(GameComponent_MoonWorld war, EnemyWarParticipant participant)
-        { return war != null && participant != null && (war.CurrentWarEntry?.Participants.IndexOf(participant) == 0
+        { return war != null && participant != null && (war.CurrentWarEntry?.IsPlayerParticipant(participant) == true
             || Progress(war, participant) >= ServantReveal || Find(war, participant).ServantSeen); }
         internal static bool KnowsMaster(GameComponent_MoonWorld war, EnemyWarParticipant participant)
-        { return war != null && participant != null && (war.CurrentWarEntry?.Participants.IndexOf(participant) == 0
+        { return war != null && participant != null && (war.CurrentWarEntry?.IsPlayerParticipant(participant) == true
             || Progress(war, participant) >= MasterReveal || Find(war, participant).MasterSeen); }
         internal static bool KnowsSite(GameComponent_MoonWorld war, EnemyWarParticipant participant)
-        { return war != null && participant != null && (war.CurrentWarEntry?.Participants.IndexOf(participant) == 0 || Progress(war, participant) >= SiteReveal); }
+        { return war != null && participant != null && (war.CurrentWarEntry?.IsPlayerParticipant(participant) == true || Progress(war, participant) >= SiteReveal); }
 
         internal static void Advance(GameComponent_MoonWorld war, EnemyWarParticipant participant, int amount)
-        { if (participant != null && war != null && war.CurrentWarEntry?.Participants.IndexOf(participant) != 0) Find(war, participant).Add(amount); }
+        { if (participant != null && war != null && war.CurrentWarEntry?.IsPlayerParticipant(participant) != true) Find(war, participant).Add(amount); }
 
         internal static void ObserveVisiblePawns(GameComponent_MoonWorld war)
         {
             if (war?.CurrentWarEntry == null) return;
             foreach (var map in Verse.Find.Maps)
             {
-                if (map == null || !map.IsPlayerHome || !HasPlayerPawn(map)) continue;
+                if (map == null || !HasPlayerPawn(map)) continue;
                 foreach (var participant in war.CurrentWarEntry.Enemies)
                 {
                     var record = Find(war, participant);

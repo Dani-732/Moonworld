@@ -114,7 +114,8 @@ internal static class RuntimeContractChecks
             new[] { "MoonWorld.LordJob_EnemyWarParty", "Verse.AI.Group.LordJob" },
             new[] { "MoonWorld.LordJob_WorkshopRetreat", "Verse.AI.Group.LordJob" },
             new[] { "MoonWorld.LordToil_EnemyServantAssault", "Verse.AI.Group.LordToil" },
-            new[] { "MoonWorld.JobGiver_EnemyServantAssault", "RimWorld.JobGiver_AIFightEnemies" } })
+            new[] { "MoonWorld.JobGiver_EnemyServantAssault", "RimWorld.JobGiver_AIFightEnemies" },
+            new[] { "MoonWorld.Building_HolyGrail", "Verse.Building" } })
         {
             Type implementation = mod.GetType(pair[0]);
             Type contract = game.GetType(pair[1]);
@@ -131,6 +132,15 @@ internal static class RuntimeContractChecks
             throw new Exception("Encounter must inherit native caravan entry and reform");
         if (stateType.GetField("enemyChallenge", BindingFlags.Instance | BindingFlags.NonPublic)?.FieldType
             != mod.GetType("MoonWorld.EnemyChallengeSession", true)) throw new Exception("Challenge state missing");
+        foreach (string field in new[] { "holyGrailRewardGranted", "holyGrailRewardSpawned", "holyGrailWishMade",
+            "holyGrailMaterializationGranted", "holyGrailServantDeadlineTickAbs" })
+            if (stateType.GetField(field, BindingFlags.Instance | BindingFlags.NonPublic) == null)
+                throw new Exception("Holy Grail ending state missing: " + field);
+        Type grailService = mod.GetType("MoonWorld.HolyGrailEndingService", true);
+        if (grailService.GetMethod("TryWishWealth", BindingFlags.Static | BindingFlags.NonPublic) == null
+            || grailService.GetMethod("TryWishMaterialization", BindingFlags.Static | BindingFlags.NonPublic) == null
+            || grailService.GetMethod("OnVictory", BindingFlags.Static | BindingFlags.NonPublic) == null)
+            throw new Exception("Holy Grail ending service entry points missing");
         Type statType = game.GetType("RimWorld.StatDef", true);
         foreach (string field in new[] { "defaultBaseValue", "minValue", "toStringStyle", "alwaysHide" })
             if (statType.GetField(field) == null) throw new Exception("Native stat field missing: " + field);
